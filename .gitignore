@@ -1,0 +1,15 @@
+*.db
+*.db-journal
+.env
+.env.*
+!.env.example
+**/local.properties
+**/.gradle/
+**/build/
+**/.idea/
+**/__pycache__/
+*.pyc
+*.jks
+*.keystore
+*.apk
+*.aab

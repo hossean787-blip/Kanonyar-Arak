@@ -1,2 +1,11 @@
-# Kanonyar-Arak
-Student Clubs Event &amp; Ticketing Platform
+# کانون‌ها — اپ مستقل دانشجویی
+
+این مخزن برای اپ جدید پنج‌صفحه‌ای کانون‌ها بازسازی شده است.
+صفحات: خانه، کانون‌ها، رویدادها، فعالیت‌های من، حساب کاربری.
+
+سورس HTML/CSS/JavaScript در app/src/main/assets قرار دارد و از WebViewAssetLoader در برنامه اندروید استفاده می‌کند.
+داده‌ها و ثبت‌نام‌ها فعلاً نمایشی و محلی هستند. سرور، احراز هویت واقعی، بلیت معتبر و پرداخت وجود ندارند.
+
+ساخت: JDK 17 و Android SDK 35 و Gradle 8.9؛ gradle :app:assembleDebug
+
+نسخه قدیمی در شاخه backup/pre-replacement-2026-11-07 محفوظ است.

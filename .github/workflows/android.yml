@@ -28,7 +28,7 @@ jobs:
           root=Path('app/src/main/assets')
           html=(root/'index.html').read_text(encoding='utf-8')
           for name in ('home','clubs','events','activity','profile'):
-              assert 'id="'+name+'"' in html, name
+              assert 'data-screen="'+name+'"' in html, name
           for name in ('styles.css','app.js'):
               assert (root/name).is_file(), name
           for svg in (root/'assets').glob('*.svg'):

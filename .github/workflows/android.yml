@@ -19,6 +19,23 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
+      - name: Validate offline UI and SVG assets
+        run: |
+          node --check app/src/main/assets/app.js
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          root=Path('app/src/main/assets')
+          html=(root/'index.html').read_text(encoding='utf-8')
+          for name in ('home','clubs','events','activity','profile'):
+              assert 'id="'+name+'"' in html, name
+          for name in ('styles.css','app.js'):
+              assert (root/name).is_file(), name
+          for svg in (root/'assets').glob('*.svg'):
+              ET.parse(svg)
+          assert len(list((root/'assets').glob('*.svg'))) == 6
+          print('UI integrity and all SVGs valid')
+          PY
       - name: Build demo APK
         run: gradle :app:assembleDebug --no-daemon
       - uses: actions/upload-artifact@v4

@@ -1,1 +1,42 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 110 130"><defs><linearGradient id="b" x2="1" y2="1"><stop stop-color="#ca8061"/><stop offset="1" stop-color="#7a513c"/></linearGradient></defs><rect width="110" height="130" rx="8" fill="url(#b)"/><rect x="20" y="50" width="72" height="15" rx="3" fill="#e39e40"/><rect x="25" y="45" width="65" height="16" rx="3" fill="#f6db98"/><rect x="15" y="66" width="80" height="17" rx="3" fill="#5f9dcf"/><rect x="20" y="62" width="71" height="15" rx="2" fill="#f5ebde"/><rect x="25" y="84" width="63" height="18" rx="3" fill="#c76368"/><rect x="30" y="79" width="55" height="17" rx="2" fill="#fff3de"/><path d="M16 103h79" stroke="#51362f" stroke-width="5"/><path d="M87 48q-10-22-2-35 17 10 10 29" fill="#4a8b54"/><path d="M93 37q9-13 14-9-2 11-14 13" fill="#78b16a"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 110 130">
+  <defs>
+    <linearGradient id="bg4" x2="0.3" y2="1">
+      <stop stop-color="#2eaa78"/>
+      <stop offset="1" stop-color="#0f5c3c"/>
+    </linearGradient>
+  </defs>
+  <rect width="110" height="130" rx="8" fill="url(#bg4)"/>
+  <!-- Book 1 (back) -->
+  <rect x="22" y="38" width="30" height="48" rx="4" fill="#f4a435"/>
+  <rect x="22" y="38" width="6" height="48" rx="3" fill="#c97f20"/>
+  <g fill="#c97f20" opacity="0.5">
+    <rect x="30" y="48" width="16" height="2" rx="1"/>
+    <rect x="30" y="54" width="20" height="2" rx="1"/>
+    <rect x="30" y="60" width="14" height="2" rx="1"/>
+  </g>
+  <!-- Book 2 (middle) -->
+  <rect x="38" y="30" width="34" height="56" rx="4" fill="#6295e8"/>
+  <rect x="38" y="30" width="7" height="56" rx="3" fill="#3e73c8"/>
+  <g fill="#3e73c8" opacity="0.5">
+    <rect x="48" y="42" width="18" height="2" rx="1"/>
+    <rect x="48" y="49" width="22" height="2" rx="1"/>
+    <rect x="48" y="56" width="15" height="2" rx="1"/>
+    <rect x="48" y="63" width="20" height="2" rx="1"/>
+  </g>
+  <!-- Book 3 (front) -->
+  <rect x="58" y="42" width="28" height="44" rx="4" fill="#f97676"/>
+  <rect x="58" y="42" width="6" height="44" rx="3" fill="#d04040"/>
+  <g fill="#d04040" opacity="0.5">
+    <rect x="67" y="52" width="14" height="2" rx="1"/>
+    <rect x="67" y="58" width="16" height="2" rx="1"/>
+    <rect x="67" y="64" width="11" height="2" rx="1"/>
+  </g>
+  <!-- Shelf -->
+  <rect x="14" y="86" width="82" height="6" rx="3" fill="#0a3d28" opacity="0.7"/>
+  <!-- Book marker ribbon -->
+  <path d="M68 42L68 36L73 39L78 36L78 42" fill="#ffe066"/>
+  <!-- Bottom text bars -->
+  <rect x="16" y="98" width="78" height="5" rx="2.5" fill="white" opacity="0.4"/>
+  <rect x="24" y="107" width="62" height="4" rx="2" fill="white" opacity="0.25"/>
+  <rect x="30" y="116" width="50" height="4" rx="2" fill="white" opacity="0.2"/>
+</svg>

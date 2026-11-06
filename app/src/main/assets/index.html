@@ -1,9 +1,177 @@
 <!doctype html>
-<html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#fff"><title>کانون‌های دانشجویی</title><link rel="stylesheet" href="styles.css"><script defer src="app.js"></script></head>
-<body><div class="shell">
-<section class="screen active" id="home"><div class="hero"><div><h1>سلام علی! 👋</h1><p>به اپلیکیشن کانون‌های دانشجویی خوش آمدی</p></div><img class="campus" src="assets/campus.svg" width="112" height="78" alt="محوطه دانشگاه"></div><label class="search">⌕ <input id="homeSearch" placeholder="جستجو در کانون‌ها، رویدادها و ..."></label><button class="notice" id="notice"><span>📣</span><div><strong>اطلاعیه مهم</strong><small>ثبت‌نام کانون‌ها برای نیمسال جدید آغاز شد.</small></div><b>‹</b></button><div class="heading"><h2>رویدادهای جدید</h2><button data-page="events">مشاهده همه ‹</button></div><div id="homeEvents"></div><div class="heading"><h2>کانون‌های فعال</h2><button data-page="clubs">مشاهده همه ‹</button></div><div class="mini" id="miniClubs"></div></section>
-<section class="screen" id="clubs"><h1>کانون‌ها</h1><label class="search">⌕ <input id="clubSearch" placeholder="جستجو در کانون‌ها ..."></label><div id="clubsList"></div></section>
-<section class="screen" id="events"><h1>رویدادها</h1><div class="filters" id="filters"></div><div id="eventsList"></div></section>
-<section class="screen" id="activity"><h1>فعالیت‌های من</h1><h2 class="subheading">♧ کانون‌های من</h2><div id="myClubs"></div><h2 class="subheading">▦ رویدادهای ثبت‌نام‌شده</h2><div id="myEvents"></div><h2 class="subheading">🎫 بلیت‌های من</h2><div id="myTickets"></div></section>
-<section class="screen" id="profile"><h1>حساب کاربری</h1><div class="profile"><div class="avatar"><img src="assets/avatar.svg" width="84" height="84" alt="آواتار نمونه"></div><h2 id="displayName">علی رضایی</h2><p id="displayNo">شماره دانشجویی: ۴۰۱۱۲۳۴۵۶</p><p>دانشجوی کارشناسی علوم کامپیوتر</p></div><button class="menu" data-action="edit">♙ ویرایش اطلاعات <b>‹</b></button><button class="menu" data-action="requests">♧ درخواست‌های عضویت <b>‹</b></button><button class="menu" data-action="about">ⓘ درباره برنامه <b>‹</b></button><button class="menu exit" data-action="logout">⇥ خروج <b>‹</b></button></section>
-</div><nav class="nav" id="nav"></nav><div class="shade" id="shade" hidden><div class="dialog" role="dialog" aria-modal="true"><div class="dialoghead"><strong id="dialogTitle"></strong><button id="closeDialog" aria-label="بستن">✕</button></div><div id="dialogBody"></div></div></div><div class="toast" id="toast" hidden></div></body></html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="description" content="رابط کاربری اپ کانون‌های دانشجویی — نمونه تعاملی">
+  <title>کانون‌های دانشجویی</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <div class="app-shell" id="app-shell">
+    <!-- Status bar -->
+    <div class="status-bar" aria-hidden="true">
+      <span class="status-time">۱۲:۳۰</span>
+      <span class="status-icons">
+        <svg viewBox="0 0 50 15" width="50" height="13" fill="#152636">
+          <rect x="0" y="3" width="4" height="9" rx="1" opacity="0.4"/>
+          <rect x="6" y="1" width="4" height="11" rx="1" opacity="0.6"/>
+          <rect x="12" y="0" width="4" height="12" rx="1" opacity="0.8"/>
+          <rect x="18" y="0" width="4" height="12" rx="1"/>
+          <path d="M28 5 Q34 0 40 5 Q36 8 32 8 Z" fill="none" stroke="#152636" stroke-width="1.5"/>
+          <path d="M30 7 Q34 3 38 7 Q35 9.5 33 9.5Z" fill="none" stroke="#152636" stroke-width="1.5"/>
+          <circle cx="34" cy="10.5" r="1.5"/>
+          <rect x="43" y="2" width="7" height="10" rx="1.5" fill="none" stroke="#152636" stroke-width="1.2"/>
+          <rect x="44" y="3.5" width="4" height="7" rx="1" fill="#152636"/>
+          <rect x="50" y="5" width="1.5" height="4" rx="1" fill="#152636"/>
+        </svg>
+      </span>
+    </div>
+
+    <main class="app-content" id="main" tabindex="-1">
+
+      <!-- ==================== صفحه خانه ==================== -->
+      <section class="screen" id="screen-home" data-screen="home" aria-labelledby="title-home">
+        <div class="home-hero">
+          <div class="home-greeting">
+            <h1 id="title-home">سلام علی!</h1>
+            <p>به اپلیکیشن کانون‌های دانشجویی<br>خوش آمدی 👋</p>
+          </div>
+          <img class="campus-art" src="assets/campus.svg" alt="تصویرسازی محوطه دانشگاه" width="180" height="110">
+        </div>
+        <div class="home-body">
+          <label class="search-field">
+            <span class="search-icon-wrap" data-icon="search" aria-hidden="true"></span>
+            <input id="home-search" type="search" placeholder="جستجو در کانون‌ها، رویدادها و ..." aria-label="جستجو در کانون‌ها و رویدادها">
+          </label>
+          <button class="notice-banner" id="notice-btn" type="button">
+            <span class="notice-symbol" data-icon="megaphone" aria-hidden="true"></span>
+            <span class="notice-copy">
+              <strong>اطلاعیه مهم</strong>
+              <small>ثبت‌نام کانون‌ها برای نیمسال جدید آغاز شد.</small>
+            </span>
+            <span class="chev" data-icon="chevron-left" aria-hidden="true"></span>
+          </button>
+
+          <div class="section-heading">
+            <h2>رویدادهای جدید</h2>
+            <button class="text-link" type="button" data-goto="events">مشاهده همه <span aria-hidden="true">‹</span></button>
+          </div>
+          <div id="home-events" class="home-event-list"></div>
+
+          <div class="section-heading clubs-heading">
+            <h2>کانون‌های فعال</h2>
+            <button class="text-link" type="button" data-goto="clubs">مشاهده همه <span aria-hidden="true">‹</span></button>
+          </div>
+          <div id="home-clubs" class="home-club-grid"></div>
+        </div>
+      </section>
+
+      <!-- ==================== صفحه کانون‌ها ==================== -->
+      <section class="screen padded-screen" id="screen-clubs" data-screen="clubs" aria-labelledby="title-clubs" hidden>
+        <h1 id="title-clubs" class="screen-title">کانون‌ها</h1>
+        <label class="search-field">
+          <span data-icon="search" aria-hidden="true"></span>
+          <input id="clubs-search" type="search" placeholder="جستجو در کانون‌ها ..." aria-label="جستجو در کانون‌ها">
+        </label>
+        <div id="clubs-list" class="club-list"></div>
+      </section>
+
+      <!-- ==================== صفحه رویدادها ==================== -->
+      <section class="screen padded-screen" id="screen-events" data-screen="events" aria-labelledby="title-events" hidden>
+        <h1 id="title-events" class="screen-title">رویدادها</h1>
+        <div class="filter-row" id="event-filters" role="group" aria-label="فیلتر رویدادها"></div>
+        <div id="events-list" class="events-list"></div>
+      </section>
+
+      <!-- ==================== صفحه فعالیت‌های من ==================== -->
+      <section class="screen padded-screen" id="screen-activity" data-screen="activity" aria-labelledby="title-activity" hidden>
+        <h1 id="title-activity" class="screen-title">فعالیت‌های من</h1>
+        <div class="activity-section-title">
+          <span class="title-icon" data-icon="users" aria-hidden="true"></span>
+          <h2>کانون‌های من</h2>
+        </div>
+        <div id="activity-clubs"></div>
+        <div class="activity-section-title">
+          <span class="title-icon" data-icon="calendar" aria-hidden="true"></span>
+          <h2>رویدادهای ثبت‌نام‌شده</h2>
+        </div>
+        <div id="activity-events"></div>
+        <div class="activity-section-title">
+          <span class="title-icon" data-icon="ticket" aria-hidden="true"></span>
+          <h2>بلیت‌های من</h2>
+        </div>
+        <div id="activity-tickets"></div>
+      </section>
+
+      <!-- ==================== صفحه حساب کاربری ==================== -->
+      <section class="screen padded-screen" id="screen-profile" data-screen="profile" aria-labelledby="title-profile" hidden>
+        <h1 id="title-profile" class="screen-title">حساب کاربری</h1>
+        <div class="profile-card">
+          <div class="profile-bg-art"></div>
+          <div class="profile-info-row">
+            <div class="avatar-wrap">
+              <div class="avatar-ring">
+                <img src="assets/avatar.svg" alt="آواتار نمایشی دانشجو" width="80" height="80">
+              </div>
+              <button class="avatar-edit-btn" type="button" data-action="edit" aria-label="ویرایش پروفایل">
+                <span data-icon="pencil" aria-hidden="true"></span>
+              </button>
+            </div>
+            <div class="profile-details">
+              <h2 id="profile-name">علی رضایی</h2>
+              <p id="profile-number">شماره دانشجویی: ۴۰۱۱۲۳۴۵۶</p>
+              <p>دانشجوی کارشناسی علوم کامپیوتر</p>
+            </div>
+          </div>
+        </div>
+        <div class="settings-menu">
+          <button class="menu-item" type="button" data-action="edit">
+            <span class="menu-ico" data-icon="user" aria-hidden="true"></span>
+            <span>ویرایش اطلاعات</span>
+            <span class="menu-arrow" data-icon="chevron-left" aria-hidden="true"></span>
+          </button>
+          <button class="menu-item" type="button" data-action="requests">
+            <span class="menu-ico" data-icon="users" aria-hidden="true"></span>
+            <span>درخواست‌های عضویت</span>
+            <span class="menu-arrow" data-icon="chevron-left" aria-hidden="true"></span>
+          </button>
+          <button class="menu-item" type="button" data-action="about">
+            <span class="menu-ico" data-icon="info" aria-hidden="true"></span>
+            <span>درباره برنامه</span>
+            <span class="menu-arrow" data-icon="chevron-left" aria-hidden="true"></span>
+          </button>
+          <button class="menu-item danger" type="button" data-action="exit">
+            <span class="menu-ico" data-icon="log-out" aria-hidden="true"></span>
+            <span>خروج</span>
+            <span class="menu-arrow" data-icon="chevron-left" aria-hidden="true"></span>
+          </button>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Bottom navigation -->
+    <nav class="bottom-nav" id="bottom-nav" aria-label="منوی اصلی"></nav>
+
+    <!-- Toast notification -->
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+    <!-- Sheet overlay -->
+    <div class="sheet-overlay" id="sheet-overlay" hidden>
+      <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+        <div class="sheet-grip"></div>
+        <div class="sheet-head">
+          <h2 id="sheet-title"></h2>
+          <button type="button" id="close-sheet" class="close-btn" aria-label="بستن">
+            <span data-icon="x" aria-hidden="true"></span>
+          </button>
+        </div>
+        <div id="sheet-content"></div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

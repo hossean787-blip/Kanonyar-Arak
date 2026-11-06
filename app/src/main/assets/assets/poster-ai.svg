@@ -1,1 +1,35 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 110 130"><defs><linearGradient id="b" x2="1" y2="1"><stop stop-color="#174a98"/><stop offset="1" stop-color="#2d1070"/></linearGradient></defs><rect width="110" height="130" rx="8" fill="url(#b)"/><circle cx="55" cy="53" r="40" fill="#8c5be9" opacity=".22"/><rect x="32" y="28" width="46" height="46" rx="10" fill="#8542d8" stroke="#b87fff" stroke-width="2"/><g stroke="#b6bbff" stroke-width="2"><path d="M20 42h12M20 55h12M20 67h12M78 42h12M78 55h12M78 67h12M44 18v10M55 18v10M66 18v10M44 74v12M55 74v12M66 74v12"/></g><text x="55" y="60" fill="white" font-size="22" font-weight="bold" font-family="Arial" text-anchor="middle">AI</text><rect x="21" y="101" width="68" height="5" rx="2.5" fill="#c9a0ff" opacity=".7"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 110 130">
+  <defs>
+    <linearGradient id="bg2" x2="0.3" y2="1">
+      <stop stop-color="#6225c0"/>
+      <stop offset="1" stop-color="#2d1070"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.4" r="0.5">
+      <stop stop-color="#9b4fff" offset="0"/>
+      <stop stop-color="transparent" offset="1"/>
+    </radialGradient>
+  </defs>
+  <rect width="110" height="130" rx="8" fill="url(#bg2)"/>
+  <ellipse cx="55" cy="50" rx="35" ry="35" fill="url(#glow)" opacity="0.4"/>
+  <!-- AI chip/brain icon -->
+  <rect x="32" y="28" width="46" height="46" rx="12" fill="#8542d8" stroke="#b87fff" stroke-width="1.5"/>
+  <!-- Circuit lines -->
+  <g stroke="#c9a0ff" stroke-width="1.5" fill="none">
+    <path d="M22 44h10M22 55h10M22 66h10"/>
+    <path d="M78 44h10M78 55h10M78 66h10"/>
+    <path d="M44 18v10M55 18v10M66 18v10"/>
+    <path d="M44 92v10M55 92v10M66 92v10"/>
+  </g>
+  <!-- Connection dots -->
+  <g fill="#c9a0ff">
+    <circle cx="22" cy="44" r="3"/><circle cx="22" cy="55" r="3"/><circle cx="22" cy="66" r="3"/>
+    <circle cx="88" cy="44" r="3"/><circle cx="88" cy="55" r="3"/><circle cx="88" cy="66" r="3"/>
+    <circle cx="44" cy="18" r="3"/><circle cx="55" cy="18" r="3"/><circle cx="66" cy="18" r="3"/>
+    <circle cx="44" cy="102" r="3"/><circle cx="55" cy="102" r="3"/><circle cx="66" cy="102" r="3"/>
+  </g>
+  <!-- AI letters -->
+  <text x="55" y="60" font-family="Arial" font-weight="800" font-size="22" fill="white" text-anchor="middle" letter-spacing="2">AI</text>
+  <!-- Bottom text bars -->
+  <rect x="20" y="110" width="70" height="5" rx="2.5" fill="#c9a0ff" opacity="0.5"/>
+  <rect x="28" y="119" width="54" height="4" rx="2" fill="#c9a0ff" opacity="0.3"/>
+</svg>

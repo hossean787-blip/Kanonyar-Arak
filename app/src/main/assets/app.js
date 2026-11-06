@@ -1,38 +1,474 @@
-(()=>{
-'use strict';
-const $=id=>document.getElementById(id);
-const pages=['home','clubs','events','activity','profile'];
-const tabs=[['home','خانه','home'],['clubs','کانون‌ها','users'],['events','رویدادها','calendar'],['activity','فعالیت‌های من','check'],['profile','حساب کاربری','user']];
-const paths={home:'<path d="m3 11 9-7 9 7v9H4z"/><path d="M9 20v-7h6v7"/>',users:'<circle cx="9" cy="8" r="3"/><path d="M3 20c0-7 12-7 12 0M17 5c4 0 4 6 0 6M17 14c3 0 5 3 5 6"/>',calendar:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 2v6M17 2v6M3 10h18"/>',check:'<rect x="4" y="4" width="16" height="16" rx="2"/><path d="m8 12 3 3 5-6"/>',user:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-10 16-10 16 0"/>'};
-const icon=name=>'<svg viewBox="0 0 24 24" aria-hidden="true">'+paths[name]+'</svg>';
-const clubs=[['کانون فرهنگی و هنری','برگزاری رویدادهای فرهنگی، هنری و ادبی','📖'],['کانون علمی و پژوهشی','ترویج فعالیت‌های علمی و پژوهشی دانشجویان','⚗️'],['کانون فناوری و نوآوری','حمایت از ایده‌های فناورانه و آموزش مهارت‌های روز','💻'],['کانون محیط‌زیست','فرهنگ‌سازی و اجرای برنامه‌های حفاظت از محیط‌زیست','🌿'],['کانون ورزشی','برگزاری مسابقات و برنامه‌های ورزشی دانشجویی','🏀']];
-const events=[['کارگاه مقدماتی پایتون','سه‌شنبه ۱۸ دی ۱۴۰۳','سالن جلسات دانشکده مهندسی',18,'💻','کارگاه',''],['نشست «آینده هوش مصنوعی»','چهارشنبه ۱۹ دی ۱۴۰۳','سالن آمفی‌تئاتر مرکزی',45,'🤖','نشست','ai'],['مسابقه طراحی پوستر','دوشنبه ۲۴ دی ۱۴۰۳','کانون فرهنگی و هنری',20,'🎨','مسابقه','art'],['نشست کتاب‌خوانی','چهارشنبه ۱۹ دی ۱۴۰۳','کتابخانه دانشگاه',25,'📚','نشست','book']];
-const defaults=()=>({joined:[1,2],registered:[0,1],name:'علی رضایی',number:'۴۰۱۱۲۳۴۵۶'});
-const esc=s=>String(s).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
-let state;try{state=JSON.parse(localStorage.getItem('kanonha-ui')||'null')||defaults()}catch(_){state=defaults()}
-if(!Array.isArray(state.joined)||!Array.isArray(state.registered))state=defaults();
-let selected='home',filter='همه',timer;
-function save(){try{localStorage.setItem('kanonha-ui',JSON.stringify(state))}catch(_){}}
-function toast(s){$('toast').textContent=s;$('toast').hidden=false;clearTimeout(timer);timer=setTimeout(()=>$('toast').hidden=true,2200)}
-function nav(){$('nav').innerHTML=tabs.map(t=>'<button data-page="'+t[0]+'" class="'+(t[0]===selected?'on':'')+'" '+(t[0]===selected?'aria-current="page"':'')+'>'+icon(t[2])+'<span>'+t[1]+'</span></button>').join('')}
-function show(id){if(!pages.includes(id))return;selected=id;document.querySelectorAll('.screen').forEach(el=>el.classList.toggle('active',el.id===id));nav();if(id==='activity')activity();window.scrollTo(0,0)}
-function eventCard(e,i,compact){return '<article class="card"><img class="poster" src="assets/poster-'+['code','ai','art','books'][i]+'.svg" alt="پوستر رویداد" loading="lazy"><div class="cardbody"><h3>'+e[0]+'</h3><div class="meta">▦ '+e[1]+(compact?'':'<br>⌖ '+e[2]+'<br><span class="capacity">ظرفیت باقی‌مانده: '+e[3]+' نفر</span>')+'</div><button class="pill '+(compact?'soft':'')+'" data-'+(compact?'details':'register')+'="'+i+'">'+(compact?'مشاهده':state.registered.includes(i)?'ثبت‌نام‌شده':'ثبت‌نام')+'</button></div></article>'}
-function clubCard(c,i){return '<article class="card clubcard"><div class="clubicon">'+c[2]+'</div><div class="cardbody"><h3>'+c[0]+'</h3><div class="meta">'+c[1]+'</div><button class="pill '+(state.joined.includes(i)?'soft':'')+'" data-club="'+i+'">'+(state.joined.includes(i)?'عضو هستید':'عضویت')+'</button></div></article>'}
-function home(){const q=$('homeSearch').value.trim();$('homeEvents').innerHTML=events.map((e,i)=>({e,i})).filter(x=>(!q?[0,3].includes(x.i):x.e[0].includes(q))).map(x=>eventCard(x.e,x.i,true)).join('')||'<p class="empty">رویدادی یافت نشد.</p>';$('miniClubs').innerHTML=[0,2,3].filter(i=>clubs[i][0].includes(q)).map(i=>'<button data-club="'+i+'"><span>'+clubs[i][2]+'</span>'+clubs[i][0]+'</button>').join('')}
-function renderClubs(){const q=$('clubSearch').value.trim();$('clubsList').innerHTML=clubs.map((c,i)=>({c,i})).filter(x=>x.c[0].includes(q)||x.c[1].includes(q)).map(x=>clubCard(x.c,x.i)).join('')||'<p class="empty">کانونی پیدا نشد.</p>'}
-function renderEvents(){$('filters').innerHTML=['همه','کارگاه','نشست','مسابقه'].map(f=>'<button data-filter="'+f+'" class="'+(f===filter?'on':'')+'">'+f+'</button>').join('');$('eventsList').innerHTML=events.map((e,i)=>({e,i})).filter(x=>filter==='همه'||x.e[5]===filter).map(x=>eventCard(x.e,x.i,false)).join('')}
-function activity(){$('myClubs').innerHTML=state.joined.length?state.joined.filter(i=>clubs[i]).map(i=>'<button class="item" data-club="'+i+'">'+clubs[i][2]+' '+clubs[i][0]+'<b>‹</b></button>').join(''):'<p class="empty">هنوز عضو کانونی نیستید.</p>';$('myEvents').innerHTML=state.registered.length?state.registered.filter(i=>events[i]).map(i=>'<button class="item" data-details="'+i+'">'+events[i][0]+'<b>‹</b></button>').join(''):'<p class="empty">ثبت‌نامی وجود ندارد.</p>';$('myTickets').innerHTML=state.registered.length?state.registered.filter(i=>events[i]).map(i=>'<article class="ticket"><div class="details"><strong>'+events[i][0]+'</strong><small>'+events[i][1]+'</small><small>'+events[i][2]+'</small><small>بلیت نمونه — فاقد اعتبار ورود</small></div><div class="qrsample">QR نمایشی<br>فاقد اعتبار</div></article>').join(''):'<p class="empty">بلیتی وجود ندارد.</p>'}
-function sheet(title,body){$('dialogTitle').textContent=title;$('dialogBody').innerHTML=body;$('shade').hidden=false}
-function close(){$('shade').hidden=true}
-function detail(i){if(!events[i])return;const e=events[i];sheet(e[0],'<p>▦ '+e[1]+'<br>⌖ '+e[2]+'</p><p>این یک رویداد نمایشی است و ثبت‌نام واقعی انجام نمی‌شود.</p><button class="pill" data-register="'+i+'">'+(state.registered.includes(i)?'ثبت‌نام‌شده':'ثبت‌نام نمایشی')+'</button>')}
-function club(i){if(!clubs[i])return;const c=clubs[i];sheet(c[0],'<p>'+c[1]+'</p><p>درخواست عضویت صرفاً روی همین دستگاه ذخیره می‌شود.</p><button class="pill" data-join="'+i+'">'+(state.joined.includes(i)?'عضو هستید':'عضویت نمایشی')+'</button>')}
-function register(i){if(!events[i])return;if(state.registered.includes(i)){toast('قبلاً ثبت‌نام کرده‌اید');return}state.registered.push(i);save();renderEvents();activity();home();close();toast('ثبت‌نام نمایشی ثبت شد')}
-function join(i){if(!clubs[i])return;if(state.joined.includes(i)){toast('قبلاً عضو شده‌اید');return}state.joined.push(i);save();renderClubs();activity();close();toast('عضویت نمایشی ثبت شد')}
-function action(a){if(a==='edit'){sheet('ویرایش اطلاعات','<form id="editForm"><label>نام و نام خانوادگی<input name="name" maxlength="60" required value="'+esc(state.name)+'"></label><label>شماره دانشجویی<input name="number" maxlength="20" required value="'+esc(state.number)+'"></label><button class="pill">ذخیره نمایشی</button></form>')}else if(a==='requests'){sheet('درخواست‌های عضویت','<p>وضعیت عضویت‌های نمایشی را در «فعالیت‌های من» ببینید.</p>')}else if(a==='about'){sheet('درباره برنامه','<p>اپ کانون‌ها — نسخه ۰.۱ نمایشی. بدون سرور، پرداخت و بلیت واقعی.</p>')}else{sheet('خروج','<p>در نسخه نمایشی حساب کاربری واقعی وجود ندارد.</p>')}}
-document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const d=b.dataset;if(d.page)show(d.page);else if(d.filter){filter=d.filter;renderEvents()}else if(d.details!==undefined)detail(+d.details);else if(d.register!==undefined)register(+d.register);else if(d.club!==undefined)club(+d.club);else if(d.join!==undefined)join(+d.join);else if(d.action)action(d.action)});
-$('closeDialog').onclick=close;$('shade').onclick=e=>{if(e.target===$('shade'))close()};
-$('notice').onclick=()=>sheet('اطلاعیه مهم','<p>ثبت‌نام کانون‌ها برای نیمسال جدید آغاز شد. این اطلاعیه نمونه است.</p>');
-$('homeSearch').oninput=home;$('clubSearch').oninput=renderClubs;
-document.addEventListener('submit',e=>{if(e.target.id==='editForm'){e.preventDefault();const f=new FormData(e.target);const name=String(f.get('name')||'').trim(),num=String(f.get('number')||'').trim();if(!name||!num)return;state.name=name;state.number=num;save();$('displayName').textContent=state.name;$('displayNo').textContent='شماره دانشجویی: '+state.number;close();toast('اطلاعات نمایشی ذخیره شد')}});
-$('displayName').textContent=state.name;$('displayNo').textContent='شماره دانشجویی: '+state.number;home();renderClubs();renderEvents();activity();show('home');
+/* ==========================================
+   اپ کانون‌های دانشجویی — نمونه رابط کاربری
+   HTML + CSS + JavaScript — کاملاً آفلاین
+   هیچ داده‌ای به سرور ارسال نمی‌شود.
+   ========================================== */
+(() => {
+  'use strict';
+
+  /* ——— Helpers ——— */
+  const $ = (id) => document.getElementById(id);
+  const escapeHTML = (str) => String(str).replace(/[&<>"']/g, s =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[s])
+  );
+
+  /* ——— Navigation items ——— */
+  const navItems = [
+    { id: 'home',     label: 'خانه',          icon: 'home'          },
+    { id: 'clubs',    label: 'کانون‌ها',       icon: 'users'         },
+    { id: 'events',   label: 'رویدادها',       icon: 'calendar'      },
+    { id: 'activity', label: 'فعالیت‌های من', icon: 'check-square'  },
+    { id: 'profile',  label: 'حساب کاربری',   icon: 'user'          }
+  ];
+
+  /* ——— SVG icon paths ——— */
+  const iconPaths = {
+    home:           '<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>',
+    users:          '<circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2M17 5a3 3 0 0 1 0 6M17 14a6 6 0 0 1 4 6"/>',
+    user:           '<circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/>',
+    calendar:       '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 2v6M17 2v6M3 10h18"/>',
+    'check-square': '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="m8 12 3 3 5-6"/>',
+    search:         '<circle cx="11" cy="11" r="7"/><path d="m16.5 16.5 4.5 4.5"/>',
+    megaphone:      '<path d="M4 10h4l10-5v14L8 14H4zM8 14l2 5h3M20 9v6"/>',
+    'chevron-left': '<path d="m15 18-6-6 6-6"/>',
+    'chevron-right':'<path d="m9 18 6-6-6-6"/>',
+    'map-pin':      '<path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2"/>',
+    ticket:         '<path d="M3 8V5a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v3a3 3 0 0 0 0 6v4a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-4a3 3 0 0 0 0-6Z"/><path d="M13 4v15" stroke-dasharray="2 3"/>',
+    pencil:         '<path d="m4 20 4-.8L19 8a2 2 0 1 0-3-3L5 16z"/><path d="m14 7 3 3"/>',
+    info:           '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/>',
+    'log-out':      '<path d="M10 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h5M14 8l4 4-4 4M18 12H8"/>',
+    x:              '<path d="M5 5l14 14M19 5 5 19"/>',
+    book:           '<path d="M12 6c-2-2-6-3-9-2v14c3-1 7 0 9 2 2-2 6-3 9-2V4c-3-1-7 0-9 2Z"/><path d="M12 6v14M6 8l3 1M15 9l3-1M6 12l3 1"/>',
+    flask:          '<path d="M8 3h8M10 3v8l-6 9a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1l-6-9V3M7 16h10"/>',
+    code:           '<path d="m8 5-6 7 6 7m8-14 6 7-6 7M14 3l-4 18"/>',
+    leaf:           '<path d="M21 3C12 3 4 6 4 15a6 6 0 0 0 6 6c9 0 11-9 11-18ZM3 21c3-5 7-8 14-12"/>',
+    basketball:     '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3v18M5 5c6 3 8 11 14 14M19 5C13 8 11 16 5 19"/>'
+  };
+
+  const svg = (name, size = 21) =>
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${iconPaths[name] || iconPaths.info}</svg>`;
+
+  /* ——— Data ——— */
+  const clubs = [
+    { title: 'کانون فرهنگی و هنری',    desc: 'برگزاری رویدادهای فرهنگی، هنری و ادبی',                          short: 'کانون فرهنگی',      icon: 'book',       tone: 'blue'   },
+    { title: 'کانون علمی و پژوهشی',     desc: 'ترویج فعالیت‌های علمی و پژوهشی دانشجویان',                      short: 'کانون علمی',        icon: 'flask',      tone: 'mint'   },
+    { title: 'کانون فناوری و نوآوری',   desc: 'حمایت از ایده‌های فناورانه و آموزش مهارت‌های روز',              short: 'کانون فناوری',      icon: 'code',       tone: 'blue'   },
+    { title: 'کانون محیط‌زیست',          desc: 'فرهنگ‌سازی و اجرای برنامه‌های حفاظت از محیط‌زیست',             short: 'کانون محیط‌زیست',  icon: 'leaf',       tone: 'green'  },
+    { title: 'کانون ورزشی',              desc: 'برگزاری مسابقات و برنامه‌های ورزشی دانشجویی',                   short: 'کانون ورزشی',       icon: 'basketball', tone: 'orange' }
+  ];
+
+  const events = [
+    { title: 'کارگاه مقدماتی پایتون',     date: 'سه‌شنبه ۱۸ دی ۱۴۰۳',    location: 'سالن جلسات دانشکده مهندسی', capacity: 18, poster: 'poster-code.svg',  category: 'کارگاه',   club: 2 },
+    { title: 'نشست «آینده هوش مصنوعی»',   date: 'چهارشنبه ۱۹ دی ۱۴۰۳',  location: 'سالن آمفی‌تئاتر مرکزی',     capacity: 45, poster: 'poster-ai.svg',    category: 'نشست',     club: 1 },
+    { title: 'مسابقه طراحی پوستر',        date: 'دوشنبه ۲۴ دی ۱۴۰۳',     location: 'کانون فرهنگی و هنری',       capacity: 20, poster: 'poster-art.svg',   category: 'مسابقه',   club: 0 },
+    { title: 'نشست کتاب‌خوانی',           date: 'چهارشنبه ۱۹ دی ۱۴۰۳',  location: 'کتابخانه دانشگاه',          capacity: 25, poster: 'poster-books.svg', category: 'نشست',     club: 0 }
+  ];
+
+  /* ——— State ——— */
+  const STORAGE_KEY = 'kanonha-ui-v2';
+  const defaultState = () => ({ joined: [1, 2], registered: [0, 1], name: 'علی رضایی', number: '۴۰۱۱۲۳۴۵۶' });
+
+  function loadState() {
+    try {
+      const s = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      if (s && Array.isArray(s.joined) && Array.isArray(s.registered) && typeof s.name === 'string' && typeof s.number === 'string') {
+        s.joined = [...new Set(s.joined.filter(n => Number.isInteger(n) && n >= 0 && n < clubs.length))];
+        s.registered = [...new Set(s.registered.filter(n => Number.isInteger(n) && n >= 0 && n < events.length))];
+        return s;
+      }
+    } catch (_) {}
+    return defaultState();
+  }
+
+  let state = loadState();
+  let activeScreen = 'home';
+  let activeFilter = 'همه';
+  let toastTimer;
+
+  const saveState = () => {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (_) {}
+  };
+
+  /* ——— Toast ——— */
+  function notify(message) {
+    const el = $('toast');
+    el.textContent = message;
+    el.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.hidden = true, 2600);
+  }
+
+  /* ——— Navigation ——— */
+  function go(screen, { scroll = true } = {}) {
+    if (!navItems.some(x => x.id === screen)) return;
+    activeScreen = screen;
+    document.querySelectorAll('.screen').forEach(el => {
+      el.hidden = el.dataset.screen !== screen;
+    });
+    renderNav();
+    if (screen === 'activity') renderActivity();
+    if (scroll) $('main').scrollTop = 0;
+    try { history.replaceState(null, '', `#${screen}`); } catch (_) {}
+  }
+
+  function renderNav() {
+    $('bottom-nav').innerHTML = navItems.map(x =>
+      `<button type="button" data-screen-btn="${x.id}"
+        class="${x.id === activeScreen ? 'active' : ''}"
+        ${x.id === activeScreen ? 'aria-current="page"' : ''}>
+        ${svg(x.icon, 22)}<span>${x.label}</span>
+      </button>`
+    ).join('');
+  }
+
+  /* ——— Event card ——— */
+  function eventCard(event, index, { compact = false } = {}) {
+    const registered = state.registered.includes(index);
+    return `<article class="card event-card${compact ? ' compact' : ''}" data-event-card="${index}">
+      <img class="event-poster" src="assets/${event.poster}" alt="پوستر ${escapeHTML(event.title)}" width="88" height="${compact ? 88 : 120}" loading="lazy">
+      <div class="event-info">
+        <h3>${escapeHTML(event.title)}</h3>
+        <div class="event-meta">${svg('calendar', 13)}<span>${escapeHTML(event.date)}</span></div>
+        ${compact ? '' : `<div class="event-meta">${svg('map-pin', 13)}<span>${escapeHTML(event.location)}</span></div>
+        <div class="capacity">ظرفیت باقی‌مانده: <strong>${event.capacity} نفر</strong></div>`}
+      </div>
+      <button type="button"
+        class="pill-btn ${compact ? 'view-btn' : registered ? 'signed' : ''}"
+        data-${compact ? 'details' : 'register'}="${index}"
+        aria-label="${compact ? 'مشاهده' : 'ثبت‌نام'} ${escapeHTML(event.title)}">
+        ${compact ? 'مشاهده' : registered ? 'ثبت‌نام‌شده' : 'ثبت‌نام'}
+      </button>
+    </article>`;
+  }
+
+  /* ——— Club card ——— */
+  function clubCard(club, index) {
+    const member = state.joined.includes(index);
+    const isViewOnly = index === 0 || index === 3;
+    return `<article class="card club-card">
+      <div class="club-icon ${club.tone === 'blue' ? '' : club.tone}">${svg(club.icon, 33)}</div>
+      <div class="club-info">
+        <h3>${club.title}</h3>
+        <p>${club.desc}</p>
+        <button type="button"
+          ${member || isViewOnly ? `data-club-details="${index}"` : `data-join="${index}"`}
+          class="pill-btn ${member ? 'joined' : isViewOnly ? 'view-btn' : ''}">
+          ${member ? 'عضو هستید' : isViewOnly ? 'مشاهده' : 'عضویت'}
+        </button>
+      </div>
+    </article>`;
+  }
+
+  /* ——— Render functions ——— */
+  function renderHome() {
+    $('home-events').innerHTML = [0, 3].map(i => eventCard(events[i], i, { compact: true })).join('');
+    $('home-clubs').innerHTML = [0, 2, 3].map(i =>
+      `<button type="button" class="home-mini-club" data-club-details="${i}">
+        <span class="mini-club-icon ${clubs[i].tone === 'green' ? 'green' : clubs[i].tone === 'mint' ? 'mint' : clubs[i].tone === 'orange' ? 'orange' : ''}">${svg(clubs[i].icon, 24)}</span>
+        ${clubs[i].short}
+      </button>`
+    ).join('');
+  }
+
+  function renderClubs() {
+    const q = $('clubs-search').value.trim();
+    const found = clubs.map((c, i) => [c, i]).filter(([c]) => !q || c.title.includes(q) || c.desc.includes(q));
+    $('clubs-list').innerHTML = found.length
+      ? found.map(([c, i]) => clubCard(c, i)).join('')
+      : '<div class="no-results">کانونی با این نام پیدا نشد.</div>';
+  }
+
+  function renderEvents() {
+    $('event-filters').innerHTML = ['همه', 'کارگاه', 'نشست', 'مسابقه'].map(type =>
+      `<button type="button" class="filter-btn${type === activeFilter ? ' active' : ''}" data-filter="${type}" aria-pressed="${type === activeFilter}">${type}</button>`
+    ).join('');
+    const found = events.map((ev, i) => [ev, i]).filter(([ev]) => activeFilter === 'همه' || ev.category === activeFilter);
+    $('events-list').innerHTML = found.length
+      ? found.map(([ev, i]) => eventCard(ev, i)).join('')
+      : '<div class="no-results">رویدادی پیدا نشد.</div>';
+  }
+
+  /* ——— QR placeholder (non-scannable, labeled) ——— */
+  function qrMarkup(seed) {
+    let cells = '';
+    for (let y = 0; y < 13; y++) {
+      for (let x = 0; x < 13; x++) {
+        let finder = false;
+        for (const [sx, sy] of [[0, 0], [8, 0], [0, 8]]) {
+          const dx = x - sx, dy = y - sy;
+          if (dx >= 0 && dx < 5 && dy >= 0 && dy < 5) {
+            finder = dx === 0 || dy === 0 || dx === 4 || dy === 4 || (dx === 2 && dy === 2);
+            break;
+          }
+        }
+        const on = finder || ((x * 19 + y * 13 + seed * 11 + x * y) % 7 <= 2);
+        cells += `<i class="${on ? 'dark' : ''}"></i>`;
+      }
+    }
+    return `<div class="sample-qr" role="img" aria-label="کد QR صرفاً نمایشی و فاقد اعتبار">${cells}</div>`;
+  }
+
+  function renderActivity() {
+    $('activity-clubs').innerHTML = state.joined.length
+      ? state.joined.filter(i => clubs[i]).map(i =>
+          `<button class="activity-row" type="button" data-club-details="${i}">
+            <span class="club-icon ${clubs[i].tone}">${svg(clubs[i].icon, 20)}</span>
+            <span class="activity-copy">${clubs[i].title}</span>
+            <span class="arrow">${svg('chevron-left', 15)}</span>
+          </button>`
+        ).join('')
+      : '<div class="empty">هنوز عضو کانونی نشده‌اید.</div>';
+
+    $('activity-events').innerHTML = state.registered.length
+      ? state.registered.filter(i => events[i]).map(i =>
+          `<button class="activity-row" type="button" data-details="${i}">
+            <span class="activity-copy">${events[i].title}<small>${events[i].date}</small></span>
+            <span class="arrow">${svg('chevron-left', 15)}</span>
+          </button>`
+        ).join('')
+      : '<div class="empty">رویدادی ثبت‌نام نشده است.</div>';
+
+    $('activity-tickets').innerHTML = state.registered.length
+      ? state.registered.filter(i => events[i]).map(i =>
+          `<article class="ticket-card">
+            <div class="ticket-details">
+              <h3>${events[i].title}</h3>
+              <p>${svg('calendar', 12)} ${events[i].date}</p>
+              <p>${svg('map-pin', 12)} ${events[i].location}</p>
+              <div class="ticket-label">بلیت نمونه — فاقد اعتبار ورود</div>
+            </div>
+            ${qrMarkup(i)}
+          </article>`
+        ).join('')
+      : '<div class="empty">هنوز بلیتی ندارید.</div>';
+  }
+
+  /* ——— Sheet ——— */
+  let focusBeforeSheet = null;
+  function openSheet(title, html) {
+    focusBeforeSheet = document.activeElement;
+    $('sheet-title').textContent = title;
+    $('sheet-content').innerHTML = html;
+    $('sheet-overlay').hidden = false;
+    requestAnimationFrame(() => $('close-sheet').focus());
+  }
+
+  function closeSheet() {
+    $('sheet-overlay').hidden = true;
+    if (focusBeforeSheet && typeof focusBeforeSheet.focus === 'function' && focusBeforeSheet.isConnected) focusBeforeSheet.focus();
+    focusBeforeSheet = null;
+  }
+
+  /* ——— Detail sheets ——— */
+  function eventDetails(i) {
+    const ev = events[i];
+    if (!ev) return;
+    openSheet(ev.title,
+      `<p>${svg('calendar', 15)} ${ev.date}<br>${svg('map-pin', 15)} ${ev.location}<br>
+       کانون برگزارکننده: ${clubs[ev.club].title}</p>
+       <p>این یک رویداد نمونه رابط کاربری است. ثبت‌نام واقعی انجام نمی‌شود.</p>
+       <button class="pill-btn sheet-action" type="button" data-register="${i}">
+         ${state.registered.includes(i) ? 'ثبت‌نام‌شده' : 'ثبت‌نام نمایشی'}
+       </button>`
+    );
+  }
+
+  function clubDetails(i) {
+    const club = clubs[i];
+    if (!club) return;
+    openSheet(club.title,
+      `<p>${club.desc}</p>
+       <p>برای مشاهده عملکرد ظاهری عضویت می‌توانید روی دکمه زیر بزنید. هیچ اطلاعاتی به سرور ارسال نمی‌شود.</p>
+       <button class="pill-btn sheet-action" type="button" data-join="${i}">
+         ${state.joined.includes(i) ? 'عضو هستید' : 'درخواست عضویت نمایشی'}
+       </button>`
+    );
+  }
+
+  /* ——— Actions ——— */
+  function join(i) {
+    if (!clubs[i]) return;
+    if (state.joined.includes(i)) { notify('این عضویت در نسخه نمایشی ثبت شده است.'); return; }
+    state.joined.push(i);
+    saveState();
+    renderClubs();
+    renderActivity();
+    closeSheet();
+    notify('عضویت نمایشی ثبت شد.');
+  }
+
+  function register(i) {
+    if (!events[i]) return;
+    if (state.registered.includes(i)) { notify('قبلاً در این رویداد ثبت‌نام نمایشی کرده‌اید.'); return; }
+    state.registered.push(i);
+    saveState();
+    renderEvents();
+    renderActivity();
+    renderHome();
+    closeSheet();
+    notify('ثبت‌نام نمایشی انجام شد.');
+  }
+
+  function action(name) {
+    if (name === 'edit') {
+      openSheet('ویرایش اطلاعات',
+        `<form id="edit-form">
+          <label class="field">نام و نام خانوادگی
+            <input name="name" autocomplete="name" maxlength="60" required value="${escapeHTML(state.name)}">
+          </label>
+          <label class="field">شماره دانشجویی
+            <input name="number" maxlength="20" required value="${escapeHTML(state.number)}">
+          </label>
+          <button type="submit" class="pill-btn sheet-action">ذخیره نمایشی</button>
+        </form>`
+      );
+    } else if (name === 'requests') {
+      openSheet('درخواست‌های عضویت',
+        `<p>این نمونه رابط کاربری است. وضعیت عضویت نمونه در قسمت «فعالیت‌های من» قابل مشاهده است.</p>
+         <button class="pill-btn sheet-action" type="button" data-goto="activity">فعالیت‌های من</button>`
+      );
+    } else if (name === 'about') {
+      openSheet('درباره برنامه',
+        `<p>اپ کانون‌های دانشجویی — نمونه رابط کاربری</p>
+         <p>پنج صفحه با HTML، CSS، JavaScript و تصویرسازی SVG پیاده‌سازی شده‌اند. هیچ داده‌ای به سرور ارسال نمی‌شود.</p>
+         <button type="button" data-action="reset" class="pill-btn soft">بازنشانی داده‌های نمایشی</button>`
+      );
+    } else if (name === 'exit') {
+      openSheet('خروج از حساب',
+        `<p>در نسخه نمایشی، حساب کاربری واقعی وجود ندارد. بنابراین خروج واقعی فعال نیست.</p>`
+      );
+    } else if (name === 'reset') {
+      state = defaultState();
+      saveState();
+      renderAll();
+      closeSheet();
+      notify('داده‌های نمونه بازنشانی شد.');
+    }
+  }
+
+  /* ——— Render all ——— */
+  function renderAll() {
+    renderHome();
+    renderClubs();
+    renderEvents();
+    renderActivity();
+    updateProfileDisplay();
+  }
+
+  function updateProfileDisplay() {
+    const nameEl = $('profile-name');
+    const numEl = $('profile-number');
+    const greetEl = document.querySelector('#screen-home .home-greeting h1');
+    if (nameEl) nameEl.textContent = state.name;
+    if (numEl) numEl.textContent = `شماره دانشجویی: ${state.number}`;
+    if (greetEl) greetEl.textContent = `سلام ${state.name.split(' ')[0]}!`;
+  }
+
+  /* ——— Init ——— */
+  function init() {
+    // Inject SVGs into data-icon elements
+    document.querySelectorAll('[data-icon]').forEach(el => {
+      el.innerHTML = svg(el.dataset.icon);
+    });
+
+    // Notice banner
+    $('notice-btn').addEventListener('click', () =>
+      openSheet('اطلاعیه مهم',
+        '<p>ثبت‌نام کانون‌ها برای نیمسال جدید آغاز شد.</p><p>این متن، اطلاعیه نمونه رابط کاربری است.</p>'
+      )
+    );
+
+    // Home search
+    $('home-search').addEventListener('input', (e) => {
+      const q = e.target.value.trim();
+      if (!q) { renderHome(); return; }
+      $('home-events').innerHTML = events
+        .map((ev, i) => [ev, i])
+        .filter(([ev]) => ev.title.includes(q))
+        .map(([ev, i]) => eventCard(ev, i, { compact: true }))
+        .join('') || '<div class="empty">رویدادی یافت نشد.</div>';
+      $('home-clubs').innerHTML = clubs
+        .map((c, i) => [c, i])
+        .filter(([c]) => c.title.includes(q))
+        .map(([c, i]) =>
+          `<button type="button" class="home-mini-club" data-club-details="${i}">
+            <span class="mini-club-icon">${svg(c.icon, 24)}</span>${c.short}
+          </button>`
+        )
+        .join('') || '<div class="empty">کانونی یافت نشد.</div>';
+    });
+
+    // Clubs search
+    $('clubs-search').addEventListener('input', renderClubs);
+
+    // Sheet close
+    $('close-sheet').addEventListener('click', closeSheet);
+    $('sheet-overlay').addEventListener('click', e => {
+      if (e.target === $('sheet-overlay')) closeSheet();
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && !$('sheet-overlay').hidden) closeSheet();
+    });
+
+    // Delegated click handler
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      if (btn.dataset.screenBtn)      { go(btn.dataset.screenBtn); return; }
+      if (btn.dataset.goto)           { closeSheet(); go(btn.dataset.goto); return; }
+      if (btn.dataset.filter)         { activeFilter = btn.dataset.filter; renderEvents(); return; }
+      if (btn.dataset.join !== undefined)        { join(Number(btn.dataset.join)); return; }
+      if (btn.dataset.register !== undefined)    { register(Number(btn.dataset.register)); return; }
+      if (btn.dataset.details !== undefined)     { eventDetails(Number(btn.dataset.details)); return; }
+      if (btn.dataset.clubDetails !== undefined) { clubDetails(Number(btn.dataset.clubDetails)); return; }
+      if (btn.dataset.action)         { action(btn.dataset.action); }
+    });
+
+    // Profile edit form
+    document.addEventListener('submit', (e) => {
+      if (e.target.id !== 'edit-form') return;
+      e.preventDefault();
+      const form = new FormData(e.target);
+      const name = String(form.get('name') || '').trim();
+      const number = String(form.get('number') || '').trim();
+      if (!name || !number) return;
+      state.name = name;
+      state.number = number;
+      saveState();
+      renderAll();
+      closeSheet();
+      notify('اطلاعات نمایشی ذخیره شد.');
+    });
+
+    if (new URLSearchParams(window.location.search).get('native') === '1') { document.body.classList.add('native-app'); }
+    // Initial render
+    renderAll();
+    renderNav();
+
+    // Handle hash navigation
+    const requested = location.hash.replace('#', '');
+    go(navItems.some(x => x.id === requested) ? requested : 'home');
+
+    window.addEventListener('hashchange', () => {
+      const id = location.hash.slice(1);
+      if (navItems.some(x => x.id === id) && id !== activeScreen) go(id);
+    });
+  }
+
+  // Boot
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+  // Read-only testing API
+  if (typeof window !== 'undefined') {
+    window.KanonhaPreview = {
+      get screen() { return activeScreen; },
+      get state() { return { ...state, joined: [...state.joined], registered: [...state.registered] }; },
+      go,
+      reset: () => action('reset')
+    };
+  }
 })();

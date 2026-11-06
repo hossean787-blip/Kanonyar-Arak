@@ -24,7 +24,7 @@ public final class MainActivity extends Activity {
    @Override public WebResourceResponse shouldInterceptRequest(WebView v,WebResourceRequest r){return loader.shouldInterceptRequest(r.getUrl());}
    @Override public boolean shouldOverrideUrlLoading(WebView v,WebResourceRequest r){Uri u=r.getUrl();return !"appassets.androidplatform.net".equals(u.getHost());}
   });
-  setContentView(web);web.loadUrl("https://appassets.androidplatform.net/assets/index.html");
+  setContentView(web);web.loadUrl("https://appassets.androidplatform.net/assets/index.html?native=1");
  }
  @Override public void onBackPressed(){
   if(web==null){super.onBackPressed();return;}

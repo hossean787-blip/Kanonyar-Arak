@@ -1,1 +1,47 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 110"><defs><linearGradient id="s" x2="0" y2="1"><stop stop-color="#d1eefb"/><stop offset="1" stop-color="#eaf6fe"/></linearGradient></defs><rect width="180" height="110" rx="12" fill="url(#s)"/><path d="M0 83Q40 70 90 78Q130 68 180 82V110H0Z" fill="#c5dfc5"/><rect x="58" y="30" width="62" height="55" rx="2" fill="#b0c8db"/><path d="M54 30L89 14L126 30" fill="#d6e8f5" stroke="#9db8c8" stroke-width="2"/><rect x="80" y="58" width="20" height="27" rx="9" fill="#f0f8ff"/><g fill="#d4edf9"><rect x="65" y="37" width="10" height="13" rx="2"/><rect x="80" y="37" width="10" height="13" rx="2"/><rect x="96" y="37" width="10" height="13" rx="2"/></g><g fill="#86b87f"><circle cx="20" cy="52" r="16"/><circle cx="17" cy="65" r="18"/><circle cx="34" cy="68" r="12"/><circle cx="156" cy="55" r="15"/><circle cx="160" cy="68" r="18"/><circle cx="143" cy="70" r="11"/></g><path d="M20 92V73M157 92V73" stroke="#6e9868" stroke-width="4"/><path d="M78 110l6-25m17 25-6-25" stroke="#a8bda8" stroke-width="5"/><ellipse cx="145" cy="18" rx="20" ry="10" fill="white" opacity=".6"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="110" viewBox="0 0 180 110">
+  <defs>
+    <linearGradient id="sky" x2="0" y2="1">
+      <stop stop-color="#d1eefb"/>
+      <stop offset="1" stop-color="#eaf6fe"/>
+    </linearGradient>
+  </defs>
+  <rect width="180" height="110" fill="url(#sky)"/>
+  <!-- Ground -->
+  <path d="M0 82Q40 70 90 78Q130 68 180 82V110H0Z" fill="#c5dfc5"/>
+  <!-- Main building -->
+  <rect x="58" y="30" width="62" height="55" fill="#b0c8db" rx="2"/>
+  <!-- Roof -->
+  <path d="M54 30L89 14L126 30" fill="#d6e8f5" stroke="#9db8c8" stroke-width="2"/>
+  <!-- Door -->
+  <rect x="80" y="58" width="20" height="27" rx="10" fill="#f0f8ff"/>
+  <!-- Windows -->
+  <g fill="#d4edf9">
+    <rect x="65" y="37" width="10" height="13" rx="2"/>
+    <rect x="80" y="37" width="10" height="13" rx="2"/>
+    <rect x="96" y="37" width="10" height="13" rx="2"/>
+    <rect x="65" y="55" width="10" height="10" rx="2"/>
+    <rect x="96" y="55" width="10" height="10" rx="2"/>
+  </g>
+  <!-- Trees left -->
+  <g fill="#86b87f">
+    <circle cx="20" cy="52" r="16"/>
+    <circle cx="17" cy="65" r="18"/>
+    <circle cx="34" cy="68" r="12"/>
+  </g>
+  <rect x="20" y="72" width="4" height="20" fill="#6e9868"/>
+  <!-- Trees right -->
+  <g fill="#94c48c">
+    <circle cx="156" cy="55" r="15"/>
+    <circle cx="160" cy="68" r="18"/>
+    <circle cx="143" cy="70" r="11"/>
+  </g>
+  <rect x="157" y="74" width="4" height="18" fill="#6e9868"/>
+  <!-- Path -->
+  <path d="M78 110L84 85M101 110L95 85" stroke="#a8bda8" stroke-width="6" stroke-linecap="round"/>
+  <!-- Base line -->
+  <path d="M0 95H180" stroke="#a8c5a0" stroke-width="2"/>
+  <!-- Cloud accent -->
+  <ellipse cx="145" cy="18" rx="20" ry="10" fill="white" opacity="0.6"/>
+  <ellipse cx="158" cy="17" rx="14" ry="8" fill="white" opacity="0.6"/>
+  <ellipse cx="134" cy="20" rx="13" ry="7" fill="white" opacity="0.6"/>
+</svg>

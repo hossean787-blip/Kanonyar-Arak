@@ -73,6 +73,8 @@
   const defaultState = () => ({ joined: [], requested: [], registered: [], name: onlineMode ? 'مهمان' : 'کاربر آزمایشی', number: 'ثبت نشده' });
 
   function loadState() {
+    // Never read a previous offline demo account while online mode is active.
+    if (onlineMode) return defaultState();
     try {
       const s = JSON.parse(localStorage.getItem(STORAGE_KEY));
       if (s && Array.isArray(s.joined) && Array.isArray(s.registered) && typeof s.name === 'string' && typeof s.number === 'string') {
@@ -604,6 +606,7 @@
     // Clubs search
     $('clubs-search').addEventListener('input', renderClubs);
     if (onlineMode) {
+      $('online-events-heading').textContent = 'رویدادهای در حال ثبت‌نام';
       onlineRenderAuth();
       $('online-auth-toggle').addEventListener('click', () => {
         onlineSignup = !onlineSignup;

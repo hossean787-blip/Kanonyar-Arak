@@ -7,6 +7,8 @@
   <meta name="description" content="رابط کاربری اپ کانون‌های دانشجویی — نمونه تعاملی">
   <title>کانون‌ها | اپ مستقل دانشجویی</title>
   <link rel="stylesheet" href="styles.css">
+  <script src="config.js" defer></script>
+  <script src="backend.js" defer></script>
   <script src="app.js" defer></script>
 </head>
 <body>
@@ -119,7 +121,31 @@
         <div class="screen-kicker"><span class="brand-mark">کانون‌ها</span><span class="kicker-spark">✦ فضای دانشجویی</span></div>
         <h1 id="title-profile" class="screen-title">حساب کاربری</h1>
         <p class="screen-description">اطلاعات و تنظیمات حساب کاربری ✨</p>
-        <div class="profile-card">
+        <section id="online-connection" class="online-connection" hidden aria-live="polite"></section>
+        <section id="online-auth-panel" class="online-auth-panel" hidden aria-labelledby="online-auth-title">
+          <h2 id="online-auth-title">ورود دانشجو</h2>
+          <p class="online-caption">ورود امن با ایمیل و رمز عبور؛ شماره دانشجویی هنوز توسط دانشگاه تأیید نمی‌شود.</p>
+          <form id="online-auth-form">
+            <label class="field">ایمیل
+              <input id="online-email" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="name@example.com">
+            </label>
+            <label class="field">رمز عبور
+              <input id="online-password" name="password" type="password" autocomplete="current-password" minlength="8" maxlength="128" required>
+            </label>
+            <div class="online-signup-only" hidden>
+              <label class="field">نام و نام خانوادگی
+                <input id="online-name" name="name" maxlength="80" autocomplete="name">
+              </label>
+              <label class="field">شماره دانشجویی (۶ تا ۲۰ رقم انگلیسی)
+                <input id="online-student" name="studentNumber" inputmode="numeric" pattern="[0-9]{6,20}" maxlength="20">
+              </label>
+            </div>
+            <button id="online-auth-submit" class="pill-btn sheet-action" type="submit">ورود به حساب</button>
+          </form>
+          <button id="online-auth-toggle" class="online-auth-toggle" type="button">حساب ندارم؛ ثبت‌نام</button>
+          <p id="online-auth-status" class="online-auth-status" role="status" aria-live="polite"></p>
+        </section>
+        <div class="profile-card" id="online-profile-card">
           <div class="profile-bg-art"></div>
           <div class="profile-info-row">
             <div class="avatar-wrap">
@@ -137,7 +163,7 @@
             </div>
           </div>
         </div>
-        <div class="settings-menu">
+        <div class="settings-menu" id="profile-menu">
           <button class="menu-item" type="button" data-action="edit">
             <span class="menu-ico" data-icon="user" aria-hidden="true"></span>
             <span>ویرایش اطلاعات</span>

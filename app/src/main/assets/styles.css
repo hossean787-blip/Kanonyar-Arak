@@ -1183,3 +1183,16 @@ body.native-app .bottom-nav{padding-bottom:5px!important}
 .notice-symbol{background:rgba(255,255,255,.43);color:#103A25}
 .pill-btn{background:linear-gradient(135deg,#91E6AB,#50C878);color:#103A25}
 .filter-btn.active{background:#50C878;border-color:#50C878;color:#103A25}
+
+/* The uploaded Islamic Azad University emblem replaces the old campus illustration.
+   Preserve its proportions and transparent background at mobile widths. */
+.home-hero{min-height:194px}
+.home-hero .campus-art{
+  display:block;width:170px;height:178px;max-width:47%;object-fit:contain;
+  object-position:center;border:0;border-radius:0;box-shadow:none;
+  background:transparent;padding:3px
+}
+@media(max-width:375px){
+ .home-hero{min-height:178px}
+ .home-hero .campus-art{width:154px;height:160px}
+}

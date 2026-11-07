@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#FFFFFF">
   <meta name="description" content="رابط کاربری اپ کانون‌های دانشجویی — نمونه تعاملی">
-  <title>همراه | کانون‌های دانشجویی</title>
+  <title>کانون‌ها | اپ مستقل دانشجویی</title>
   <link rel="stylesheet" href="styles.css">
   <script src="app.js" defer></script>
 </head>
@@ -36,21 +36,21 @@
       <section class="screen" id="screen-home" data-screen="home" aria-labelledby="title-home">
         <h1 id="title-home" class="visually-hidden">خانه</h1>
         <div class="home-hero home-hero-announcements">
-          <button class="home-notice-card" id="notice-btn" type="button" aria-label="مشاهده اطلاعیه ثبت‌نام کانون‌ها">
-            <span class="home-notice-heading"><span class="home-notice-symbol" data-icon="megaphone" aria-hidden="true"></span><span>اطلاعیه‌ها</span><span class="home-notice-new">جدید</span></span>
-            <strong class="home-notice-title">ثبت‌نام کانون‌ها آغاز شد</strong>
-            <span class="home-notice-subtitle">برای نیمسال جدید</span>
+          <button class="home-notice-card" id="notice-btn" type="button" aria-label="مشاهده اطلاعیه نمونه کانون‌ها">
+            <span class="home-notice-heading"><span class="home-notice-symbol" data-icon="megaphone" aria-hidden="true"></span><span>اطلاعیه‌ها</span><span class="home-notice-new">آزمایشی</span></span>
+            <strong class="home-notice-title">اطلاعیه نمونه کانون‌ها</strong>
+            <span class="home-notice-subtitle">پیش‌نمایش رابط کاربری</span>
             <span class="home-notice-more">مشاهده اطلاعیه <span aria-hidden="true">‹</span></span>
           </button>
           <img class="campus-art" src="assets/azad-university-logo.svg" alt="نشان دانشگاه آزاد اسلامی" width="170" height="180">
         </div>
         <div class="home-body">
           <div class="section-heading home-register-heading">
-            <h2>رویدادهای در حال ثبت‌نام</h2>
+            <h2>رویدادهای نمونه</h2>
             <button class="text-link" type="button" data-goto="events">مشاهده همه <span aria-hidden="true">‹</span></button>
           </div>
           <div class="home-carousel-wrap">
-            <div id="home-events" class="home-event-carousel" dir="rtl" role="region" aria-label="رویدادهای در حال ثبت‌نام؛ برای دیدن رویدادهای بعدی به طرفین بکشید" tabindex="0"></div>
+            <div id="home-events" class="home-event-carousel" dir="rtl" role="region" aria-label="رویدادهای نمونه؛ برای دیدن رویدادهای بعدی به طرفین بکشید" tabindex="0"></div>
             <div class="home-carousel-controls">
               <span id="home-carousel-count" class="home-carousel-count" aria-live="polite">۱ از ۱</span>
               <div class="home-carousel-buttons" role="group" aria-label="جابجایی رویدادها">
@@ -73,7 +73,7 @@
 
       <!-- ==================== صفحه کانون‌ها ==================== -->
       <section class="screen padded-screen" id="screen-clubs" data-screen="clubs" aria-labelledby="title-clubs" hidden>
-        <div class="screen-kicker"><span class="brand-mark">همراه</span><span class="kicker-spark">✦ فضای دانشجویی</span></div>
+        <div class="screen-kicker"><span class="brand-mark">کانون‌ها</span><span class="kicker-spark">✦ فضای دانشجویی</span></div>
         <h1 id="title-clubs" class="screen-title">کانون‌ها</h1>
         <p class="screen-description">دنبال علاقه‌ت بگرد و به جمع دوست‌داشتنی‌ها بپیوند ✨</p>
         <label class="search-field">
@@ -85,7 +85,7 @@
 
       <!-- ==================== صفحه رویدادها ==================== -->
       <section class="screen padded-screen" id="screen-events" data-screen="events" aria-labelledby="title-events" hidden>
-        <div class="screen-kicker"><span class="brand-mark">همراه</span><span class="kicker-spark">✦ فضای دانشجویی</span></div>
+        <div class="screen-kicker"><span class="brand-mark">کانون‌ها</span><span class="kicker-spark">✦ فضای دانشجویی</span></div>
         <h1 id="title-events" class="screen-title">رویدادها</h1>
         <p class="screen-description">از کارگاه تا رویداد، جای تو اینجاست ✨</p>
         <div class="filter-row" id="event-filters" role="group" aria-label="فیلتر رویدادها"></div>
@@ -94,7 +94,7 @@
 
       <!-- ==================== صفحه فعالیت‌های من ==================== -->
       <section class="screen padded-screen" id="screen-activity" data-screen="activity" aria-labelledby="title-activity" hidden>
-        <div class="screen-kicker"><span class="brand-mark">همراه</span><span class="kicker-spark">✦ فضای دانشجویی</span></div>
+        <div class="screen-kicker"><span class="brand-mark">کانون‌ها</span><span class="kicker-spark">✦ فضای دانشجویی</span></div>
         <h1 id="title-activity" class="screen-title">فعالیت‌های من</h1>
         <p class="screen-description">همه تجربه‌ها و فعالیت‌های دانشجویی تو در یک نگاه ✨</p>
         <div class="activity-section-title">
@@ -116,7 +116,7 @@
 
       <!-- ==================== صفحه حساب کاربری ==================== -->
       <section class="screen padded-screen" id="screen-profile" data-screen="profile" aria-labelledby="title-profile" hidden>
-        <div class="screen-kicker"><span class="brand-mark">همراه</span><span class="kicker-spark">✦ فضای دانشجویی</span></div>
+        <div class="screen-kicker"><span class="brand-mark">کانون‌ها</span><span class="kicker-spark">✦ فضای دانشجویی</span></div>
         <h1 id="title-profile" class="screen-title">حساب کاربری</h1>
         <p class="screen-description">اطلاعات و تنظیمات حساب کاربری ✨</p>
         <div class="profile-card">
@@ -131,9 +131,9 @@
               </button>
             </div>
             <div class="profile-details">
-              <h2 id="profile-name">علی رضایی</h2>
-              <p id="profile-number">شماره دانشجویی: ۴۰۱۱۲۳۴۵۶</p>
-              <p>دانشجوی کارشناسی علوم کامپیوتر</p>
+              <h2 id="profile-name">کاربر آزمایشی</h2>
+              <p id="profile-number">شماره دانشجویی: ثبت نشده</p>
+              <p>نسخه آزمایشی؛ بدون حساب کاربری واقعی</p>
             </div>
           </div>
         </div>

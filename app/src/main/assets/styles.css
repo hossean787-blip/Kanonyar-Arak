@@ -1176,3 +1176,10 @@ body.native-app .bottom-nav{padding-bottom:5px!important}
 .toast{bottom:82px;background:#16482D;border:1px solid #50C878;color:#fff;box-shadow:0 6px 18px rgba(20,83,47,.24)}
 @media(max-width:375px){.bottom-nav{margin-left:7px;margin-right:7px}.bottom-nav button{font-size:8.5px}.bottom-nav button .nav-art{height:28px;width:28px}}
 @media(max-width:335px){.bottom-nav button{font-size:8px}.bottom-nav button .nav-art{width:26px!important;height:26px!important}}
+
+/* Emerald accessibility: readable dark text on the exact #50C878 green */
+.notice-banner{background:linear-gradient(110deg,#B8F1CA 0%,#72D997 48%,#50C878 100%)}
+.notice-copy strong,.notice-copy small,.notice-banner .chev{color:#103A25}
+.notice-symbol{background:rgba(255,255,255,.43);color:#103A25}
+.pill-btn{background:linear-gradient(135deg,#91E6AB,#50C878);color:#103A25}
+.filter-btn.active{background:#50C878;border-color:#50C878;color:#103A25}

@@ -1237,3 +1237,95 @@ body.native-app .bottom-nav{padding-bottom:5px!important}
 #screen-home .home-search-field{margin-top:9px;margin-bottom:12px}
 @media(max-width:355px){#screen-home .home-hero.home-hero-announcements{min-height:170px;padding:10px 9px;gap:6px}#screen-home .home-notice-card{min-height:143px;padding:10px 8px;gap:5px}#screen-home .home-notice-heading{font-size:11px}#screen-home .home-notice-new{font-size:8px}#screen-home .home-notice-title{font-size:11.5px}#screen-home .home-hero .campus-art{height:139px;flex-basis:38%;width:38%;max-width:38%}#screen-home .home-register-heading h2{font-size:14px}#screen-home .home-event-slide{flex-basis:min(76vw,260px)}}
 @media(prefers-reduced-motion:reduce){#screen-home .home-event-carousel{scroll-behavior:auto}}
+
+
+/* ===== Kanonha v0.4 — isolated online student account ===== */
+.online-connection {
+  margin: 10px 0 14px;
+  border: 1px solid #C8E8D6;
+  border-radius: 15px;
+  background: linear-gradient(120deg, #F1FCF5, #FFFFFF);
+  color: #245C40;
+  padding: 11px 14px;
+  font-size: 11px;
+  line-height: 1.9;
+}
+.online-connection.is-error {
+  border-color: #EFC5BE;
+  background: #FFF6F3;
+  color: #913B31;
+}
+.online-auth-panel {
+  background: #FFFFFF;
+  border: 1px solid #DCEFE4;
+  box-shadow: 0 12px 34px rgba(25, 91, 52, .10);
+  padding: 19px 16px 20px;
+  border-radius: 23px;
+  margin: 12px 0 22px;
+}
+.online-auth-panel h2 {
+  font-size: 20px;
+  margin: 0 0 7px;
+  font-weight: 900;
+  color: #153F2A;
+}
+.online-caption {
+  color: #647E6C;
+  font-size: 11px;
+  line-height: 1.9;
+  margin-bottom: 15px;
+}
+.online-auth-panel .field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #27583D;
+  margin-bottom: 13px;
+}
+.online-auth-panel input {
+  color: #173B27;
+  background: #F8FCF9;
+  border: 1px solid #DAE9DF;
+  border-radius: 12px;
+  min-height: 46px;
+  padding: 10px 13px;
+  width: 100%;
+  direction: ltr;
+  text-align: left;
+}
+.online-auth-panel input:focus {
+  border-color: #50C878;
+  outline: 3px solid rgba(80,200,120,.15);
+}
+.online-auth-panel .sheet-action {
+  display: block;
+  width: 100%;
+  min-height: 45px;
+  margin: 14px 0 3px;
+  font-weight: 900;
+}
+.online-auth-toggle {
+  background: transparent;
+  border: 0;
+  color: #188A58;
+  font-size: 12px;
+  font-weight: 800;
+  margin-top: 8px;
+  padding: 7px 0;
+}
+.online-auth-status {
+  color: #825A36;
+  font-size: 11px;
+  line-height: 1.9;
+  min-height: 4px;
+  margin: 5px 0 0;
+}
+.online-auth-panel [hidden], .online-auth-panel[hidden] {
+  display: none !important;
+}
+@media(max-width:355px) {
+  .online-auth-panel { padding: 14px 11px 17px; }
+  .online-auth-panel h2 { font-size: 18px; }
+}

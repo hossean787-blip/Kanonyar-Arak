@@ -1,4 +1,4 @@
-name: Android UI build
+name: Kanonha UI + online preview validation
 on:
   push:
     branches: [main]
@@ -23,6 +23,10 @@ jobs:
         run: |
           node --check app/src/main/assets/app.js
           node --check tests/ui-smoke.cjs
+          node --check app/src/main/assets/backend.js
+          node --check app/src/main/assets/config.js
+          node --check tests/backend-smoke.cjs
+          node --check tests/online-ui-smoke.cjs
           python3 - <<'PY'
           from pathlib import Path
           import xml.etree.ElementTree as ET
@@ -30,7 +34,7 @@ jobs:
           html=(root/'index.html').read_text(encoding='utf-8')
           for name in ('home','clubs','events','activity','profile'):
               assert 'data-screen="'+name+'"' in html, name
-          for name in ('styles.css','app.js'):
+          for name in ('styles.css','app.js','backend.js','config.js'):
               assert (root/name).is_file(), name
           for svg in (root/'assets').glob('*.svg'):
               ET.parse(svg)
@@ -51,10 +55,14 @@ jobs:
           PY
       - name: Smoke-test navigation, offline state and Android Back bridge
         run: node tests/ui-smoke.cjs
+      - name: Verify online API, RLS schema and account isolation
+        run: |
+          node tests/backend-smoke.cjs
+          node tests/online-ui-smoke.cjs
       - name: Build demo APK
         run: gradle :app:assembleDebug --no-daemon
       - uses: actions/upload-artifact@v4
         with:
-          name: kanonha-ui-debug
+          name: kanonha-0.4.0-online-preview-debug
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error

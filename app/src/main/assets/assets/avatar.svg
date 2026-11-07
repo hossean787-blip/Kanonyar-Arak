@@ -1,25 +1,25 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 110 110">
   <!-- Background circle -->
-  <circle cx="55" cy="55" r="54" fill="#ddeef9"/>
+  <circle cx="55" cy="55" r="54" fill="#F5FBF8"/>
   <!-- Shirt/body -->
-  <path d="M6 108q8-38 49-36 44 0 51 36" fill="#2a7bbf"/>
+  <path d="M6 108q8-38 49-36 44 0 51 36" fill="#50C884"/>
   <!-- Collar highlight -->
-  <path d="M38 94q14-12 32 0" fill="none" stroke="#1d5e96" stroke-width="6" stroke-linecap="round"/>
+  <path d="M38 94q14-12 32 0" fill="none" stroke="#38A869" stroke-width="6" stroke-linecap="round"/>
   <!-- Head -->
-  <ellipse cx="55" cy="45" rx="22" ry="27" fill="#f5c99a"/>
+  <ellipse cx="55" cy="45" rx="22" ry="27" fill="#F5C99A"/>
   <!-- Hair -->
-  <path d="M33 35q2-28 44-18 10 4 11 20-18-4-28-15-5 15-27 13" fill="#2d3d4e"/>
+  <path d="M33 35q2-28 44-18 10 4 11 20-18-4-28-15-5 15-27 13" fill="#1E5F3A"/>
   <!-- Eyes -->
-  <ellipse cx="47" cy="44" rx="3" ry="3.5" fill="#2d3040"/>
-  <ellipse cx="63" cy="44" rx="3" ry="3.5" fill="#2d3040"/>
+  <ellipse cx="47" cy="44" rx="3" ry="3.5" fill="#1E5F3A"/>
+  <ellipse cx="63" cy="44" rx="3" ry="3.5" fill="#1E5F3A"/>
   <!-- Eye shine -->
   <circle cx="48.5" cy="42.5" r="1" fill="white"/>
   <circle cx="64.5" cy="42.5" r="1" fill="white"/>
   <!-- Nose -->
-  <path d="M53 50q2 4 5 0" stroke="#d0956e" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  <path d="M53 50q2 4 5 0" stroke="#D0956E" stroke-width="1.5" fill="none" stroke-linecap="round"/>
   <!-- Smile -->
-  <path d="M46 60q9 9 18 0" stroke="#b06852" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <path d="M46 60q9 9 18 0" stroke="#B06852" stroke-width="2.5" fill="none" stroke-linecap="round"/>
   <!-- Ear -->
-  <ellipse cx="33.5" cy="45" rx="3" ry="4" fill="#f0be8e"/>
-  <ellipse cx="76.5" cy="45" rx="3" ry="4" fill="#f0be8e"/>
+  <ellipse cx="33.5" cy="45" rx="3" ry="4" fill="#F0BE8E"/>
+  <ellipse cx="76.5" cy="45" rx="3" ry="4" fill="#F0BE8E"/>
 </svg>

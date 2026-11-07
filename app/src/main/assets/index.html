@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#ffffff">
+  <meta name="theme-color" content="#f5f6ff">
   <meta name="description" content="رابط کاربری اپ کانون‌های دانشجویی — نمونه تعاملی">
-  <title>کانون‌های دانشجویی</title>
+  <title>همراه | کانون‌های دانشجویی</title>
   <link rel="stylesheet" href="styles.css">
   <script src="app.js" defer></script>
 </head>
@@ -36,6 +36,7 @@
       <section class="screen" id="screen-home" data-screen="home" aria-labelledby="title-home">
         <div class="home-hero">
           <div class="home-greeting">
+            <img class="hamrah-wordmark" src="assets/hamrah-wordmark.png" alt="همراه" width="116" height="47">
             <h1 id="title-home">سلام علی!</h1>
             <p>به اپلیکیشن کانون‌های دانشجویی<br>خوش آمدی 👋</p>
           </div>
@@ -71,7 +72,9 @@
 
       <!-- ==================== صفحه کانون‌ها ==================== -->
       <section class="screen padded-screen" id="screen-clubs" data-screen="clubs" aria-labelledby="title-clubs" hidden>
+        <div class="screen-kicker"><span class="brand-mark">همراه</span><span class="kicker-spark">✦ فضای دانشجویی</span></div>
         <h1 id="title-clubs" class="screen-title">کانون‌ها</h1>
+        <p class="screen-description">دنبال علاقه‌ت بگرد و به جمع دوست‌داشتنی‌ها بپیوند ✨</p>
         <label class="search-field">
           <span data-icon="search" aria-hidden="true"></span>
           <input id="clubs-search" type="search" placeholder="جستجو در کانون‌ها ..." aria-label="جستجو در کانون‌ها">
@@ -81,14 +84,18 @@
 
       <!-- ==================== صفحه رویدادها ==================== -->
       <section class="screen padded-screen" id="screen-events" data-screen="events" aria-labelledby="title-events" hidden>
+        <div class="screen-kicker"><span class="brand-mark">همراه</span><span class="kicker-spark">✦ فضای دانشجویی</span></div>
         <h1 id="title-events" class="screen-title">رویدادها</h1>
+        <p class="screen-description">از کارگاه تا رویداد، جای تو اینجاست ✨</p>
         <div class="filter-row" id="event-filters" role="group" aria-label="فیلتر رویدادها"></div>
         <div id="events-list" class="events-list"></div>
       </section>
 
       <!-- ==================== صفحه فعالیت‌های من ==================== -->
       <section class="screen padded-screen" id="screen-activity" data-screen="activity" aria-labelledby="title-activity" hidden>
+        <div class="screen-kicker"><span class="brand-mark">همراه</span><span class="kicker-spark">✦ فضای دانشجویی</span></div>
         <h1 id="title-activity" class="screen-title">فعالیت‌های من</h1>
+        <p class="screen-description">همه تجربه‌ها و فعالیت‌های دانشجویی تو در یک نگاه ✨</p>
         <div class="activity-section-title">
           <span class="title-icon" data-icon="users" aria-hidden="true"></span>
           <h2>کانون‌های من</h2>
@@ -108,7 +115,9 @@
 
       <!-- ==================== صفحه حساب کاربری ==================== -->
       <section class="screen padded-screen" id="screen-profile" data-screen="profile" aria-labelledby="title-profile" hidden>
+        <div class="screen-kicker"><span class="brand-mark">همراه</span><span class="kicker-spark">✦ فضای دانشجویی</span></div>
         <h1 id="title-profile" class="screen-title">حساب کاربری</h1>
+        <p class="screen-description">اطلاعات و تنظیمات حساب کاربری ✨</p>
         <div class="profile-card">
           <div class="profile-bg-art"></div>
           <div class="profile-info-row">

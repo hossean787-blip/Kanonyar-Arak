@@ -116,7 +116,7 @@
       `<button type="button" data-screen-btn="${x.id}"
         class="${x.id === activeScreen ? 'active' : ''}"
         ${x.id === activeScreen ? 'aria-current="page"' : ''}>
-        ${svg(x.icon, 22)}<span>${x.label}</span>
+        <img class="nav-art" src="assets/nav-${x.id}.svg" alt="" width="34" height="34"><span>${x.label}</span>
       </button>`
     ).join('');
   }
@@ -146,7 +146,7 @@
     const member = state.joined.includes(index);
     const isViewOnly = index === 0 || index === 3;
     return `<article class="card club-card">
-      <div class="club-icon ${club.tone === 'blue' ? '' : club.tone}">${svg(club.icon, 33)}</div>
+      <div class="club-icon ${club.tone === 'blue' ? '' : club.tone}"><img class="club-art" src="assets/club-${club.icon === "book" ? "book" : club.icon === "code" ? "tech" : club.icon === "leaf" ? "leaf" : club.icon === "flask" ? "science" : "sport"}.svg" alt="" width="48" height="48"></div>
       <div class="club-info">
         <h3>${club.title}</h3>
         <p>${club.desc}</p>
@@ -164,7 +164,7 @@
     $('home-events').innerHTML = [0, 3].map(i => eventCard(events[i], i, { compact: true })).join('');
     $('home-clubs').innerHTML = [0, 2, 3].map(i =>
       `<button type="button" class="home-mini-club" data-club-details="${i}">
-        <span class="mini-club-icon ${clubs[i].tone === 'green' ? 'green' : clubs[i].tone === 'mint' ? 'mint' : clubs[i].tone === 'orange' ? 'orange' : ''}">${svg(clubs[i].icon, 24)}</span>
+        <span class="mini-club-icon ${clubs[i].tone === 'green' ? 'green' : clubs[i].tone === 'mint' ? 'mint' : clubs[i].tone === 'orange' ? 'orange' : ''}"><img class="mini-art" src="assets/club-${clubs[i].icon === "book" ? "book" : clubs[i].icon === "code" ? "tech" : clubs[i].icon === "leaf" ? "leaf" : clubs[i].icon === "flask" ? "science" : "sport"}.svg" alt="" width="57" height="57"></span>
         ${clubs[i].short}
       </button>`
     ).join('');
@@ -212,7 +212,7 @@
     $('activity-clubs').innerHTML = state.joined.length
       ? state.joined.filter(i => clubs[i]).map(i =>
           `<button class="activity-row" type="button" data-club-details="${i}">
-            <span class="club-icon ${clubs[i].tone}">${svg(clubs[i].icon, 20)}</span>
+            <span class="club-icon ${clubs[i].tone}"><img class="row-club-art" src="assets/club-${clubs[i].icon === "book" ? "book" : clubs[i].icon === "code" ? "tech" : clubs[i].icon === "leaf" ? "leaf" : clubs[i].icon === "flask" ? "science" : "sport"}.svg" alt="" width="31" height="31"></span>
             <span class="activity-copy">${clubs[i].title}</span>
             <span class="arrow">${svg('chevron-left', 15)}</span>
           </button>`

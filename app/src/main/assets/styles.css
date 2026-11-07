@@ -873,6 +873,180 @@ body.native-app { padding: 0; background: white; }
 .pill-btn:focus-visible,.filter-btn:focus-visible,.bottom-nav button:focus-visible { outline: 3px solid #0b75b8; outline-offset: 2px; }
 .sheet-overlay[hidden] { display: none; }
 @media (max-width: 350px) { .activity-row { gap: 5px; } .profile-info-row { padding: 16px 9px 18px; } }
-/* Native inset contract: Android FrameLayout already excludes real system bars.
-   Do not add CSS safe-area padding again, or the bottom tab bar shifts upward. */
+
+body.native-app .status-bar { display: none; }
+body.native-app .app-shell { height: 100dvh; border-radius: 0; box-shadow: none; border: 0; }
+body.native-app { padding: 0; background: white; }
 body.native-app .bottom-nav { padding-bottom: 6px; }
+
+/* ==========================================================
+   HAMRAH AURORA — Premium visual system / 2026
+   All five screens share the same navy–lavender design language.
+   Structural/behavioral rules inherited from the working v0.1 UI.
+   ========================================================== */
+:root {
+  --ink:#111d53;--sub:#6473a4;--blue:#394bc1;--bright:#6c5cf2;
+  --teal:#6761da;--teal-dark:#5043c7;--pale:#f0f0ff;
+  --line:#e5e6fb;--r:24px;--r-sm:18px;--nav-h:88px;
+  --shadow-sm:0 5px 15px rgba(44,49,125,.07);
+  --shadow:0 11px 26px rgba(39,46,124,.12),0 1px 0 rgba(255,255,255,.9) inset;
+  --shadow-md:0 16px 34px rgba(41,47,129,.17);
+}
+html{color-scheme:light;background:#f0f1fd}
+body{background:#e7eaff;color:var(--ink);font-size:13px}
+.app-shell{
+  background:radial-gradient(circle at 10% 0%,rgba(175,191,255,.29),transparent 33%),
+             radial-gradient(circle at 90% 38%,rgba(223,200,255,.21),transparent 45%),
+             linear-gradient(180deg,#fafaff 0%,#f7f8ff 70%,#eff2ff 100%);
+  box-shadow:0 18px 65px rgba(22,29,86,.23)
+}
+.app-content{background:transparent;scrollbar-color:transparent transparent}
+.screen{position:relative;padding-bottom:24px}
+.padded-screen{padding:19px 16px 32px}
+.screen-title{color:#101a56;font-size:25px;letter-spacing:-.5px;margin-bottom:5px;text-shadow:0 1px 0 white}
+.screen-kicker{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px;color:#8274cd;font-size:10px;font-weight:800}
+.brand-mark{font-size:19px;font-weight:900;font-style:italic;letter-spacing:-1px;color:#0b1753;text-shadow:1px 1px #9188fc}
+.kicker-spark{color:#8179bb;white-space:nowrap}
+.screen-description{margin:0 0 20px;color:#747eaf;font-size:11.5px;line-height:1.8}
+.status-bar{background:rgba(248,248,255,.95);color:#1b2257;border-bottom:1px solid rgba(224,220,255,.5)}
+/* Greeting and branded hero */
+.home-hero{min-height:182px;align-items:center;padding:12px 15px 12px 17px;overflow:hidden;
+ background:radial-gradient(circle at 5% 10%,#e8edff 0%,transparent 55%),linear-gradient(126deg,#eef3ff 0%,#fafaff 78%)}
+.home-hero:after{width:300px;height:230px;top:-168px;left:-120px;opacity:.32;background:linear-gradient(130deg,#c8d6ff,#c4b0ff)}
+.home-hero:before{content:'';position:absolute;inset:auto -70px -180px 20px;height:240px;border:1px solid rgba(176,176,255,.17);border-radius:50%;transform:rotate(-24deg)}
+.home-greeting{max-width:53%;margin-top:0;align-self:center}
+.hamrah-wordmark{display:block;width:111px;max-width:94%;height:46px;object-fit:contain;object-position:right center;margin-bottom:4px;filter:drop-shadow(0 4px 6px rgba(63,57,142,.08))}
+.home-greeting h1{font-size:24px;color:#0b1551;font-weight:900;margin:4px 0 7px;white-space:nowrap}
+.home-greeting p{font-size:11.3px;color:#4b548f;line-height:2.05}
+.campus-art{max-width:48%;width:181px;height:153px;object-fit:cover;object-position:center;border-radius:23px;margin:0;box-shadow:0 8px 19px rgba(55,76,172,.13);border:2px solid #fff}
+.home-body{padding:5px 15px 22px}
+/* Search is functional and styled as a soft recessed glass control */
+.search-field{height:55px;border-radius:29px;margin:12px 0 17px;padding:0 15px;border:2px solid rgba(232,234,255,.9);
+ background:linear-gradient(145deg,rgba(255,255,255,.91),rgba(239,241,255,.87));
+ box-shadow:inset 0 2px 6px rgba(95,105,182,.06),0 5px 18px rgba(69,69,149,.08);color:#4b53ba}
+.search-field svg{width:22px;height:22px}
+.search-field:focus-within{border-color:#beb4ff;box-shadow:0 0 0 4px rgba(160,152,255,.16),0 6px 20px rgba(69,69,149,.10)}
+.search-field input{color:#1a255d;font-size:12px}
+.search-field input::placeholder{color:#9199b6}
+/* Notice ribbon — satin navy/violet with non-decorative accessible text */
+.notice-banner{min-height:86px;border-radius:22px;padding:15px 14px;background:
+ radial-gradient(circle at 0% 120%,rgba(125,179,255,.55),transparent 44%),
+ linear-gradient(115deg,#5367db 0%,#27379c 47%,#131d67 100%);
+ color:white;box-shadow:0 12px 26px rgba(45,57,153,.23),inset 0 1px 2px rgba(255,255,255,.26);gap:12px;border:1px solid rgba(197,190,255,.4);position:relative;overflow:hidden}
+.notice-banner:before{content:'';position:absolute;left:-29px;top:-32px;width:180px;height:100px;border-radius:50%;border:1px solid rgba(215,222,255,.38);transform:rotate(-28deg);pointer-events:none}
+.notice-banner .notice-copy strong{color:#fff;font-size:15px}
+.notice-banner .notice-copy small{color:#e2e7ff;font-size:10.5px}
+.notice-symbol{height:51px;width:51px;border-radius:17px;color:white;background:linear-gradient(138deg,#c5bcff,#7858e6 56%,#3439ad);
+ box-shadow:inset 0 2px 3px rgba(255,255,255,.55),0 5px 15px rgba(23,24,107,.35);border:1px solid rgba(255,255,255,.55)}
+.notice-symbol svg{width:28px;height:28px;filter:drop-shadow(0 2px 1px rgba(10,16,100,.4))}
+.notice-banner .chev svg{color:#eef0ff;width:19px}
+.section-heading{margin:23px 0 11px}
+.section-heading h2{color:#101a56;font-size:17px;font-weight:900}
+.text-link{color:#3345ae;font-size:11px;font-weight:800}
+.clubs-heading{margin-top:20px}
+/* Translucent cards with thick soft borders */
+.card{background:linear-gradient(143deg,#ffffff 0%,#fbfbff 70%,#f6f5ff 100%);
+ border:1.4px solid rgba(255,255,255,.97);outline:1px solid rgba(209,212,252,.55);outline-offset:-1px;
+ box-shadow:var(--shadow);border-radius:23px;backdrop-filter:blur(6px)}
+.event-card{min-height:151px;padding:10px;gap:13px;margin:11px 0}
+.event-card.compact{height:121px;min-height:121px;padding:8px;gap:12px}
+.event-poster{height:127px;width:105px;border-radius:17px;background:linear-gradient(160deg,#112780,#5540d0);
+ box-shadow:inset 0 2px 6px rgba(255,255,255,.16),0 5px 10px rgba(33,47,113,.12);border:1px solid rgba(255,255,255,.5)}
+.event-card.compact .event-poster{height:103px;width:105px}
+.event-info{padding:10px 0 28px}
+.event-info h3{font-size:13.5px;color:#11164d;line-height:1.55;font-weight:900}
+.event-card.compact .event-info{padding-top:11px}
+.event-card.compact .event-info h3{font-size:12.5px}
+.event-meta{color:#737caa;font-size:10.5px}
+.event-meta svg{color:#5e68b3}
+.capacity{color:#7278a4}.capacity strong{color:#514fe1}
+.pill-btn{height:33px;min-width:87px;border-radius:23px;font-size:11px;
+ background:linear-gradient(110deg,#7567f5,#414fcd);color:white;
+ box-shadow:0 5px 13px rgba(99,83,218,.22),inset 0 1px 1px rgba(255,255,255,.45)}
+.pill-btn:hover{box-shadow:0 7px 17px rgba(100,81,216,.32)}
+.pill-btn.soft,.pill-btn.view-btn,.pill-btn.joined,.pill-btn.signed{color:#3549ae;border:1px solid #e3e7ff;
+ background:linear-gradient(100deg,#e6ebff,#ece7ff);box-shadow:0 3px 9px rgba(123,124,211,.1)}
+.event-card .pill-btn{left:11px;bottom:13px}
+/* 3D illustrated mini-clubs */
+.home-club-grid{gap:10px}
+.home-mini-club{min-height:117px;background:linear-gradient(160deg,#fff,#f8f7ff);border:1.5px solid white;
+ outline:1px solid #e9e7fc;outline-offset:-1px;border-radius:24px;box-shadow:var(--shadow-sm);
+ font-size:10.5px;color:#141b54;gap:3px;padding:8px 3px}
+.mini-club-icon,.mini-club-icon.mint,.mini-club-icon.green,.mini-club-icon.orange{width:68px;height:68px;border-radius:20px;background:transparent;box-shadow:none;filter:drop-shadow(0 5px 5px rgba(74,55,174,.11))}
+.mini-club-icon svg{display:none}
+.mini-club-icon .mini-art{display:block;width:67px;height:67px;object-fit:contain}
+/* Clubs */
+#screen-clubs .search-field{margin:5px 0 21px}
+.club-card{min-height:121px;margin-bottom:12px;padding:12px 11px;gap:11px}
+.club-icon,.club-icon.green,.club-icon.mint,.club-icon.orange{height:76px;width:76px;border-radius:22px;
+ background:linear-gradient(145deg,#edf0ff,#e6e7ff);box-shadow:inset 0 1px 3px white,0 3px 9px rgba(113,107,202,.08)}
+.club-icon svg{display:none}
+.club-icon .club-art{width:70px;height:70px;object-fit:contain}
+.club-info h3{color:#1c245c;font-size:13px}
+.club-info p{color:#7b81a9}
+.club-card .pill-btn{margin-top:8px;height:30px}
+/* Filters */
+.filter-row{margin-top:8px;margin-bottom:17px;gap:9px}
+.filter-btn{height:40px;min-width:70px;border-radius:20px;background:linear-gradient(130deg,#fff,#f3f2ff);
+ border:1px solid #e3e3fb;color:#636aa4;font-size:11px;box-shadow:0 4px 9px rgba(50,40,145,.04)}
+.filter-btn.active{background:linear-gradient(135deg,#8172fb,#424ac3);color:#fff;border-color:#b2aaff;
+ box-shadow:0 5px 13px rgba(96,73,204,.21)}
+/* Activities and ticket */
+.activity-section-title{margin-top:27px;margin-bottom:13px}
+.activity-section-title h2{color:#1b245b;font-size:16px}
+.title-icon{color:#7660dd}
+.activity-row{background:linear-gradient(150deg,#fff,#f9f7ff);border:1px solid #eaebff;border-radius:18px;
+ padding:10px 13px;min-height:64px;box-shadow:var(--shadow-sm)}
+.activity-row .club-icon,.activity-row .club-icon.green,.activity-row .club-icon.mint,.activity-row .club-icon.orange{width:42px;height:42px;border-radius:14px}
+.activity-row .club-icon .row-club-art{width:39px;height:39px}
+.activity-row .activity-copy{color:#29356d;font-size:12px}
+.activity-row .activity-copy small{color:#858db4}
+.ticket-card{background:linear-gradient(115deg,#f0eeff,#dde8ff);border:1px solid #ddd8ff;
+ border-radius:24px;box-shadow:0 10px 24px rgba(97,93,191,.12);min-height:151px;padding:16px;gap:15px}
+.ticket-card:after{border-left:2px dashed #c6c7ef;left:106px}
+.ticket-details h3{color:#1c2664;font-size:13px}
+.ticket-details p{color:#646e9f}.ticket-label{color:#7c78ac;font-size:10px;font-weight:700}
+.sample-qr{width:88px;height:88px;border:4px solid #fff;border-radius:13px;box-shadow:0 6px 12px #6061bd18}
+.sample-qr i.dark{background:#353a92}
+.empty{border:1px dashed #d9d5fd;background:#fbfaff;color:#8d8db8;border-radius:20px}
+/* Profile */
+.profile-card{border-radius:27px;margin:9px 0 21px;background:radial-gradient(circle at 83% 0%,#d5c5ff,transparent 45%),linear-gradient(135deg,#dce8ff,#f1eeff);
+ border:2px solid white;box-shadow:var(--shadow-md)}
+.profile-bg-art:before{background:rgba(255,255,255,.58)}
+.profile-bg-art:after{background:rgba(150,151,240,.26)}
+.profile-info-row{min-height:236px;padding:21px 14px 25px}
+.avatar-ring{height:100px;width:100px;border:4px solid #fff;box-shadow:0 8px 22px #5651ad38}
+.avatar-edit-btn{background:linear-gradient(140deg,#d2c2ff,#6654e0);color:#fff;width:30px;height:30px;border:2px solid white}
+.profile-details h2{font-size:19px;color:#121851}
+.profile-details p{font-size:11px;color:#67719f}
+.settings-menu{gap:11px}
+.menu-item{min-height:62px;border:1px solid #e7e8ff;border-radius:20px;background:linear-gradient(150deg,#fff,#f8f7ff);
+ box-shadow:var(--shadow-sm);color:#263267;font-size:12px}
+.menu-ico{height:36px;width:36px;border-radius:13px;background:linear-gradient(135deg,#e8e7ff,#f5f1ff);color:#5c55c7;box-shadow:inset 0 1px 2px white}
+.menu-item.danger{color:#bb4b86}
+/* The five icons are custom volumetric SVG illustrations, NOT recolored line icons. */
+.bottom-nav{height:var(--nav-h);margin:7px 10px 12px;padding:8px 7px!important;flex-shrink:0;direction:rtl;
+ border:1.3px solid rgba(125,133,255,.54);border-radius:29px;
+ background:radial-gradient(circle at 90% 100%,#38358a 0%,transparent 36%),linear-gradient(120deg,#202b6d,#12194f 80%);
+ box-shadow:0 15px 26px rgba(27,34,93,.23),inset 0 2px 3px rgba(255,255,255,.2);gap:1px;
+ position:relative;isolation:isolate;z-index:4;overflow:visible}
+.bottom-nav:before{content:'';position:absolute;inset:0;border-radius:inherit;border-top:1px solid rgba(255,255,255,.34);pointer-events:none}
+.bottom-nav button{color:#e4e9ff;font-size:10px;font-weight:800;border-radius:22px;padding:5px 1px 6px;gap:1px;transition:transform .2s,background .2s;min-width:0}
+.bottom-nav button > svg{display:none}
+.bottom-nav button .nav-art{display:block;width:40px;height:40px;object-fit:contain;filter:drop-shadow(0 2px 3px rgba(0,0,35,.18));transition:transform .22s}
+.bottom-nav button.active{color:#fff;background:linear-gradient(145deg,#9382ff 0%,#584ade 55%,#243ba7 100%);
+ box-shadow:inset 0 2px 2px rgba(255,255,255,.4),0 4px 15px #7954e899;border:1px solid rgba(220,220,255,.66)}
+.bottom-nav button.active .nav-art{transform:scale(1.05);filter:drop-shadow(0 4px 4px rgba(0,0,39,.23))}
+.bottom-nav button:not(.active):active{transform:translateY(-2px);background:#3e447a}
+.toast{bottom:115px;background:#1c205d;border:1px solid #807cff;box-shadow:0 8px 26px #211a6b66}
+.sheet-overlay{background:rgba(11,19,77,.69);backdrop-filter:blur(6px)}
+.sheet{background:linear-gradient(155deg,#fff,#f4f2ff);border-radius:28px 28px 0 0}
+.sheet-grip{background:#b8acf1}
+.sheet .field input{border-color:#e1dbfa;background:#fff}
+.sheet .field input:focus{border-color:#8e80fa}
+.close-btn{background:#eae6ff;color:#4c47a9}
+body.native-app .bottom-nav{padding-bottom:8px!important}
+/* Prevent animations for people preferring reduced motion */
+@media (prefers-reduced-motion:reduce){.bottom-nav button,.nav-art,.pill-btn,.card{transition:none!important}}
+@media(max-width:375px){.home-hero{min-height:167px}.campus-art{height:139px}.home-greeting h1{font-size:21px}.hamrah-wordmark{width:96px;height:37px}.event-card.compact .event-poster{width:93px}.bottom-nav{margin-left:7px;margin-right:7px}.bottom-nav button{font-size:9px}.bottom-nav button .nav-art{height:36px;width:36px}.club-icon{width:66px;height:66px}}
+@media(max-width:335px){.home-greeting h1{font-size:19px}.campus-art{height:125px}.home-greeting p{font-size:9.5px}.bottom-nav button{font-size:8px}.nav-art{width:33px!important;height:33px!important}.home-mini-club{font-size:9px}.event-card.compact .event-poster{width:84px}}

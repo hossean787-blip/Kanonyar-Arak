@@ -33,7 +33,12 @@ jobs:
               assert (root/name).is_file(), name
           for svg in (root/'assets').glob('*.svg'):
               ET.parse(svg)
-          assert len(list((root/'assets').glob('*.svg'))) == 6
+          assert len(list((root/'assets').glob('*.svg'))) >= 16
+          for name in ('home','clubs','events','activity','profile'):
+              assert (root/'assets'/f'nav-{name}.svg').is_file(), name
+          for name in ('book','tech','leaf','science','sport'):
+              assert (root/'assets'/f'club-{name}.svg').is_file(), name
+          assert (root/'assets'/'hamrah-wordmark.png').is_file()
           print('UI integrity and all SVGs valid')
           PY
       - name: Build demo APK

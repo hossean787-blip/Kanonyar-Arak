@@ -873,3 +873,6 @@ body.native-app { padding: 0; background: white; }
 .pill-btn:focus-visible,.filter-btn:focus-visible,.bottom-nav button:focus-visible { outline: 3px solid #0b75b8; outline-offset: 2px; }
 .sheet-overlay[hidden] { display: none; }
 @media (max-width: 350px) { .activity-row { gap: 5px; } .profile-info-row { padding: 16px 9px 18px; } }
+/* Native inset contract: Android FrameLayout already excludes real system bars.
+   Do not add CSS safe-area padding again, or the bottom tab bar shifts upward. */
+body.native-app .bottom-nav { padding-bottom: 6px; }

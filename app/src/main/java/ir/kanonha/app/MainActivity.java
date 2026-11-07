@@ -78,9 +78,8 @@ public final class MainActivity extends Activity {
 
  @Override public void onBackPressed() {
   if (web == null) { super.onBackPressed(); return; }
-  web.evaluateJavascript("document.querySelector('.screen.active')?.id", value -> {
-   if ("\"home\"".equals(value) || "null".equals(value)) MainActivity.super.onBackPressed();
-   else web.evaluateJavascript("document.querySelector('[data-page=\"home\"]')?.click()", null);
+  web.evaluateJavascript("window.KanonhaPreview ? window.KanonhaPreview.handleBack() : false", value -> {
+   if (!"true".equals(value)) MainActivity.super.onBackPressed();
   });
  }
  @Override protected void onDestroy() {

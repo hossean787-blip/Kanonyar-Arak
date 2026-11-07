@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <!-- Unique Kanonha mark: three students gathered in a shared circle. -->
+    <path android:fillColor="#FFFFFF" android:pathData="M54,14 a40,40 0,1 0,0 80 a40,40 0,1 0,0 -80"/>
+    <path android:fillColor="#00000000" android:strokeColor="#A6E5C3"
+        android:strokeWidth="2.5" android:pathData="M54,20 a34,34 0,1 0,0 68 a34,34 0,1 0,0 -68"/>
+    <path android:fillColor="#188A58" android:pathData="M54,29 a10,10 0,1 0,0 20 a10,10 0,1 0,0 -20"/>
+    <path android:fillColor="#50C878" android:pathData="M35,45 a7,7 0,1 0,0 14 a7,7 0,1 0,0 -14"/>
+    <path android:fillColor="#50C878" android:pathData="M73,45 a7,7 0,1 0,0 14 a7,7 0,1 0,0 -14"/>
+    <path android:fillColor="#188A58" android:pathData="M36,74 C36,61 43,55 54,55 C65,55 72,61 72,74 L72,77 L36,77 Z"/>
+    <path android:fillColor="#50C878" android:pathData="M21,74 C22,64 28,60 35,60 C37,60 39,61 41,62 C37,66 35,71 35,77 L21,77 Z"/>
+    <path android:fillColor="#50C878" android:pathData="M87,74 C86,64 80,60 73,60 C71,60 69,61 67,62 C71,66 73,71 73,77 L87,77 Z"/>
+</vector>

@@ -58,15 +58,15 @@
   ];
 
   const events = [
-    { title: 'کارگاه مقدماتی پایتون',     date: 'سه‌شنبه ۱۸ دی ۱۴۰۳',    location: 'سالن جلسات دانشکده مهندسی', capacity: 18, poster: 'poster-code.svg',  category: 'کارگاه',   club: 2, registrationOpen: true },
-    { title: 'نشست «آینده هوش مصنوعی»',   date: 'چهارشنبه ۱۹ دی ۱۴۰۳',  location: 'سالن آمفی‌تئاتر مرکزی',     capacity: 45, poster: 'poster-ai.svg',    category: 'نشست',     club: 1, registrationOpen: true },
-    { title: 'مسابقه طراحی پوستر',        date: 'دوشنبه ۲۴ دی ۱۴۰۳',     location: 'کانون فرهنگی و هنری',       capacity: 20, poster: 'poster-art.svg',   category: 'مسابقه',   club: 0, registrationOpen: true },
-    { title: 'نشست کتاب‌خوانی',           date: 'چهارشنبه ۱۹ دی ۱۴۰۳',  location: 'کتابخانه دانشگاه',          capacity: 25, poster: 'poster-books.svg', category: 'نشست',     club: 0, registrationOpen: true }
+    { title: 'کارگاه مقدماتی پایتون',     date: 'زمان‌بندی نمونه',    location: 'سالن جلسات دانشکده مهندسی', capacity: 18, poster: 'poster-code.svg',  category: 'کارگاه',   club: 2, registrationOpen: true },
+    { title: 'نشست «آینده هوش مصنوعی»',   date: 'زمان‌بندی نمونه',  location: 'سالن آمفی‌تئاتر مرکزی',     capacity: 45, poster: 'poster-ai.svg',    category: 'نشست',     club: 1, registrationOpen: true },
+    { title: 'مسابقه طراحی پوستر',        date: 'زمان‌بندی نمونه',     location: 'کانون فرهنگی و هنری',       capacity: 20, poster: 'poster-art.svg',   category: 'مسابقه',   club: 0, registrationOpen: true },
+    { title: 'نشست کتاب‌خوانی',           date: 'زمان‌بندی نمونه',  location: 'کتابخانه دانشگاه',          capacity: 25, poster: 'poster-books.svg', category: 'نشست',     club: 0, registrationOpen: true }
   ];
 
   /* ——— State ——— */
-  const STORAGE_KEY = 'kanonha-ui-v2';
-  const defaultState = () => ({ joined: [1, 2], registered: [0, 1], name: 'علی رضایی', number: '۴۰۱۱۲۳۴۵۶' });
+  const STORAGE_KEY = 'kanonha-ui-v3';
+  const defaultState = () => ({ joined: [], registered: [], name: 'کاربر آزمایشی', number: 'ثبت نشده' });
 
   function loadState() {
     try {
@@ -130,7 +130,7 @@
         <h3>${escapeHTML(event.title)}</h3>
         <div class="event-meta">${svg('calendar', 13)}<span>${escapeHTML(event.date)}</span></div>
         ${compact ? '' : `<div class="event-meta">${svg('map-pin', 13)}<span>${escapeHTML(event.location)}</span></div>
-        <div class="capacity">ظرفیت باقی‌مانده: <strong>${event.capacity} نفر</strong></div>`}
+        <div class="capacity">ظرفیت نمونه: <strong>${event.capacity} نفر</strong></div>`}
       </div>
       <button type="button"
         class="pill-btn ${compact ? 'view-btn' : registered ? 'signed' : ''}"
@@ -164,7 +164,7 @@
     return `<article class="home-event-slide" role="group" aria-label="${escapeHTML(event.title)}">
       <div class="home-slide-cover">
         <img src="assets/${event.poster}" alt="پوستر ${escapeHTML(event.title)}" width="244" height="119" loading="lazy">
-        <span class="home-slide-status"><span class="home-slide-pulse" aria-hidden="true"></span> ثبت‌نام باز</span>
+        <span class="home-slide-status"><span class="home-slide-pulse" aria-hidden="true"></span> ثبت‌نام آزمایشی</span>
       </div>
       <div class="home-slide-info">
         <h3>${escapeHTML(event.title)}</h3>
@@ -294,6 +294,13 @@
     focusBeforeSheet = null;
   }
 
+  /* ——— Native Android back action: close the sheet first, then return Home. ——— */
+  function handleBack() {
+    if (!$('sheet-overlay').hidden) { closeSheet(); return true; }
+    if (activeScreen !== 'home') { go('home'); return true; }
+    return false;
+  }
+
   /* ——— Detail sheets ——— */
   function eventDetails(i) {
     const ev = events[i];
@@ -364,7 +371,7 @@
       );
     } else if (name === 'about') {
       openSheet('درباره برنامه',
-        `<p>اپ کانون‌های دانشجویی — نمونه رابط کاربری</p>
+        `<p>کانون‌ها — نسخه آزمایشی مستقل</p>
          <p>پنج صفحه با HTML، CSS، JavaScript و تصویرسازی SVG پیاده‌سازی شده‌اند. هیچ داده‌ای به سرور ارسال نمی‌شود.</p>
          <button type="button" data-action="reset" class="pill-btn soft">بازنشانی داده‌های نمایشی</button>`
       );
@@ -407,7 +414,7 @@
     // Notice banner
     $('notice-btn').addEventListener('click', () =>
       openSheet('اطلاعیه مهم',
-        '<p>ثبت‌نام کانون‌ها برای نیمسال جدید آغاز شد.</p><p>این متن، اطلاعیه نمونه رابط کاربری است.</p>'
+        '<p>این یک اطلاعیه نمایشی برای آزمایش رابط کاربری کانون‌هاست.</p><p>ثبت‌نام واقعی هنوز فعال نیست.</p>'
       )
     );
 
@@ -489,6 +496,7 @@
       get screen() { return activeScreen; },
       get state() { return { ...state, joined: [...state.joined], registered: [...state.registered] }; },
       go,
+      handleBack,
       reset: () => action('reset')
     };
   }

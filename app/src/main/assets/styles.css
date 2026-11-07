@@ -880,7 +880,7 @@ body.native-app { padding: 0; background: white; }
 body.native-app .bottom-nav { padding-bottom: 6px; }
 
 /* ==========================================================
-   HAMRAH AURORA — Premium visual system / 2026
+   KANONHA AURORA — Premium visual system / 2026
    All five screens share the same navy–lavender design language.
    Structural/behavioral rules inherited from the working v0.1 UI.
    ========================================================== */
@@ -915,7 +915,7 @@ body{background:#F5FBF8;color:var(--ink);font-size:13px}
 .home-hero:after{width:300px;height:230px;top:-168px;left:-120px;opacity:.32;background:linear-gradient(130deg,#E3F5EB,#E3F5EB)}
 .home-hero:before{content:'';position:absolute;inset:auto -70px -180px 20px;height:240px;border:1px solid rgba(227,245,235,.17);border-radius:50%;transform:rotate(-24deg)}
 .home-greeting{max-width:53%;margin-top:0;align-self:center}
-.hamrah-wordmark{display:block;width:111px;max-width:94%;height:46px;object-fit:contain;object-position:right center;margin-bottom:4px;filter:drop-shadow(0 4px 6px rgba(56,168,105,.08))}
+
 .home-greeting h1{font-size:24px;color:#1E5F3A;font-weight:900;margin:4px 0 7px;white-space:nowrap}
 .home-greeting p{font-size:11.3px;color:#38A869;line-height:2.05}
 .campus-art{max-width:48%;width:181px;height:153px;object-fit:cover;object-position:center;border-radius:23px;margin:0;box-shadow:0 8px 19px rgba(80,200,132,.13);border:2px solid #FFFFFF}
@@ -1048,10 +1048,10 @@ body{background:#F5FBF8;color:var(--ink);font-size:13px}
 body.native-app .bottom-nav{padding-bottom:8px!important}
 /* Prevent animations for people preferring reduced motion */
 @media (prefers-reduced-motion:reduce){.bottom-nav button,.nav-art,.pill-btn,.card{transition:none!important}}
-@media(max-width:375px){.home-hero{min-height:167px}.campus-art{height:139px}.home-greeting h1{font-size:21px}.hamrah-wordmark{width:96px;height:37px}.event-card.compact .event-poster{width:93px}.bottom-nav{margin-left:7px;margin-right:7px}.bottom-nav button{font-size:9px}.bottom-nav button .nav-art{height:36px;width:36px}.club-icon{width:66px;height:66px}}
+@media(max-width:375px){.home-hero{min-height:167px}.campus-art{height:139px}.home-greeting h1{font-size:21px}.event-card.compact .event-poster{width:93px}.bottom-nav{margin-left:7px;margin-right:7px}.bottom-nav button{font-size:9px}.bottom-nav button .nav-art{height:36px;width:36px}.club-icon{width:66px;height:66px}}
 @media(max-width:335px){.home-greeting h1{font-size:19px}.campus-art{height:125px}.home-greeting p{font-size:9.5px}.bottom-nav button{font-size:8px}.nav-art{width:33px!important;height:33px!important}.home-mini-club{font-size:9px}.event-card.compact .event-poster{width:84px}}
 
-/* HAMRAH / compact sage-green navigation — 2026-11-07.
+/* KANONHA / compact sage-green navigation — 2026-11-07.
    Scope intentionally limited to bottom navigation and its notification offset. */
 :root { --nav-h: 66px; }
 .bottom-nav {
@@ -1105,7 +1105,7 @@ body.native-app .bottom-nav { padding-bottom: 5px !important; }
   .bottom-nav button .nav-art { width: 26px !important; height: 26px !important; }
 }
 
-/* === HAMRAH / Emerald #50C878 + White / all five pages === */
+/* === KANONHA / Emerald #50C878 + White / all five pages === */
 :root {
  --ink:#153927;--sub:#658171;--line:#DDEFE3;
  --blue:#50C878;--bright:#50C878;--teal:#50C878;--teal-dark:#278D54;
@@ -1120,7 +1120,7 @@ html,body{background:#fff;color:var(--ink);color-scheme:light}
 .screen-kicker{color:#3D9A60}
 .home-hero{background:linear-gradient(122deg,#F0FCF4 0%,#FFFFFF 60%,#FFFFFF 100%)}
 .home-hero::after{background:rgba(80,200,120,.055)}
-.hamrah-wordmark{filter:none}
+
 .home-greeting h1{color:#153927}
 .home-greeting p{color:#63816D}
 .home-body{background:transparent}

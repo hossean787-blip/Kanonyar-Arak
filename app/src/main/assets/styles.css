@@ -1196,3 +1196,44 @@ body.native-app .bottom-nav{padding-bottom:5px!important}
  .home-hero{min-height:178px}
  .home-hero .campus-art{width:154px;height:160px}
 }
+
+/* HOME: notices replace greeting; live-registration demo events use a swipeable row. */
+.visually-hidden{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+#screen-home .home-hero.home-hero-announcements{display:flex;align-items:center;justify-content:space-between;min-height:190px;padding:14px 14px 13px;gap:10px}
+#screen-home .home-notice-card{position:relative;z-index:2;flex:1 1 55%;min-width:0;min-height:150px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:7px;text-align:right;padding:14px 12px 13px;border:1px solid #CBEBD4;border-radius:21px;background:linear-gradient(145deg,#fff,#EAF9EF);box-shadow:0 7px 19px rgba(27,118,63,.09);color:#183F2A}
+#screen-home .home-notice-heading{width:100%;display:flex;align-items:center;gap:5px;font-weight:900;color:#176B3A;font-size:12px;white-space:nowrap}
+#screen-home .home-notice-symbol{display:inline-grid;place-items:center;width:27px;height:27px;border-radius:10px;background:#D0F3DC;color:#21854C;flex-shrink:0}
+#screen-home .home-notice-symbol svg{width:17px;height:17px}
+#screen-home .home-notice-new{font-size:9px;font-weight:800;color:#217F46;background:#DEF5E5;padding:1px 5px;border-radius:12px;margin-inline-start:auto}
+#screen-home .home-notice-title{font-size:13px;line-height:1.7;font-weight:900;color:#133F25}
+#screen-home .home-notice-subtitle{font-size:10.5px;color:#5B8267;line-height:1.5}
+#screen-home .home-notice-more{font-size:10.5px;font-weight:800;color:#208A4B;display:flex;align-items:center;gap:4px}
+#screen-home .home-notice-more span{font-size:18px;line-height:1}
+#screen-home .home-hero .campus-art{flex:0 0 40%;width:40%;max-width:40%;height:157px;min-width:0;padding:0;align-self:center;object-fit:contain}
+#screen-home .home-body{padding-top:12px}
+#screen-home .home-register-heading{margin:5px 0 10px;gap:4px}
+#screen-home .home-register-heading h2{font-size:16px;line-height:1.65;margin:0;letter-spacing:-.2px}
+#screen-home .home-register-heading .text-link{font-size:10px;white-space:nowrap}
+#screen-home .home-carousel-wrap{width:100%;position:relative}
+#screen-home .home-event-carousel{display:flex;flex-wrap:nowrap;gap:12px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scroll-padding-inline:15px;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;touch-action:pan-x;padding:4px 15px 11px;margin-inline:-15px;scrollbar-width:none;outline-offset:2px}
+#screen-home .home-event-carousel::-webkit-scrollbar{display:none}
+#screen-home .home-event-slide{flex:0 0 min(72vw,270px);scroll-snap-align:start;scroll-snap-stop:always;min-width:0;min-height:236px;overflow:hidden;border-radius:23px;border:1px solid #D6EBDC;background:linear-gradient(150deg,#FFFFFF,#FAFFFC);box-shadow:0 6px 16px rgba(30,98,51,.09)}
+#screen-home .home-slide-cover{height:118px;position:relative;background:linear-gradient(120deg,#E3F8EA,#D8F4E3);overflow:hidden}
+#screen-home .home-slide-cover img{width:100%;height:100%;object-fit:cover;object-position:center;display:block}
+#screen-home .home-slide-status{position:absolute;top:9px;right:9px;display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:13px;background:rgba(255,255,255,.93);border:1px solid #D2F2DE;color:#19733E;font-size:10px;font-weight:800;box-shadow:0 2px 7px rgba(10,70,37,.1)}
+#screen-home .home-slide-pulse{width:7px;height:7px;background:#50C878;border-radius:50%;box-shadow:0 0 0 3px rgba(80,200,120,.15)}
+#screen-home .home-slide-info{padding:10px 13px 11px;display:flex;flex-direction:column;align-items:flex-start;gap:5px;min-height:119px}
+#screen-home .home-slide-info h3{margin:0;color:#183F28;font-size:13px;font-weight:900;line-height:1.65;max-width:100%;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+#screen-home .home-slide-date{display:flex;align-items:center;gap:5px;color:#64826B;font-size:10px;white-space:nowrap;min-width:0}
+#screen-home .home-slide-date svg{flex-shrink:0;color:#319B56}
+#screen-home .home-slide-view{margin-top:auto;display:flex;justify-content:center;align-items:center;gap:10px;color:#145A32;background:#DFF5E8;border-radius:14px;padding:5px 11px;font-size:10.5px;font-weight:800;min-height:27px}
+#screen-home .home-slide-view span{font-size:17px;line-height:1}
+#screen-home .home-carousel-controls{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0 0 9px}
+#screen-home .home-carousel-count{color:#699076;font-size:10px;font-weight:700;font-variant-numeric:tabular-nums}
+#screen-home .home-carousel-buttons{display:flex;gap:7px;direction:rtl}
+#screen-home .home-carousel-arrow{display:grid;place-items:center;width:30px;height:30px;border-radius:12px;background:#F0FBF3;color:#258A4C;border:1px solid #D5ECDD;font-size:23px;line-height:1;box-shadow:0 2px 5px rgba(25,96,48,.05)}
+#screen-home .home-carousel-arrow:disabled{opacity:.36;cursor:default;box-shadow:none}
+#screen-home .home-carousel-empty{width:100%;padding:25px 15px;text-align:center;color:#62816B;background:#F5FCF7;border:1px dashed #CAE6D3;border-radius:18px;font-size:12px}
+#screen-home .home-search-field{margin-top:9px;margin-bottom:12px}
+@media(max-width:355px){#screen-home .home-hero.home-hero-announcements{min-height:170px;padding:10px 9px;gap:6px}#screen-home .home-notice-card{min-height:143px;padding:10px 8px;gap:5px}#screen-home .home-notice-heading{font-size:11px}#screen-home .home-notice-new{font-size:8px}#screen-home .home-notice-title{font-size:11.5px}#screen-home .home-hero .campus-art{height:139px;flex-basis:38%;width:38%;max-width:38%}#screen-home .home-register-heading h2{font-size:14px}#screen-home .home-event-slide{flex-basis:min(76vw,260px)}}
+@media(prefers-reduced-motion:reduce){#screen-home .home-event-carousel{scroll-behavior:auto}}

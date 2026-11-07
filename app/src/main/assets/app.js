@@ -58,10 +58,10 @@
   ];
 
   const events = [
-    { title: 'کارگاه مقدماتی پایتون',     date: 'سه‌شنبه ۱۸ دی ۱۴۰۳',    location: 'سالن جلسات دانشکده مهندسی', capacity: 18, poster: 'poster-code.svg',  category: 'کارگاه',   club: 2 },
-    { title: 'نشست «آینده هوش مصنوعی»',   date: 'چهارشنبه ۱۹ دی ۱۴۰۳',  location: 'سالن آمفی‌تئاتر مرکزی',     capacity: 45, poster: 'poster-ai.svg',    category: 'نشست',     club: 1 },
-    { title: 'مسابقه طراحی پوستر',        date: 'دوشنبه ۲۴ دی ۱۴۰۳',     location: 'کانون فرهنگی و هنری',       capacity: 20, poster: 'poster-art.svg',   category: 'مسابقه',   club: 0 },
-    { title: 'نشست کتاب‌خوانی',           date: 'چهارشنبه ۱۹ دی ۱۴۰۳',  location: 'کتابخانه دانشگاه',          capacity: 25, poster: 'poster-books.svg', category: 'نشست',     club: 0 }
+    { title: 'کارگاه مقدماتی پایتون',     date: 'سه‌شنبه ۱۸ دی ۱۴۰۳',    location: 'سالن جلسات دانشکده مهندسی', capacity: 18, poster: 'poster-code.svg',  category: 'کارگاه',   club: 2, registrationOpen: true },
+    { title: 'نشست «آینده هوش مصنوعی»',   date: 'چهارشنبه ۱۹ دی ۱۴۰۳',  location: 'سالن آمفی‌تئاتر مرکزی',     capacity: 45, poster: 'poster-ai.svg',    category: 'نشست',     club: 1, registrationOpen: true },
+    { title: 'مسابقه طراحی پوستر',        date: 'دوشنبه ۲۴ دی ۱۴۰۳',     location: 'کانون فرهنگی و هنری',       capacity: 20, poster: 'poster-art.svg',   category: 'مسابقه',   club: 0, registrationOpen: true },
+    { title: 'نشست کتاب‌خوانی',           date: 'چهارشنبه ۱۹ دی ۱۴۰۳',  location: 'کتابخانه دانشگاه',          capacity: 25, poster: 'poster-books.svg', category: 'نشست',     club: 0, registrationOpen: true }
   ];
 
   /* ——— State ——— */
@@ -160,14 +160,49 @@
   }
 
   /* ——— Render functions ——— */
-  function renderHome() {
-    $('home-events').innerHTML = [0, 3].map(i => eventCard(events[i], i, { compact: true })).join('');
-    $('home-clubs').innerHTML = [0, 2, 3].map(i =>
+  function homeCarouselCard(event,index){
+    return `<article class="home-event-slide" role="group" aria-label="${escapeHTML(event.title)}">
+      <div class="home-slide-cover">
+        <img src="assets/${event.poster}" alt="پوستر ${escapeHTML(event.title)}" width="244" height="119" loading="lazy">
+        <span class="home-slide-status"><span class="home-slide-pulse" aria-hidden="true"></span> ثبت‌نام باز</span>
+      </div>
+      <div class="home-slide-info">
+        <h3>${escapeHTML(event.title)}</h3>
+        <span class="home-slide-date">${svg('calendar',13)}${escapeHTML(event.date)}</span>
+        <button class="home-slide-view" type="button" data-details="${index}" aria-label="مشاهده ${escapeHTML(event.title)}">مشاهده جزئیات <span aria-hidden="true">‹</span></button>
+      </div>
+    </article>`;
+  }
+
+  function updateHomeCarouselControls(){
+    const scroll=$('home-events'),items=Array.from(scroll.querySelectorAll('.home-event-slide'));
+    const count=$('home-carousel-count'),prev=$('home-carousel-prev'),next=$('home-carousel-next');
+    const width=items[0]?items[0].getBoundingClientRect().width:0;
+    const step=width+12;
+    const index=step?Math.max(0,Math.min(items.length-1,Math.round(Math.abs(scroll.scrollLeft)/step))):0;
+    count.textContent=items.length?`${index+1} از ${items.length}`:'رویدادی یافت نشد';
+    prev.disabled=!items.length||index===0;next.disabled=!items.length||index===items.length-1;
+  }
+
+  function moveHomeCarousel(direction){
+    const scroll=$('home-events'),items=Array.from(scroll.querySelectorAll('.home-event-slide'));
+    if(!items.length)return;
+    const step=items[0].getBoundingClientRect().width+12;
+    const index=Math.max(0,Math.min(items.length-1,Math.round(Math.abs(scroll.scrollLeft)/step)));
+    const target=Math.max(0,Math.min(items.length-1,index+direction));
+    items[target].scrollIntoView({behavior:'smooth',block:'nearest',inline:'start'});
+  }
+
+  function renderHome(query=$('home-search').value.trim()){
+    // Explicit demo registration statuses; replace with backend results before production.
+    const found=events.map((event,index)=>[event,index]).filter(([event])=>event.registrationOpen===true&&event.capacity>0&&(!query||event.title.includes(query)));
+    $('home-events').innerHTML=found.length?found.map(([event,index])=>homeCarouselCard(event,index)).join(''):'<div class="home-carousel-empty" role="status">رویداد دارای ثبت‌نام فعال پیدا نشد.</div>';
+    $('home-events').scrollLeft=0;updateHomeCarouselControls();
+    const foundClubs=[0,2,3].filter(i=>!query||clubs[i].title.includes(query)||clubs[i].desc.includes(query));
+    $('home-clubs').innerHTML=foundClubs.length?foundClubs.map(i=>
       `<button type="button" class="home-mini-club" data-club-details="${i}">
-        <span class="mini-club-icon ${clubs[i].tone === 'green' ? 'green' : clubs[i].tone === 'mint' ? 'mint' : clubs[i].tone === 'orange' ? 'orange' : ''}"><img class="mini-art" src="assets/club-${clubs[i].icon === "book" ? "book" : clubs[i].icon === "code" ? "tech" : clubs[i].icon === "leaf" ? "leaf" : clubs[i].icon === "flask" ? "science" : "sport"}.svg" alt="" width="57" height="57"></span>
-        ${clubs[i].short}
-      </button>`
-    ).join('');
+      <span class="mini-club-icon ${clubs[i].tone==='green'?'green':clubs[i].tone==='mint'?'mint':clubs[i].tone==='orange'?'orange':''}"><img class="mini-art" src="assets/club-${clubs[i].icon==='book'?'book':clubs[i].icon==='code'?'tech':clubs[i].icon==='leaf'?'leaf':clubs[i].icon==='flask'?'science':'sport'}.svg" alt="" width="57" height="57"></span>
+      ${clubs[i].short}</button>`).join(''):'<div class="empty">کانونی یافت نشد.</div>';
   }
 
   function renderClubs() {
@@ -358,10 +393,8 @@
   function updateProfileDisplay() {
     const nameEl = $('profile-name');
     const numEl = $('profile-number');
-    const greetEl = document.querySelector('#screen-home .home-greeting h1');
     if (nameEl) nameEl.textContent = state.name;
     if (numEl) numEl.textContent = `شماره دانشجویی: ${state.number}`;
-    if (greetEl) greetEl.textContent = `سلام ${state.name.split(' ')[0]}!`;
   }
 
   /* ——— Init ——— */
@@ -378,24 +411,11 @@
       )
     );
 
-    // Home search
-    $('home-search').addEventListener('input', (e) => {
-      const q = e.target.value.trim();
-      if (!q) { renderHome(); return; }
-      $('home-events').innerHTML = events
-        .map((ev, i) => [ev, i])
-        .filter(([ev]) => ev.title.includes(q))
-        .map(([ev, i]) => eventCard(ev, i, { compact: true }))
-        .join('') || '<div class="empty">رویدادی یافت نشد.</div>';
-      $('home-clubs').innerHTML = clubs
-        .map((c, i) => [c, i])
-        .filter(([c]) => c.title.includes(q))
-        .map(([c, i]) =>
-          `<button type="button" class="home-mini-club" data-club-details="${i}">
-            <span class="mini-club-icon">${svg(c.icon, 24)}</span>${c.short}
-          </button>`
-        )
-        .join('') || '<div class="empty">کانونی یافت نشد.</div>';
+    // Horizontal home carousel stays horizontal after search.
+    $('home-search').addEventListener('input',e=>renderHome(e.target.value.trim()));
+    $('home-events').addEventListener('scroll',updateHomeCarouselControls,{passive:true});
+    $('home-events').addEventListener('keydown',e=>{
+      if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();moveHomeCarousel(e.key==='ArrowLeft'?1:-1);}
     });
 
     // Clubs search
@@ -414,6 +434,7 @@
     document.addEventListener('click', (e) => {
       const btn = e.target.closest('button');
       if (!btn) return;
+      if (btn.dataset.carousel) { moveHomeCarousel(btn.dataset.carousel==='next'?1:-1); return; }
       if (btn.dataset.screenBtn)      { go(btn.dataset.screenBtn); return; }
       if (btn.dataset.goto)           { closeSheet(); go(btn.dataset.goto); return; }
       if (btn.dataset.filter)         { activeFilter = btn.dataset.filter; renderEvents(); return; }

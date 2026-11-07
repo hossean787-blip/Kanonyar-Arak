@@ -34,34 +34,35 @@
 
       <!-- ==================== صفحه خانه ==================== -->
       <section class="screen" id="screen-home" data-screen="home" aria-labelledby="title-home">
-        <div class="home-hero">
-          <div class="home-greeting">
-            <img class="hamrah-wordmark" src="assets/hamrah-wordmark.png" alt="همراه" width="116" height="47">
-            <h1 id="title-home">سلام علی!</h1>
-            <p>به اپلیکیشن کانون‌های دانشجویی<br>خوش آمدی 👋</p>
-          </div>
+        <h1 id="title-home" class="visually-hidden">خانه</h1>
+        <div class="home-hero home-hero-announcements">
+          <button class="home-notice-card" id="notice-btn" type="button" aria-label="مشاهده اطلاعیه ثبت‌نام کانون‌ها">
+            <span class="home-notice-heading"><span class="home-notice-symbol" data-icon="megaphone" aria-hidden="true"></span><span>اطلاعیه‌ها</span><span class="home-notice-new">جدید</span></span>
+            <strong class="home-notice-title">ثبت‌نام کانون‌ها آغاز شد</strong>
+            <span class="home-notice-subtitle">برای نیمسال جدید</span>
+            <span class="home-notice-more">مشاهده اطلاعیه <span aria-hidden="true">‹</span></span>
+          </button>
           <img class="campus-art" src="assets/azad-university-logo.svg" alt="نشان دانشگاه آزاد اسلامی" width="170" height="180">
         </div>
         <div class="home-body">
-          <label class="search-field">
+          <div class="section-heading home-register-heading">
+            <h2>رویدادهای در حال ثبت‌نام</h2>
+            <button class="text-link" type="button" data-goto="events">مشاهده همه <span aria-hidden="true">‹</span></button>
+          </div>
+          <div class="home-carousel-wrap">
+            <div id="home-events" class="home-event-carousel" dir="rtl" role="region" aria-label="رویدادهای در حال ثبت‌نام؛ برای دیدن رویدادهای بعدی به طرفین بکشید" tabindex="0"></div>
+            <div class="home-carousel-controls">
+              <span id="home-carousel-count" class="home-carousel-count" aria-live="polite">۱ از ۱</span>
+              <div class="home-carousel-buttons" role="group" aria-label="جابجایی رویدادها">
+                <button id="home-carousel-prev" class="home-carousel-arrow" type="button" data-carousel="prev" aria-label="رویداد قبلی">›</button>
+                <button id="home-carousel-next" class="home-carousel-arrow" type="button" data-carousel="next" aria-label="رویداد بعدی">‹</button>
+              </div>
+            </div>
+          </div>
+          <label class="search-field home-search-field">
             <span class="search-icon-wrap" data-icon="search" aria-hidden="true"></span>
             <input id="home-search" type="search" placeholder="جستجو در کانون‌ها، رویدادها و ..." aria-label="جستجو در کانون‌ها و رویدادها">
           </label>
-          <button class="notice-banner" id="notice-btn" type="button">
-            <span class="notice-symbol" data-icon="megaphone" aria-hidden="true"></span>
-            <span class="notice-copy">
-              <strong>اطلاعیه مهم</strong>
-              <small>ثبت‌نام کانون‌ها برای نیمسال جدید آغاز شد.</small>
-            </span>
-            <span class="chev" data-icon="chevron-left" aria-hidden="true"></span>
-          </button>
-
-          <div class="section-heading">
-            <h2>رویدادهای جدید</h2>
-            <button class="text-link" type="button" data-goto="events">مشاهده همه <span aria-hidden="true">‹</span></button>
-          </div>
-          <div id="home-events" class="home-event-list"></div>
-
           <div class="section-heading clubs-heading">
             <h2>کانون‌های فعال</h2>
             <button class="text-link" type="button" data-goto="clubs">مشاهده همه <span aria-hidden="true">‹</span></button>

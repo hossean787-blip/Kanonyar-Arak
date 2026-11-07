@@ -880,7 +880,7 @@ body.native-app { padding: 0; background: white; }
 body.native-app .bottom-nav { padding-bottom: 6px; }
 
 /* ==========================================================
-   HAMRAH AURORA — Premium visual system / 2026
+   KANONHA AURORA — Premium visual system / 2026
    All five screens share the same navy–lavender design language.
    Structural/behavioral rules inherited from the working v0.1 UI.
    ========================================================== */
@@ -1051,7 +1051,7 @@ body.native-app .bottom-nav{padding-bottom:8px!important}
 @media(max-width:375px){.home-hero{min-height:167px}.campus-art{height:139px}.home-greeting h1{font-size:21px}.event-card.compact .event-poster{width:93px}.bottom-nav{margin-left:7px;margin-right:7px}.bottom-nav button{font-size:9px}.bottom-nav button .nav-art{height:36px;width:36px}.club-icon{width:66px;height:66px}}
 @media(max-width:335px){.home-greeting h1{font-size:19px}.campus-art{height:125px}.home-greeting p{font-size:9.5px}.bottom-nav button{font-size:8px}.nav-art{width:33px!important;height:33px!important}.home-mini-club{font-size:9px}.event-card.compact .event-poster{width:84px}}
 
-/* HAMRAH / compact sage-green navigation — 2026-11-07.
+/* KANONHA / compact sage-green navigation — 2026-11-07.
    Scope intentionally limited to bottom navigation and its notification offset. */
 :root { --nav-h: 66px; }
 .bottom-nav {
@@ -1105,7 +1105,7 @@ body.native-app .bottom-nav { padding-bottom: 5px !important; }
   .bottom-nav button .nav-art { width: 26px !important; height: 26px !important; }
 }
 
-/* === HAMRAH / Emerald #50C878 + White / all five pages === */
+/* === KANONHA / Emerald #50C878 + White / all five pages === */
 :root {
  --ink:#153927;--sub:#658171;--line:#DDEFE3;
  --blue:#50C878;--bright:#50C878;--teal:#50C878;--teal-dark:#278D54;

@@ -366,7 +366,7 @@
     const found=events.map((event,index)=>[event,index]).filter(([event])=>event.registrationOpen===true&&event.capacity>0&&(!query||event.title.includes(query)));
     $('home-events').innerHTML=found.length?found.map(([event,index])=>homeCarouselCard(event,index)).join(''):'<div class="home-carousel-empty" role="status">رویداد دارای ثبت‌نام فعال پیدا نشد.</div>';
     $('home-events').scrollLeft=0;updateHomeCarouselControls();
-    const foundClubs=[0,2,3].filter(i=>!query||clubs[i].title.includes(query)||clubs[i].desc.includes(query));
+    const foundClubs=(onlineMode ? clubs.map((_, i) => i) : [0,2,3]).filter(i=>!query||clubs[i].title.includes(query)||clubs[i].desc.includes(query));
     $('home-clubs').innerHTML=foundClubs.length?foundClubs.map(i=>
       `<button type="button" class="home-mini-club" data-club-details="${i}">
       <span class="mini-club-icon ${clubs[i].tone==='green'?'green':clubs[i].tone==='mint'?'mint':clubs[i].tone==='orange'?'orange':''}"><img class="mini-art" src="assets/club-${clubs[i].icon==='book'?'book':clubs[i].icon==='code'?'tech':clubs[i].icon==='leaf'?'leaf':clubs[i].icon==='flask'?'science':'sport'}.svg" alt="" width="57" height="57"></span>
@@ -382,7 +382,7 @@
   }
 
   function renderEvents() {
-    $('event-filters').innerHTML = ['همه', 'کارگاه', 'نشست', 'مسابقه'].map(type =>
+    $('event-filters').innerHTML = (onlineMode ? ['همه', 'رویداد'] : ['همه', 'کارگاه', 'نشست', 'مسابقه']).map(type =>
       `<button type="button" class="filter-btn${type === activeFilter ? ' active' : ''}" data-filter="${type}" aria-pressed="${type === activeFilter}">${type}</button>`
     ).join('');
     const found = events.map((ev, i) => [ev, i]).filter(([ev]) => activeFilter === 'همه' || ev.category === activeFilter);
@@ -478,8 +478,8 @@
       `<p>${svg('calendar', 15)} ${ev.date}<br>${svg('map-pin', 15)} ${ev.location}<br>
        کانون برگزارکننده: ${clubs[ev.club] ? clubs[ev.club].title : 'نامشخص'}</p>
        <p>${onlineMode ? 'ثبت‌نام آنلاین با تأیید سرور انجام می‌شود.' : 'این یک رویداد نمونه رابط کاربری است. ثبت‌نام واقعی انجام نمی‌شود.'}</p>
-       <button class="pill-btn sheet-action" type="button" data-register="${i}">
-         ${state.registered.includes(i) ? 'ثبت‌نام‌شده' : onlineMode ? 'ثبت‌نام آنلاین' : 'ثبت‌نام نمایشی'}
+       <button class="pill-btn sheet-action" type="button" ${onlineMode && (!ev.registrationOpen || state.registered.includes(i)) ? "disabled" : `data-register="${i}"`}>
+         ${state.registered.includes(i) ? 'ثبت‌نام‌شده' : onlineMode ? (ev.registrationOpen ? 'ثبت‌نام آنلاین' : 'ثبت‌نام بسته است') : 'ثبت‌نام نمایشی'}
        </button>`
     );
   }

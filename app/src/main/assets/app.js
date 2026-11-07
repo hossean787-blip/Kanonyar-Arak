@@ -48,8 +48,12 @@
   const svg = (name, size = 21) =>
     `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${iconPaths[name] || iconPaths.info}</svg>`;
 
+  /* ——— Online provider. Demo content is never mixed with a configured backend. ——— */
+  const onlineBackend = typeof window !== 'undefined' ? window.KanonhaBackend : null;
+  const onlineMode = Boolean(onlineBackend && onlineBackend.enabled);
+
   /* ——— Data ——— */
-  const clubs = [
+  let clubs = onlineMode ? [] : [
     { title: 'کانون فرهنگی و هنری',    desc: 'برگزاری رویدادهای فرهنگی، هنری و ادبی',                          short: 'کانون فرهنگی',      icon: 'book',       tone: 'blue'   },
     { title: 'کانون علمی و پژوهشی',     desc: 'ترویج فعالیت‌های علمی و پژوهشی دانشجویان',                      short: 'کانون علمی',        icon: 'flask',      tone: 'mint'   },
     { title: 'کانون فناوری و نوآوری',   desc: 'حمایت از ایده‌های فناورانه و آموزش مهارت‌های روز',              short: 'کانون فناوری',      icon: 'code',       tone: 'blue'   },
@@ -57,7 +61,7 @@
     { title: 'کانون ورزشی',              desc: 'برگزاری مسابقات و برنامه‌های ورزشی دانشجویی',                   short: 'کانون ورزشی',       icon: 'basketball', tone: 'orange' }
   ];
 
-  const events = [
+  let events = onlineMode ? [] : [
     { title: 'کارگاه مقدماتی پایتون',     date: 'زمان‌بندی نمونه',    location: 'سالن جلسات دانشکده مهندسی', capacity: 18, poster: 'poster-code.svg',  category: 'کارگاه',   club: 2, registrationOpen: true },
     { title: 'نشست «آینده هوش مصنوعی»',   date: 'زمان‌بندی نمونه',  location: 'سالن آمفی‌تئاتر مرکزی',     capacity: 45, poster: 'poster-ai.svg',    category: 'نشست',     club: 1, registrationOpen: true },
     { title: 'مسابقه طراحی پوستر',        date: 'زمان‌بندی نمونه',     location: 'کانون فرهنگی و هنری',       capacity: 20, poster: 'poster-art.svg',   category: 'مسابقه',   club: 0, registrationOpen: true },
@@ -66,7 +70,7 @@
 
   /* ——— State ——— */
   const STORAGE_KEY = 'kanonha-ui-v3';
-  const defaultState = () => ({ joined: [], registered: [], name: 'کاربر آزمایشی', number: 'ثبت نشده' });
+  const defaultState = () => ({ joined: [], requested: [], registered: [], name: onlineMode ? 'مهمان' : 'کاربر آزمایشی', number: 'ثبت نشده' });
 
   function loadState() {
     try {
@@ -74,6 +78,7 @@
       if (s && Array.isArray(s.joined) && Array.isArray(s.registered) && typeof s.name === 'string' && typeof s.number === 'string') {
         s.joined = [...new Set(s.joined.filter(n => Number.isInteger(n) && n >= 0 && n < clubs.length))];
         s.registered = [...new Set(s.registered.filter(n => Number.isInteger(n) && n >= 0 && n < events.length))];
+        s.requested = [];
         return s;
       }
     } catch (_) {}
@@ -86,8 +91,170 @@
   let toastTimer;
 
   const saveState = () => {
+    if (onlineMode) return;
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (_) {}
   };
+
+  /* ——— Online catalog, account, and durable per-user records ——— */
+  let onlineSignup = false;
+  let onlineWorking = false;
+  function onlineMessage(text, isError = false) {
+    const el = $('online-connection');
+    if (!el) return;
+    el.hidden = false;
+    el.textContent = text;
+    el.classList.toggle('is-error', isError);
+  }
+  function onlineError(error) {
+    const code = error && error.status;
+    if (code === 409 || code === 23505) return 'این ثبت قبلاً انجام شده است.';
+    if (code === 401) return 'نشست شما منقضی شده است؛ دوباره وارد شوید.';
+    return error && typeof error.message === 'string'
+      ? error.message.slice(0, 180) : 'خطای ارتباط با پایگاه داده.';
+  }
+  function onlineRenderAuth() {
+    if (!onlineMode) return;
+    const signed = Boolean(onlineBackend.currentUser);
+    $('online-auth-panel').hidden = signed;
+    $('online-profile-card').hidden = !signed;
+    $('profile-menu').hidden = !signed;
+    $('online-auth-title').textContent = onlineSignup ? 'ثبت‌نام دانشجو' : 'ورود دانشجو';
+    $('online-auth-submit').textContent = onlineSignup ? 'ایجاد حساب' : 'ورود به حساب';
+    $('online-auth-toggle').textContent = onlineSignup ? 'قبلاً ثبت‌نام کرده‌ام؛ ورود' : 'حساب ندارم؛ ثبت‌نام';
+    Array.from($('online-auth-panel').querySelectorAll('.online-signup-only')).forEach(el => { el.hidden = !onlineSignup; });
+    $('online-name').required = onlineSignup;
+    $('online-student').required = onlineSignup;
+    $('online-password').autocomplete = onlineSignup ? 'new-password' : 'current-password';
+  }
+  function onlineClubIcon(category) {
+    const t = String(category || '');
+    if (/فناوری|کامپیوتر|نرم‌افزار/.test(t)) return 'code';
+    if (/علم|پژوهش/.test(t)) return 'flask';
+    if (/محیط|طبیعت/.test(t)) return 'leaf';
+    if (/ورزش/.test(t)) return 'basketball';
+    return 'book';
+  }
+  async function onlineRefreshPublic() {
+    if (!onlineMode) return;
+    try {
+      const [rawClubs, rawEvents] = await Promise.all([onlineBackend.clubs(), onlineBackend.events()]);
+      clubs = rawClubs.filter(c => c && typeof c.id === 'string').map(c => ({
+        id: c.id, title: String(c.name || ''), short: String(c.name || '').slice(0, 28),
+        desc: String(c.description || ''), icon: onlineClubIcon(c.category),
+        tone: 'green'
+      }));
+      const now = Date.now();
+      events = rawEvents.filter(e => e && typeof e.id === 'string').map(e => {
+        const start = Date.parse(e.starts_at);
+        const close = Date.parse(e.registration_deadline);
+        const free = Math.max(0, Number(e.capacity || 0) - Number(e.registered_count || 0));
+        const category = 'رویداد';
+        return {
+          id: e.id,
+          title: String(e.title || ''), date: Number.isFinite(start) ? new Date(start).toLocaleString('fa-IR') : 'زمان نامشخص',
+          location: String(e.location || ''), capacity: free, poster: 'poster-books.svg',
+          category, club: clubs.findIndex(c => c.id === e.club_id),
+          registrationOpen: Number.isFinite(start) && Number.isFinite(close) && start > now && close > now && free > 0
+        };
+      });
+      onlineMessage('نمایش اطلاعات آنلاین؛ عضویت و ثبت‌نام در پایگاه داده مستقل ثبت می‌شوند.');
+      if (onlineBackend.currentUser) await onlineRefreshPersonal();
+      else renderAll();
+    } catch (error) {
+      onlineMessage('بارگذاری اطلاعات آنلاین ناموفق بود: ' + onlineError(error), true);
+      renderAll();
+    }
+  }
+  async function onlineRefreshPersonal() {
+    if (!onlineMode || !onlineBackend.currentUser) return;
+    const [profile, memberRows, eventRows] = await Promise.all([
+      onlineBackend.ensureProfile(), onlineBackend.memberships(), onlineBackend.registrations()
+    ]);
+    const memberMap = new Map(memberRows.map(m => [m.club_id, m.status]));
+    const eventIds = new Set(eventRows.filter(e => e.status === 'confirmed').map(e => e.event_id));
+    state.joined = clubs.map((c, i) => memberMap.get(c.id) === 'approved' ? i : -1).filter(i => i >= 0);
+    state.requested = clubs.map((c, i) => memberMap.get(c.id) === 'pending' ? i : -1).filter(i => i >= 0);
+    state.registered = events.map((e, i) => eventIds.has(e.id) ? i : -1).filter(i => i >= 0);
+    state.name = profile ? profile.full_name : 'اطلاعات تکمیل نشده';
+    state.number = profile ? profile.student_number : 'ثبت نشده';
+    renderAll();
+    onlineRenderAuth();
+    if (!profile) onlineMessage('برای درخواست عضویت یا ثبت‌نام رویداد، اطلاعات دانشجویی را تکمیل کنید.');
+  }
+  async function onlineAuthenticate(form) {
+    if (onlineWorking) return;
+    onlineWorking = true;
+    $('online-auth-submit').disabled = true;
+    const status = $('online-auth-status');
+    status.textContent = 'در حال بررسی حساب کاربری…';
+    try {
+      const values = new FormData(form);
+      const email = String(values.get('email') || '');
+      const password = String(values.get('password') || '');
+      if (onlineSignup) {
+        const result = await onlineBackend.signUp(
+          email, password, String(values.get('name') || ''), String(values.get('studentNumber') || '')
+        );
+        if (result.confirmationRequired) {
+          status.textContent = 'ایمیل تأیید برای شما ارسال شد. پس از تأیید ایمیل، از بخش ورود وارد شوید.';
+          onlineSignup = false;
+          onlineRenderAuth();
+          return;
+        }
+      } else await onlineBackend.signIn(email, password);
+      form.reset();
+      await onlineRefreshPublic();
+      onlineRenderAuth();
+      status.textContent = '';
+      notify('ورود به حساب انجام شد.');
+    } catch (error) {
+      status.textContent = onlineError(error);
+    } finally { onlineWorking = false; $('online-auth-submit').disabled = false; }
+  }
+  function onlineRequireProfile() {
+    if (!onlineBackend.currentUser) {
+      go('profile');
+      notify('برای ثبت اطلاعات ابتدا وارد حساب شوید.');
+      return false;
+    }
+    if (!/^[0-9]{6,20}$/.test(state.number)) {
+      go('profile');
+      notify('ابتدا نام و شماره دانشجویی را تکمیل کنید.');
+      action('edit');
+      return false;
+    }
+    return true;
+  }
+  async function onlineJoin(i) {
+    if (!clubs[i] || !onlineRequireProfile()) return;
+    try {
+      await onlineBackend.joinClub(clubs[i].id);
+      await onlineRefreshPersonal();
+      closeSheet();
+      notify('درخواست عضویت ثبت شد و در انتظار تأیید است.');
+    } catch (error) { notify(onlineError(error)); }
+  }
+  async function onlineRegister(i) {
+    if (!events[i] || !onlineRequireProfile()) return;
+    if (!events[i].registrationOpen) { notify('ثبت‌نام این رویداد باز نیست.'); return; }
+    try {
+      await onlineBackend.registerEvent(events[i].id);
+      await onlineRefreshPublic();
+      await onlineRefreshPersonal();
+      closeSheet();
+      notify('ثبت‌نام رویداد در سرور تأیید شد.');
+    } catch (error) { notify(onlineError(error)); }
+  }
+  async function onlineLogout() {
+    try { await onlineBackend.signOut(); }
+    catch (_) { /* local tokens still cleared by adapter */ }
+    state = defaultState();
+    renderAll();
+    onlineRenderAuth();
+    closeSheet();
+    go('profile');
+    notify('از حساب خارج شدید.');
+  }
 
   /* ——— Toast ——— */
   function notify(message) {

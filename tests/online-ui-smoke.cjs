@@ -1,0 +1,107 @@
+'use strict';
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
+const base = path.resolve(__dirname, '..');
+const html = fs.readFileSync(path.join(base, 'app/src/main/assets/index.html'), 'utf8');
+const code = fs.readFileSync(path.join(base, 'app/src/main/assets/app.js'), 'utf8');
+const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map(m => m[1]);
+const clubId = '3b45d692-201b-4111-b25e-029c0bc82e62';
+const eventId = '6afeed89-2d61-4216-b103-c28e80c85e7e';
+const studentId = 'af2c8d5d-ab17-4c54-aa22-11b572ad918a';
+const pages = ['home','clubs','events','activity','profile'];
+class E {
+  constructor(id) {
+    this.id = id; this.value = ''; this.innerHTML = ''; this.textContent = '';
+    this.dataset = id.startsWith('screen-') ? {screen:id.slice(7)} : {};
+    this.hidden = ['sheet-overlay','toast','online-auth-panel','online-connection'].includes(id) ||
+      (id.startsWith('screen-') && id !== 'screen-home');
+    this.disabled = false; this.required = false; this.isConnected = true;
+    this.classList = { toggle() {}, add() {} }; this.events = {};
+  }
+  addEventListener(event, cb) { this.events[event] = cb; }
+  querySelectorAll(selector) {
+    if (selector === '.online-signup-only') return [new E('signup-fields')];
+    if (selector !== '.home-event-slide' || this.id !== 'home-events') return [];
+    return Array.from({length:(this.innerHTML.match(/class="home-event-slide"/g)||[]).length},
+      () => ({getBoundingClientRect:()=>({width:244}),scrollIntoView(){}}));
+  }
+  focus() {}
+}
+const nodes = new Map(ids.map(id => [id,new E(id)]));
+const get = id => { assert.ok(nodes.has(id), 'missing node: ' + id); return nodes.get(id); };
+const eventHandlers = {};
+const location = { search: '?native=1', hash: '' };
+const doc = {
+  readyState:'complete', getElementById:get,
+  querySelectorAll: selector => selector === '.screen' ? pages.map(id => get('screen-'+id)) : [],
+  activeElement:{isConnected:true,focus(){}},
+  body:{classList:{add(){}}},
+  addEventListener: (name, cb) => { eventHandlers[name] = cb; }
+};
+let currentUser = null, memberRows = [], eventRows = [], seats = 0;
+const actions = { joins:0, registrations:0 };
+const backend = {
+  enabled:true,
+  get currentUser() { return currentUser; },
+  async clubs() { return [{id:clubId,name:'کانون آزمایشی',description:'نمونه آنلاین',category:'فرهنگی'}]; },
+  async events() { return [{
+    id:eventId,club_id:clubId,title:'رویداد آزمایشی',
+    starts_at:'2035-05-01T10:00:00Z',registration_deadline:'2035-04-30T10:00:00Z',
+    location:'آزمایش',capacity:3,registered_count:seats
+  }]; },
+  async signIn() { currentUser = {id:studentId}; return currentUser; },
+  async signOut() { currentUser = null; },
+  async ensureProfile() { return {full_name:'دانشجوی نمونه',student_number:'123456'}; },
+  async memberships() { return memberRows; },
+  async registrations() { return eventRows; },
+  async joinClub(id) { assert.equal(id,clubId); actions.joins++; memberRows=[{club_id:id,status:'pending'}]; },
+  async registerEvent(id) { assert.equal(id,eventId); actions.registrations++; eventRows=[{event_id:id,status:'confirmed'}]; seats++; },
+  async saveProfile(name,number) { return {full_name:name,student_number:number}; }
+};
+const window = { KanonhaBackend:backend, addEventListener() {}, location };
+const storage = new Map();
+const ctx = {
+  window,document:doc,location,URLSearchParams,Date,
+  localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)},
+  history:{replaceState(_a,_b,h){location.hash=h;}},FormData:class {constructor(form){this.data=form.fields;}get(k){return this.data[k];}},
+  requestAnimationFrame:fn=>fn(),setTimeout:()=>1,clearTimeout() {},console
+};
+vm.runInNewContext(code,ctx,{filename:'app.js',timeout:3000});
+const app = window.KanonhaPreview;
+const delay = () => new Promise(r=>setImmediate(r));
+const click = dataset => eventHandlers.click({target:{closest(){return {dataset};}}});
+(async () => {
+  await delay(); await delay();
+  assert.equal(app.screen,'home');
+  assert.equal(get('online-auth-panel').hidden,false,'auth should be shown to guests');
+  assert.equal(get('online-profile-card').hidden,true,'guest cannot see account data');
+  assert.ok(!get('home-clubs').innerHTML.includes('کانون فناوری'),'no demo content in online catalog');
+  app.go('profile');
+  await eventHandlers.submit({
+    target:{id:'online-auth-form',fields:{email:'student@school.edu',password:'securepassword'},reset(){}},
+    preventDefault(){}
+  });
+  await delay(); await delay();
+  assert.equal(get('online-auth-panel').hidden,true,'logged-in screen should hide login');
+  assert.equal(get('profile-name').textContent,'دانشجوی نمونه');
+  app.go('clubs');
+  click({join:'0'});
+  await delay(); await delay();
+  assert.equal(actions.joins,1);
+  assert.equal(app.state.requested.length,1,'pending membership not reflected');
+  app.go('events');
+  click({register:'0'});
+  await delay(); await delay(); await delay();
+  assert.equal(actions.registrations,1);
+  assert.equal(app.state.registered.length,1);
+  assert.ok(!get('activity-tickets').innerHTML.includes('sample-qr'),'online should never show fake QR');
+  click({action:'confirm-exit'});
+  await delay(); await delay();
+  assert.equal(backend.currentUser,null);
+  assert.equal(get('online-auth-panel').hidden,false);
+  assert.equal(app.state.registered.length,0);
+  assert.equal(storage.size,0,'live account records must not be persisted in demo localStorage');
+  console.log('PASS: five-screen online catalog, student login, pending memberships, registrations and logout');
+})().catch(e=>{console.error(e);process.exitCode=1;});

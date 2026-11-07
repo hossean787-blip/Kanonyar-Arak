@@ -22,6 +22,7 @@ jobs:
       - name: Validate offline UI and SVG assets
         run: |
           node --check app/src/main/assets/app.js
+          node --check tests/ui-smoke.cjs
           python3 - <<'PY'
           from pathlib import Path
           import xml.etree.ElementTree as ET
@@ -38,9 +39,18 @@ jobs:
               assert (root/'assets'/f'nav-{name}.svg').is_file(), name
           for name in ('book','tech','leaf','science','sport'):
               assert (root/'assets'/f'club-{name}.svg').is_file(), name
-          assert (root/'assets'/'hamrah-wordmark.png').is_file()
+          assert (root/'assets'/'azad-university-logo.svg').is_file()
+          app_root=Path('app/src/main')
+          manifest=(app_root/'AndroidManifest.xml').read_text(encoding='utf-8')
+          assert 'android:label="کانون‌ها"' in manifest
+          assert 'همراه' not in html + manifest
+          for name in ('ic_launcher.xml','ic_launcher_round.xml'):
+              ET.parse(app_root/'res'/'mipmap-anydpi-v26'/name)
+          ET.parse(app_root/'res'/'drawable'/'ic_kanonha_foreground.xml')
           print('UI integrity and all SVGs valid')
           PY
+      - name: Smoke-test navigation, offline state and Android Back bridge
+        run: node tests/ui-smoke.cjs
       - name: Build demo APK
         run: gradle :app:assembleDebug --no-daemon
       - uses: actions/upload-artifact@v4

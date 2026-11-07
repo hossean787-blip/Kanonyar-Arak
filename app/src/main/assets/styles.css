@@ -1050,3 +1050,57 @@ body.native-app .bottom-nav{padding-bottom:8px!important}
 @media (prefers-reduced-motion:reduce){.bottom-nav button,.nav-art,.pill-btn,.card{transition:none!important}}
 @media(max-width:375px){.home-hero{min-height:167px}.campus-art{height:139px}.home-greeting h1{font-size:21px}.hamrah-wordmark{width:96px;height:37px}.event-card.compact .event-poster{width:93px}.bottom-nav{margin-left:7px;margin-right:7px}.bottom-nav button{font-size:9px}.bottom-nav button .nav-art{height:36px;width:36px}.club-icon{width:66px;height:66px}}
 @media(max-width:335px){.home-greeting h1{font-size:19px}.campus-art{height:125px}.home-greeting p{font-size:9.5px}.bottom-nav button{font-size:8px}.nav-art{width:33px!important;height:33px!important}.home-mini-club{font-size:9px}.event-card.compact .event-poster{width:84px}}
+
+/* HAMRAH / compact sage-green navigation — 2026-11-07.
+   Scope intentionally limited to bottom navigation and its notification offset. */
+:root { --nav-h: 66px; }
+.bottom-nav {
+  height: 66px;
+  min-height: 66px;
+  margin: 5px 10px 7px;
+  padding: 5px 7px !important;
+  gap: 2px;
+  border: 1px solid rgba(170,219,186,.56);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 90% 95%,rgba(114,177,137,.32),transparent 42%),
+    linear-gradient(115deg,#285849 0%,#183e38 48%,#12312e 100%);
+  box-shadow: 0 8px 18px rgba(19,58,43,.17), inset 0 1px 2px rgba(255,255,255,.23);
+}
+.bottom-nav:before { border-top-color: rgba(224,255,233,.38); }
+.bottom-nav button {
+  min-height: 54px;
+  padding: 3px 1px 4px;
+  gap: 0px;
+  font-size: 9px;
+  line-height: 1.25;
+  color: #e2f2e6;
+  border-radius: 18px;
+}
+.bottom-nav button .nav-art {
+  width: 30px;
+  height: 30px;
+  filter: drop-shadow(0 1px 2px rgba(6,48,33,.22));
+}
+.bottom-nav button.active {
+  color: #174b36;
+  background: linear-gradient(145deg,#dbf4dd 0%,#a5dfb9 52%,#79c7a0 100%);
+  border: 1px solid rgba(238,255,242,.72);
+  box-shadow: inset 0 1px 2px rgba(255,255,255,.7), 0 3px 9px rgba(35,114,79,.27);
+}
+.bottom-nav button.active .nav-art {
+  transform: scale(1.03);
+  filter: drop-shadow(0 2px 2px rgba(22,84,54,.18));
+}
+.bottom-nav button:not(.active):active { background: rgba(169,223,184,.16); }
+body.native-app .bottom-nav { padding-bottom: 5px !important; }
+.toast { bottom: 84px; }
+@media (max-width: 375px) {
+  .bottom-nav { margin-left: 7px; margin-right: 7px; }
+  .bottom-nav button { font-size: 8.5px; }
+  .bottom-nav button .nav-art { width: 28px; height: 28px; }
+}
+@media (max-width: 335px) {
+  .bottom-nav button { font-size: 8px; }
+  .bottom-nav button .nav-art { width: 26px !important; height: 26px !important; }
+}

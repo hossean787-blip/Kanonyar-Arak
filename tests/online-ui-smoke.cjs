@@ -61,7 +61,8 @@ const backend = {
   async saveProfile(name,number) { return {full_name:name,student_number:number}; }
 };
 const window = { KanonhaBackend:backend, addEventListener() {}, location };
-const storage = new Map();
+const previousDemo = JSON.stringify({joined:[0],registered:[0],name:'حساب نمایشی قدیمی',number:'111111'});
+const storage = new Map([['kanonha-ui-v3', previousDemo]]);
 const ctx = {
   window,document:doc,location,URLSearchParams,Date,
   localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)},
@@ -75,6 +76,10 @@ const click = dataset => eventHandlers.click({target:{closest(){return {dataset}
 (async () => {
   await delay(); await delay();
   assert.equal(app.screen,'home');
+  assert.equal(app.state.joined.length,0,'prior demo membership must not leak online');
+  assert.equal(app.state.registered.length,0,'prior demo registration must not leak online');
+  assert.equal(app.state.name,'مهمان','prior demo name must not leak online');
+  assert.equal(get('online-events-heading').textContent,'رویدادهای در حال ثبت‌نام');
   assert.equal(get('online-auth-panel').hidden,false,'auth should be shown to guests');
   assert.equal(get('online-profile-card').hidden,true,'guest cannot see account data');
   assert.ok(!get('home-clubs').innerHTML.includes('کانون فناوری'),'no demo content in online catalog');
@@ -102,6 +107,7 @@ const click = dataset => eventHandlers.click({target:{closest(){return {dataset}
   assert.equal(backend.currentUser,null);
   assert.equal(get('online-auth-panel').hidden,false);
   assert.equal(app.state.registered.length,0);
-  assert.equal(storage.size,0,'live account records must not be persisted in demo localStorage');
+  assert.equal(storage.size,1,'online must not persist account records in demo storage');
+  assert.equal(storage.get('kanonha-ui-v3'),previousDemo,'online mode must not mutate previous demo state');
   console.log('PASS: five-screen online catalog, student login, pending memberships, registrations and logout');
 })().catch(e=>{console.error(e);process.exitCode=1;});

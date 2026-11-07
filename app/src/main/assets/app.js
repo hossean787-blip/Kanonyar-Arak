@@ -311,16 +311,17 @@
   /* ——— Club card ——— */
   function clubCard(club, index) {
     const member = state.joined.includes(index);
-    const isViewOnly = index === 0 || index === 3;
+    const isViewOnly = !onlineMode && (index === 0 || index === 3);
+    const pending = (state.requested || []).includes(index);
     return `<article class="card club-card">
       <div class="club-icon ${club.tone === 'blue' ? '' : club.tone}"><img class="club-art" src="assets/club-${club.icon === "book" ? "book" : club.icon === "code" ? "tech" : club.icon === "leaf" ? "leaf" : club.icon === "flask" ? "science" : "sport"}.svg" alt="" width="48" height="48"></div>
       <div class="club-info">
         <h3>${club.title}</h3>
         <p>${club.desc}</p>
         <button type="button"
-          ${member || isViewOnly ? `data-club-details="${index}"` : `data-join="${index}"`}
-          class="pill-btn ${member ? 'joined' : isViewOnly ? 'view-btn' : ''}">
-          ${member ? 'عضو هستید' : isViewOnly ? 'مشاهده' : 'عضویت'}
+          ${member || pending || isViewOnly ? `data-club-details="${index}"` : `data-join="${index}"`}
+          class="pill-btn ${member ? 'joined' : pending ? 'signed' : isViewOnly ? 'view-btn' : ''}">
+          ${member ? 'عضو هستید' : pending ? 'در انتظار تأیید' : isViewOnly ? 'مشاهده' : 'عضویت'}
         </button>
       </div>
     </article>`;
@@ -411,11 +412,12 @@
   }
 
   function renderActivity() {
-    $('activity-clubs').innerHTML = state.joined.length
-      ? state.joined.filter(i => clubs[i]).map(i =>
+    const activityMembers = [...new Set([...state.joined, ...(state.requested || [])])];
+    $('activity-clubs').innerHTML = activityMembers.length
+      ? activityMembers.filter(i => clubs[i]).map(i =>
           `<button class="activity-row" type="button" data-club-details="${i}">
             <span class="club-icon ${clubs[i].tone}"><img class="row-club-art" src="assets/club-${clubs[i].icon === "book" ? "book" : clubs[i].icon === "code" ? "tech" : clubs[i].icon === "leaf" ? "leaf" : clubs[i].icon === "flask" ? "science" : "sport"}.svg" alt="" width="31" height="31"></span>
-            <span class="activity-copy">${clubs[i].title}</span>
+            <span class="activity-copy">${clubs[i].title}${state.requested.includes(i) ? '<small>در انتظار تأیید عضویت</small>' : ''}</span>
             <span class="arrow">${svg('chevron-left', 15)}</span>
           </button>`
         ).join('')
@@ -439,7 +441,7 @@
               <p>${svg('map-pin', 12)} ${events[i].location}</p>
               <div class="ticket-label">بلیت نمونه — فاقد اعتبار ورود</div>
             </div>
-            ${qrMarkup(i)}
+            ${onlineMode ? '<div class="ticket-label">بلیت قابل‌استفاده پس از راه‌اندازی صدور بلیت ارائه می‌شود.</div>' : qrMarkup(i)}
           </article>`
         ).join('')
       : '<div class="empty">هنوز بلیتی ندارید.</div>';
@@ -474,10 +476,10 @@
     if (!ev) return;
     openSheet(ev.title,
       `<p>${svg('calendar', 15)} ${ev.date}<br>${svg('map-pin', 15)} ${ev.location}<br>
-       کانون برگزارکننده: ${clubs[ev.club].title}</p>
-       <p>این یک رویداد نمونه رابط کاربری است. ثبت‌نام واقعی انجام نمی‌شود.</p>
+       کانون برگزارکننده: ${clubs[ev.club] ? clubs[ev.club].title : 'نامشخص'}</p>
+       <p>${onlineMode ? 'ثبت‌نام آنلاین با تأیید سرور انجام می‌شود.' : 'این یک رویداد نمونه رابط کاربری است. ثبت‌نام واقعی انجام نمی‌شود.'}</p>
        <button class="pill-btn sheet-action" type="button" data-register="${i}">
-         ${state.registered.includes(i) ? 'ثبت‌نام‌شده' : 'ثبت‌نام نمایشی'}
+         ${state.registered.includes(i) ? 'ثبت‌نام‌شده' : onlineMode ? 'ثبت‌نام آنلاین' : 'ثبت‌نام نمایشی'}
        </button>`
     );
   }
@@ -487,15 +489,16 @@
     if (!club) return;
     openSheet(club.title,
       `<p>${club.desc}</p>
-       <p>برای مشاهده عملکرد ظاهری عضویت می‌توانید روی دکمه زیر بزنید. هیچ اطلاعاتی به سرور ارسال نمی‌شود.</p>
-       <button class="pill-btn sheet-action" type="button" data-join="${i}">
-         ${state.joined.includes(i) ? 'عضو هستید' : 'درخواست عضویت نمایشی'}
+       <p>${onlineMode ? 'عضویت در کانون پس از تأیید مدیر کانون فعال می‌شود.' : 'برای مشاهده عملکرد ظاهری عضویت می‌توانید روی دکمه زیر بزنید. هیچ اطلاعاتی به سرور ارسال نمی‌شود.'}</p>
+       <button class="pill-btn sheet-action" type="button" ${state.joined.includes(i) || state.requested.includes(i) ? 'disabled' : 'data-join="' + i + '"'}>
+         ${state.joined.includes(i) ? 'عضو هستید' : state.requested.includes(i) ? 'در انتظار تأیید' : onlineMode ? 'درخواست عضویت' : 'درخواست عضویت نمایشی'}
        </button>`
     );
   }
 
   /* ——— Actions ——— */
   function join(i) {
+    if (onlineMode) { void onlineJoin(i); return; }
     if (!clubs[i]) return;
     if (state.joined.includes(i)) { notify('این عضویت در نسخه نمایشی ثبت شده است.'); return; }
     state.joined.push(i);
@@ -507,6 +510,7 @@
   }
 
   function register(i) {
+    if (onlineMode) { void onlineRegister(i); return; }
     if (!events[i]) return;
     if (state.registered.includes(i)) { notify('قبلاً در این رویداد ثبت‌نام نمایشی کرده‌اید.'); return; }
     state.registered.push(i);
@@ -528,25 +532,29 @@
           <label class="field">شماره دانشجویی
             <input name="number" maxlength="20" required value="${escapeHTML(state.number)}">
           </label>
-          <button type="submit" class="pill-btn sheet-action">ذخیره نمایشی</button>
+          <button type="submit" class="pill-btn sheet-action">${onlineMode ? 'ذخیره اطلاعات دانشجو' : 'ذخیره نمایشی'}</button>
         </form>`
       );
     } else if (name === 'requests') {
       openSheet('درخواست‌های عضویت',
-        `<p>این نمونه رابط کاربری است. وضعیت عضویت نمونه در قسمت «فعالیت‌های من» قابل مشاهده است.</p>
+        `<p>${onlineMode ? 'درخواست‌های شما در صفحه فعالیت‌های من نمایش داده می‌شوند.' : 'این نمونه رابط کاربری است. وضعیت عضویت نمونه در قسمت «فعالیت‌های من» قابل مشاهده است.'}</p>
          <button class="pill-btn sheet-action" type="button" data-goto="activity">فعالیت‌های من</button>`
       );
     } else if (name === 'about') {
       openSheet('درباره برنامه',
-        `<p>کانون‌ها — نسخه آزمایشی مستقل</p>
-         <p>پنج صفحه با HTML، CSS، JavaScript و تصویرسازی SVG پیاده‌سازی شده‌اند. هیچ داده‌ای به سرور ارسال نمی‌شود.</p>
-         <button type="button" data-action="reset" class="pill-btn soft">بازنشانی داده‌های نمایشی</button>`
+        `<p>کانون‌ها — ${onlineMode ? 'نسخه ۰.۴.۰، حساب کاربری و ثبت‌نام آنلاین' : 'نسخه نمایشی آفلاین'}</p>
+         <p>${onlineMode ? 'ورود و ثبت‌نام متصل به پایگاه داده مستقل؛ بلیت معتبر و تأیید شماره دانشجویی هنوز فعال نیست. نشست در حافظه موقت است.' : 'پنج صفحه با HTML، CSS و JavaScript پیاده‌سازی شده‌اند. هیچ داده‌ای به سرور ارسال نمی‌شود.'}</p>
+         ${onlineMode ? '' : '<button type="button" data-action="reset" class="pill-btn soft">بازنشانی داده‌های نمایشی</button>'}`
       );
     } else if (name === 'exit') {
       openSheet('خروج از حساب',
-        `<p>در نسخه نمایشی، حساب کاربری واقعی وجود ندارد. بنابراین خروج واقعی فعال نیست.</p>`
+        onlineMode
+          ? '<p>آیا از حساب کاربری خارج می‌شوید؟</p><button class="pill-btn sheet-action" type="button" data-action="confirm-exit">خروج از حساب</button>'
+          : '<p>در نسخه نمایشی، حساب کاربری واقعی وجود ندارد. بنابراین خروج واقعی فعال نیست.</p>'
       );
-    } else if (name === 'reset') {
+    } else if (name === 'confirm-exit' && onlineMode) {
+      void onlineLogout();
+    } else if (name === 'reset' && !onlineMode) {
       state = defaultState();
       saveState();
       renderAll();
@@ -569,6 +577,7 @@
     const numEl = $('profile-number');
     if (nameEl) nameEl.textContent = state.name;
     if (numEl) numEl.textContent = `شماره دانشجویی: ${state.number}`;
+    if (onlineMode) onlineRenderAuth();
   }
 
   /* ——— Init ——— */
@@ -594,6 +603,14 @@
 
     // Clubs search
     $('clubs-search').addEventListener('input', renderClubs);
+    if (onlineMode) {
+      onlineRenderAuth();
+      $('online-auth-toggle').addEventListener('click', () => {
+        onlineSignup = !onlineSignup;
+        $('online-auth-status').textContent = '';
+        onlineRenderAuth();
+      });
+    }
 
     // Sheet close
     $('close-sheet').addEventListener('click', closeSheet);
@@ -620,13 +637,27 @@
     });
 
     // Profile edit form
-    document.addEventListener('submit', (e) => {
+    document.addEventListener('submit', async (e) => {
+      if (onlineMode && e.target.id === 'online-auth-form') {
+        e.preventDefault();
+        await onlineAuthenticate(e.target);
+        return;
+      }
       if (e.target.id !== 'edit-form') return;
       e.preventDefault();
       const form = new FormData(e.target);
       const name = String(form.get('name') || '').trim();
       const number = String(form.get('number') || '').trim();
       if (!name || !number) return;
+      if (onlineMode) {
+        try {
+          await onlineBackend.saveProfile(name, number);
+          await onlineRefreshPersonal();
+          closeSheet();
+          notify('اطلاعات دانشجویی در سرور ذخیره شد.');
+        } catch (error) { notify(onlineError(error)); }
+        return;
+      }
       state.name = name;
       state.number = number;
       saveState();
@@ -643,6 +674,7 @@
     // Handle hash navigation
     const requested = location.hash.replace('#', '');
     go(navItems.some(x => x.id === requested) ? requested : 'home');
+    if (onlineMode) void onlineRefreshPublic();
 
     window.addEventListener('hashchange', () => {
       const id = location.hash.slice(1);

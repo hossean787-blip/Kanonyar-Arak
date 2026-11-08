@@ -51,6 +51,30 @@
           <img class="campus-art" src="assets/azad-university-logo.svg" alt="نشان دانشگاه آزاد اسلامی" width="170" height="180">
         </div>
         <div class="home-body">
+          <!-- A visual persona switch; each option is backed by authenticated server permissions. -->
+          <section id="role-switcher" class="role-switcher" hidden aria-label="انتخاب نقش کاربری">
+            <div class="role-switcher-top">
+              <div><span class="role-switcher-eyebrow">✦ حساب یکپارچه کانون‌ها</span>
+                <h2>در چه نقشی فعالیت می‌کنی؟</h2></div>
+              <button id="role-refresh" type="button" class="role-switcher-refresh" aria-label="به‌روزرسانی مجوزها">↻</button>
+            </div>
+            <div class="role-switcher-options" role="group" aria-label="انتخاب نقش">
+              <button type="button" id="role-option-student" data-role-switch="student" aria-pressed="false">
+                <span class="role-switcher-icon" aria-hidden="true">🎓</span>
+                <strong>دانشجو</strong><small>فعالیت‌های من</small>
+              </button>
+              <button type="button" id="role-option-secretary" data-role-switch="secretary" aria-pressed="false" hidden>
+                <span class="role-switcher-icon" aria-hidden="true">✦</span>
+                <strong>دبیر کانون</strong><small>مدیریت کانون</small>
+              </button>
+              <button type="button" id="role-option-manager" data-role-switch="manager" aria-pressed="false" hidden>
+                <span class="role-switcher-icon" aria-hidden="true">♛</span>
+                <strong>مدیرکل</strong><small>مدیریت سراسری</small>
+              </button>
+            </div>
+            <p id="role-switcher-description" class="role-switcher-description" aria-live="polite"></p>
+            <button id="role-onboard-btn" class="role-onboard-btn" type="button" hidden>تکمیل پرونده دانشجویی</button>
+          </section>
           <section id="home-management" class="home-management" hidden aria-label="دسترسی مدیریت">
             <div class="home-management-copy">
               <span id="home-management-overline">دسترسی ویژه فعال</span>

@@ -167,11 +167,15 @@ final class BiometricVault {
                 try {
                     byte[] wrapped = authorized.doFinal(randomKey);
                     SecretKeySpec secret = new SecretKeySpec(randomKey, "AES");
-                    // Save refresh first; commit envelope only after all operations succeed.
-                    storeRefresh(secret, token);
+                    Cipher tokenCipher = Cipher.getInstance(CIPHER);
+                    tokenCipher.init(Cipher.ENCRYPT_MODE, secret);
+                    byte[] encryptedToken = tokenCipher.doFinal(token.getBytes(StandardCharsets.UTF_8));
+                    // One atomic commit avoids a half-updated credential envelope on crash.
                     if (!prefs.edit().putString("wrapped", encode(wrapped))
-                        .putString("wrapped_iv", encode(authorized.getIV())).commit())
-                        throw new IllegalStateException("Could not save wrapped key");
+                        .putString("wrapped_iv", encode(authorized.getIV()))
+                        .putString("refresh", encode(encryptedToken))
+                        .putString("refresh_iv", encode(tokenCipher.getIV())).commit())
+                        throw new IllegalStateException("Could not save encrypted credential");
                     unlockedKey = secret;
                     java.util.Arrays.fill(randomKey, (byte)0);
                     status("enabled");

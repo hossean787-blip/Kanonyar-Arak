@@ -111,3 +111,21 @@ jobs:
           name: kanonha-0.9.1-debug-validation
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+      # Temporary SDK verification utilities, never signing credentials.
+      - name: Prepare Android signing/verification utilities
+        run: |
+          set -euo pipefail
+          mkdir -p signing-check-tools
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner.jar | sort -V | tail -1)"
+          ZIPALIGN="$(find "$ANDROID_HOME/build-tools" -type f -name zipalign | sort -V | tail -1)"
+          test -s "$APKSIGNER"
+          test -x "$ZIPALIGN"
+          cp "$APKSIGNER" signing-check-tools/apksigner.jar
+          cp "$ZIPALIGN" signing-check-tools/zipalign
+          echo 'Android platform tools staged; no release signing key present'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kanonha-android-sdk-check-tools
+          path: signing-check-tools/*
+          retention-days: 1
+          if-no-files-found: error

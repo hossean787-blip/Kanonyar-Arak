@@ -55,6 +55,7 @@ create table if not exists public.kanonha_registrations (
 
 create index if not exists kanonha_events_club_idx on public.kanonha_events (club_id, starts_at);
 create index if not exists kanonha_memberships_user_idx on public.kanonha_memberships (user_id);
+create index if not exists kanonha_memberships_club_idx on public.kanonha_memberships (club_id);
 create index if not exists kanonha_regs_user_idx on public.kanonha_registrations (user_id);
 create index if not exists kanonha_regs_event_idx on public.kanonha_registrations (event_id);
 

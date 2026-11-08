@@ -9,7 +9,9 @@ const cfg = fs.readFileSync(path.join(base, 'app/src/main/assets/config.js'), 'u
 const sql = fs.readFileSync(path.join(base, 'supabase/schema-v040.sql'), 'utf8');
 const manifest = fs.readFileSync(path.join(base, 'app/src/main/AndroidManifest.xml'), 'utf8');
 assert.match(manifest, /android.permission.INTERNET/);
-assert.match(cfg, /publishableKey:\s*''/);
+assert.match(cfg, /url:\s*'https:\/\/cnqcysnjinghzzrzanpj\.supabase\.co'/);
+assert.match(cfg, /publishableKey:\s*'sb_publishable_[A-Za-z0-9_-]+'/);
+assert.doesNotMatch(cfg, /publishableKey:\s*['\"](?:sb_secret_|service_role)/i, 'configuration must not embed privileged keys');
 assert.doesNotMatch(cfg + code, /service_role\s*[:=]\s*['"][^'"]{5}/i);
 for (const table of ['profiles','clubs','events','memberships','registrations']) {
   assert.match(sql, new RegExp('alter table public\\.kanonha_' + table + ' enable row level security', 'i'));

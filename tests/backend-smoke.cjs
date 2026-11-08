@@ -26,6 +26,7 @@ const id = 'af2c8d5d-ab17-4c54-aa22-11b572ad918a';
 const club = '3b45d692-201b-4111-b25e-029c0bc82e62';
 const event = '6afeed89-2d61-4216-b103-c28e80c85e7e';
 const responses = [];
+let storedProfile = { full_name: 'دانشجو', student_number: '123456', university_verified: false };
 function ok(data, status = 200) {
   return { ok: status >= 200 && status < 300, status,
     async text() { return data === undefined ? '' : JSON.stringify(data); } };
@@ -41,9 +42,17 @@ async function fakeFetch(url, options) {
   if (url.includes('/rest/v1/kanonha_events?'))
     return ok([{ id: event, title: 'رویداد آزمایشی', registered_count: 0 }]);
   if (url.includes('/rest/v1/kanonha_profiles?select='))
-    return ok([{ full_name: 'دانشجو', student_number: '123456', university_verified: false }]);
-  if (url.includes('/rest/v1/kanonha_profiles?on_conflict='))
-    return ok([{ full_name: 'دانشجو', student_number: '123456' }]);
+    return ok(storedProfile ? [storedProfile] : []);
+  if (url.endsWith('/rest/v1/kanonha_profiles') && options.method === 'POST') {
+    assert.equal(options.headers.Prefer, 'return=representation');
+    storedProfile = { ...JSON.parse(options.body), university_verified: false };
+    return ok([storedProfile], 201);
+  }
+  if (url.includes('/rest/v1/kanonha_profiles?user_id=eq.') && options.method === 'PATCH') {
+    assert.deepEqual(Object.keys(JSON.parse(options.body)).sort(), ['full_name','student_number']);
+    storedProfile = { ...storedProfile, ...JSON.parse(options.body) };
+    return ok([storedProfile]);
+  }
   if (url.includes('/rest/v1/kanonha_memberships?select=')) return ok([]);
   if (url.includes('/rest/v1/kanonha_registrations?select=')) return ok([]);
   if (url.endsWith('/rest/v1/kanonha_memberships')) return ok(undefined, 201);
@@ -75,7 +84,16 @@ function createClient(config) {
   await online.signIn('test@sample.org', 'eight-characters');
   assert.equal(online.currentUser.id, id);
   assert.equal((await online.profile()).student_number, '123456');
-  await online.saveProfile('دانشجو', '123456');
+  await online.saveProfile('دانشجوی تازه', '123456');
+  const updated = responses.findLast(r => r.method === 'PATCH' && r.url.includes('/kanonha_profiles?user_id=eq.'));
+  assert.ok(updated, 'existing profile must be PATCHed rather than upserted');
+  assert.equal(updated.body.user_id, undefined, 'primary key must never be updated');
+  storedProfile = null;
+  const created = await online.saveProfile('دانشجوی جدید', '987654');
+  assert.equal(created.student_number, '987654');
+  const inserted = responses.findLast(r => r.method === 'POST' && r.url.endsWith('/kanonha_profiles'));
+  assert.equal(inserted.body.user_id, id, 'new profile must belong to authenticated user');
+  assert.ok(!responses.some(r => r.url.includes('on_conflict=')), 'unsafe upsert must never be called');
   await online.memberships();
   await online.registrations();
   await online.joinClub(club);
@@ -91,5 +109,5 @@ function createClient(config) {
   const newClient = createClient({ url: 'https://kanonha-test.supabase.co', publishableKey: 'sb_publishable_testonly' });
   const result = await newClient.signUp('test@sample.org', 'strongpassword', 'دانشجو نمونه', '123456');
   assert.equal(result.confirmationRequired, true);
-  console.log('PASS: disabled guard, online public catalog, auth, profile, private RLS requests, registration and logout');
+  console.log('PASS: RLS-compatible profile insert/update, auth, catalog, membership, registration and logout');
 })().catch(error => { console.error(error); process.exitCode = 1; });

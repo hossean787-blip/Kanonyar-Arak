@@ -144,12 +144,32 @@
   async function saveProfile(name, studentNumber) {
     const user_id = mustUser();
     const fields = checkProfile(name, studentNumber);
-    const rows = await request(restPath + 'kanonha_profiles?on_conflict=user_id', {
-      method: 'POST', requireUser: true,
-      headers: { Prefer: 'resolution=merge-duplicates,return=representation' },
-      body: { user_id, ...fields }
+    // Column-level RLS grants never allow the client to UPDATE user_id.
+    // Split insert/update so PostgREST does not attempt to update the primary key.
+    const existing = await profile();
+    if (existing) return updateProfile(user_id, fields);
+    try {
+      const rows = await request(restPath + 'kanonha_profiles', {
+        method: 'POST', requireUser: true,
+        headers: { Prefer: 'return=representation' },
+        body: { user_id, ...fields }
+      });
+      return Array.isArray(rows) ? rows[0] || null : null;
+    } catch (error) {
+      // Concurrent account bootstrap: a single profile already exists for this user.
+      // A duplicated student number belonging to someone else remains a hard failure.
+      if (error.status !== 409 || !(await profile())) throw error;
+      return updateProfile(user_id, fields);
+    }
+  }
+  async function updateProfile(userId, fields) {
+    const rows = await request(restPath + 'kanonha_profiles?user_id=eq.' + encodeURIComponent(userId), {
+      method: 'PATCH', requireUser: true,
+      headers: { Prefer: 'return=representation' },
+      body: fields
     });
-    return Array.isArray(rows) ? rows[0] : null;
+    if (!Array.isArray(rows) || rows.length !== 1) throw new ApiError('ذخیره اطلاعات انجام نشد؛ دوباره تلاش کنید.');
+    return rows[0];
   }
   async function profile() {
     const user_id = mustUser();

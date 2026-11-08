@@ -55,18 +55,19 @@ async function limited(req:Request,identifier:string,signup:boolean) {
 }
 function validRegistration(input:Record<string,unknown>) {
   const student=digits(text(input.studentNumber,20)), national=digits(text(input.nationalId,10));
+  const mobile=digits(text(input.mobile,11));
   const fullName=text(input.name,80),university=text(input.university,120),
     faculty=text(input.faculty,120),major=text(input.major,120);
   const birth=text(input.birthDate,10),password=input.password;
   const d=new Date(birth+"T00:00:00Z");
-  if(!/^\d{6,20}$/.test(student)||!nationalValid(national)||
+  if(!/^\d{6,20}$/.test(student)||!nationalValid(national)||!/^09\d{9}$/.test(mobile)||
     fullName.length<2||fullName.length>80||
     ![university,faculty,major].every(s=>s.length>=2&&s.length<=120)||
     !/^\d{4}-\d{2}-\d{2}$/.test(birth) || Number.isNaN(d.getTime()) ||
     d.toISOString().slice(0,10)!==birth ||
     d.getTime()>=Date.now()||d.getUTCFullYear()<1920 ||
     typeof password!=="string"||password.length<10||password.length>128) return null;
-  return {student,national,fullName,university,faculty,major,birth,password};
+  return {student,national,mobile,fullName,university,faculty,major,birth,password};
 }
 async function create(input:Record<string,unknown>,req:Request) {
   const r=validRegistration(input);
@@ -96,7 +97,7 @@ async function create(input:Record<string,unknown>,req:Request) {
     });
     if(!profile.ok)throw Error("profile");
     const academic=await http("/rest/v1/kanonha_academic_details","POST",{
-      user_id:uid,birth_date:r.birth,university:r.university,faculty:r.faculty,major:r.major
+      user_id:uid,birth_date:r.birth,university:r.university,faculty:r.faculty,major:r.major,mobile:r.mobile
     });
     if(!academic.ok)throw Error("academic");
   }catch{

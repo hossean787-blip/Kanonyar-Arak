@@ -1,4 +1,4 @@
-name: Kanonha UI + online preview validation
+name: Kanonha connected-backend validation and Android build
 on:
   push:
     branches: [main]
@@ -27,6 +27,7 @@ jobs:
           node --check app/src/main/assets/config.js
           node --check tests/backend-smoke.cjs
           node --check tests/online-ui-smoke.cjs
+          node --check tests/live-api-smoke.cjs
           python3 - <<'PY'
           from pathlib import Path
           import xml.etree.ElementTree as ET
@@ -59,7 +60,9 @@ jobs:
         run: |
           node tests/backend-smoke.cjs
           node tests/online-ui-smoke.cjs
-      - name: Build demo APK
+      - name: Verify real isolated Supabase Data API and anonymous RLS
+        run: node tests/live-api-smoke.cjs
+      - name: Build Android connected-preview APK
         run: gradle :app:assembleDebug --no-daemon
       - uses: actions/upload-artifact@v4
         with:

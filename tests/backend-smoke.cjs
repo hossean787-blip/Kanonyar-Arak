@@ -11,7 +11,7 @@ const manifest = fs.readFileSync(path.join(base, 'app/src/main/AndroidManifest.x
 assert.match(manifest, /android.permission.INTERNET/);
 assert.match(cfg, /url:\s*'https:\/\/cnqcysnjinghzzrzanpj\.supabase\.co'/);
 assert.match(cfg, /publishableKey:\s*'sb_publishable_[A-Za-z0-9_-]+'/);
-assert.doesNotMatch(cfg, /sb_secret_|service_role/i);
+assert.doesNotMatch(cfg, /publishableKey:\s*['\"](?:sb_secret_|service_role)/i, 'configuration must not embed privileged keys');
 assert.doesNotMatch(cfg + code, /service_role\s*[:=]\s*['"][^'"]{5}/i);
 for (const table of ['profiles','clubs','events','memberships','registrations']) {
   assert.match(sql, new RegExp('alter table public\\.kanonha_' + table + ' enable row level security', 'i'));

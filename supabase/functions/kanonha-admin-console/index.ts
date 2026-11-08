@@ -46,7 +46,7 @@ async function overview(){
   rows("kanonha_registrations?select=id,user_id,event_id,status,attended_at,registered_at&order=registered_at.desc&limit=500"),
   rows("kanonha_secretaries?select=club_id,user_id,appointed_at&limit=500"),
   rows("kanonha_profiles?select=user_id,full_name,student_number,university_verified&limit=500"),
-  rows("kanonha_academic_details?select=user_id,birth_date,university,faculty,major&limit=500")
+  rows("kanonha_academic_details?select=user_id,birth_date,university,faculty,major,mobile&limit=500")
  ]);
  return {clubs,events,memberships,registrations,secretaries,
   users:profiles.map(p=>({...p,academic:academics.find(a=>a.user_id===p.user_id)||null}))};
@@ -108,10 +108,10 @@ async function handle(op:string,d:Record<string,unknown>,actor:string){
  if(op==="student.edit"){
   if(!uuid(d.user_id))throw new Error("input");
   const full_name=val(d.full_name,80),university=val(d.university,120),
-    faculty=val(d.faculty,120),major=val(d.major,120);
-  if(full_name.length<2||[university,faculty,major].some(x=>x.length<2||x.length>120))throw new Error("input");
+    faculty=val(d.faculty,120),major=val(d.major,120),mobile=val(d.mobile,11);
+  if(full_name.length<2||[university,faculty,major].some(x=>x.length<2||x.length>120)||!/^09\d{9}$/.test(mobile))throw new Error("input");
   await mutation("kanonha_profiles","PATCH",{full_name},"?user_id=eq."+d.user_id);
-  return mutation("kanonha_academic_details","PATCH",{university,faculty,major},"?user_id=eq."+d.user_id);
+  return mutation("kanonha_academic_details","PATCH",{university,faculty,major,mobile},"?user_id=eq."+d.user_id);
  }
  if(op==="roster.attendance"){
   if(!uuid(id)||!allowedBool(d.present))throw new Error("input");

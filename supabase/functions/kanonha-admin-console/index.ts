@@ -39,16 +39,18 @@ async function identity(req:Request){
  return roles.length===1?user.id:null;
 }
 async function overview(){
- const [clubs,events,memberships,registrations,secretaries,profiles,academics]=await Promise.all([
+ const [clubs,events,memberships,registrations,secretaries,profiles,academics,universities,faculties]=await Promise.all([
   rows("kanonha_clubs?select=id,name,description,category,is_active,created_at&order=name.asc&limit=500"),
   rows("kanonha_events?select=id,club_id,title,starts_at,registration_deadline,location,capacity,registered_count,is_published&order=starts_at.desc&limit=500"),
   rows("kanonha_memberships?select=id,user_id,club_id,status,requested_at,decided_at&order=requested_at.desc&limit=500"),
   rows("kanonha_registrations?select=id,user_id,event_id,status,attended_at,registered_at&order=registered_at.desc&limit=500"),
   rows("kanonha_secretaries?select=club_id,user_id,appointed_at&limit=500"),
   rows("kanonha_profiles?select=user_id,full_name,student_number,university_verified&limit=500"),
-  rows("kanonha_academic_details?select=user_id,birth_date,university,faculty,major,mobile&limit=500")
+  rows("kanonha_academic_details?select=user_id,birth_date,university,faculty,major,mobile&limit=500"),
+  rows("kanonha_universities?select=id,name&order=name.asc&limit=1000"),
+  rows("kanonha_faculties?select=id,university_id,name&order=name.asc&limit=5000")
  ]);
- return {clubs,events,memberships,registrations,secretaries,
+ return {clubs,events,memberships,registrations,secretaries,universities,faculties,
   users:profiles.map(p=>({...p,academic:academics.find(a=>a.user_id===p.user_id)||null}))};
 }
 // A director may additionally be a student: attach academic records to the SAME auth.uid.
@@ -85,6 +87,18 @@ const allowedBool=(b:unknown)=>typeof b==="boolean";
 async function handle(op:string,d:Record<string,unknown>,actor:string){
  const id=val(d.id,40);
  if(op==="overview")return await overview();
+ if(op==="university.create"){
+  const name=val(d.name,120);
+  if(name.length<2||name.length>120)throw new Error("input");
+  return mutation("kanonha_universities","POST",{name});
+ }
+ if(op==="faculty.create"){
+  const name=val(d.name,120),university_id=val(d.university_id,40);
+  if(name.length<2||name.length>120||!uuid(university_id))throw new Error("input");
+  const matched=await rows("kanonha_universities?select=id&id=eq."+university_id+"&limit=1");
+  if(matched.length!==1)throw new Error("input");
+  return mutation("kanonha_faculties","POST",{university_id,name});
+ }
   if(op==="manager.student.attach")return await attachManagerStudent(d,actor);
  if(op==="club.create"||op==="club.update"){
   const name=val(d.name,120),description=val(d.description,2000),category=val(d.category,80);

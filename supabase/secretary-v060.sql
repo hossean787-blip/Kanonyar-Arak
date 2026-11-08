@@ -25,13 +25,13 @@ create policy "secretary_can_update_assigned_club" on public.kanonha_clubs
   using (
     exists (
       select 1 from public.kanonha_secretaries s
-      where s.club_id = id and s.user_id = (select auth.uid())
+      where s.club_id = public.kanonha_clubs.id and s.user_id = (select auth.uid())
     ) and is_active = true
   )
   with check (
     exists (
       select 1 from public.kanonha_secretaries s
-      where s.club_id = id and s.user_id = (select auth.uid())
+      where s.club_id = public.kanonha_clubs.id and s.user_id = (select auth.uid())
     ) and is_active = true
   );
 
@@ -40,7 +40,7 @@ create policy "secretary_can_read_assigned_events" on public.kanonha_events
   for select to authenticated
   using (exists (
     select 1 from public.kanonha_secretaries s
-    where s.club_id = club_id and s.user_id = (select auth.uid())
+    where s.club_id = public.kanonha_events.club_id and s.user_id = (select auth.uid())
   ));
 
 grant insert (club_id, title, starts_at, registration_deadline, location, capacity, is_published)
@@ -52,18 +52,18 @@ create policy "secretary_can_create_assigned_event" on public.kanonha_events
   with check (
     exists (select 1 from public.kanonha_secretaries s
             join public.kanonha_clubs c on c.id = s.club_id
-            where s.club_id = club_id and s.user_id = (select auth.uid())
+            where s.club_id = public.kanonha_events.club_id and s.user_id = (select auth.uid())
               and c.is_active)
     and starts_at > now() and registration_deadline > now()
   );
 create policy "secretary_can_edit_assigned_event" on public.kanonha_events
   for update to authenticated
   using (exists (
-    select 1 from public.kanonha_secretaries s where s.club_id = club_id and s.user_id = (select auth.uid())
+    select 1 from public.kanonha_secretaries s where s.club_id = public.kanonha_events.club_id and s.user_id = (select auth.uid())
   ) and registered_count = 0)
   with check (
     exists (select 1 from public.kanonha_secretaries s
-            where s.club_id = club_id and s.user_id = (select auth.uid()))
+            where s.club_id = public.kanonha_events.club_id and s.user_id = (select auth.uid()))
     and registered_count = 0 and starts_at > now() and registration_deadline > now()
   );
 -- Never grant update on club_id or registered_count.
@@ -72,7 +72,7 @@ create policy "secretary_can_edit_assigned_event" on public.kanonha_events
 create policy "secretary_can_read_assigned_memberships" on public.kanonha_memberships
   for select to authenticated
   using (exists (
-    select 1 from public.kanonha_secretaries s where s.club_id = club_id and s.user_id = (select auth.uid())
+    select 1 from public.kanonha_secretaries s where s.club_id = public.kanonha_memberships.club_id and s.user_id = (select auth.uid())
   ));
 alter table public.kanonha_memberships
   add column if not exists decided_at timestamptz,
@@ -82,12 +82,12 @@ create policy "secretary_can_decide_assigned_memberships" on public.kanonha_memb
   for update to authenticated
   using (
     status = 'pending' and exists (
-      select 1 from public.kanonha_secretaries s where s.club_id = club_id and s.user_id = (select auth.uid())
+      select 1 from public.kanonha_secretaries s where s.club_id = public.kanonha_memberships.club_id and s.user_id = (select auth.uid())
     )
   )
   with check (
     status in ('approved', 'rejected') and exists (
-      select 1 from public.kanonha_secretaries s where s.club_id = club_id and s.user_id = (select auth.uid())
+      select 1 from public.kanonha_secretaries s where s.club_id = public.kanonha_memberships.club_id and s.user_id = (select auth.uid())
     )
   );
 -- The user does not have permission to forge the decision audit fields.
@@ -114,7 +114,7 @@ create policy "secretary_can_read_applicants_profiles" on public.kanonha_profile
     exists (
       select 1 from public.kanonha_memberships m
         join public.kanonha_secretaries s on s.club_id = m.club_id
-      where m.user_id = user_id and s.user_id = (select auth.uid())
+      where m.user_id = public.kanonha_profiles.user_id and s.user_id = (select auth.uid())
     )
   );
 
@@ -128,7 +128,7 @@ create policy "secretary_can_read_assigned_event_rosters" on public.kanonha_regi
     exists (
       select 1 from public.kanonha_events e
       join public.kanonha_secretaries s on s.club_id = e.club_id
-      where e.id = event_id and s.user_id = (select auth.uid())
+      where e.id = public.kanonha_registrations.event_id and s.user_id = (select auth.uid())
     )
   );
 create policy "secretary_can_mark_assigned_event_attendance" on public.kanonha_registrations
@@ -136,13 +136,13 @@ create policy "secretary_can_mark_assigned_event_attendance" on public.kanonha_r
   using (exists (
     select 1 from public.kanonha_events e
     join public.kanonha_secretaries s on s.club_id = e.club_id
-    where e.id = event_id and s.user_id = (select auth.uid())
+    where e.id = public.kanonha_registrations.event_id and s.user_id = (select auth.uid())
       and e.starts_at <= now()
   ))
   with check (exists (
     select 1 from public.kanonha_events e
     join public.kanonha_secretaries s on s.club_id = e.club_id
-    where e.id = event_id and s.user_id = (select auth.uid())
+    where e.id = public.kanonha_registrations.event_id and s.user_id = (select auth.uid())
       and e.starts_at <= now()
   ));
 -- Attendance dates are set by server clock, not client-supplied values.

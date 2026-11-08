@@ -25,6 +25,7 @@ class E {
     this.classList = { toggle() {}, add() {} }; this.events = {};
   }
   addEventListener(event, cb) { this.events[event] = cb; }
+  setAttribute(name,value) { this[name]=value; }
   querySelectorAll(selector) {
     if (selector === '.online-signup-only') return [new E('signup-fields')];
     if (selector !== '.home-event-slide' || this.id !== 'home-events') return [];
@@ -56,6 +57,10 @@ const backend = {
     location:untrustedLocation,capacity:3,registered_count:seats
   }]; },
   async signIn() { currentUser = {id:studentId}; return currentUser; },
+  async studentSignIn() { currentUser = {id:studentId}; return currentUser; },
+  async studentSignUp() { currentUser = {id:studentId}; return currentUser; },
+  async isManager() { return false; },
+  async academicDetails() { return {university:'دانشگاه نمونه',faculty:'دانشکده نمونه',major:'رشته نمونه'}; },
   async signOut() { currentUser = null; },
   async ensureProfile() { return {full_name:'دانشجوی نمونه',student_number:'123456'}; },
   async memberships() { return memberRows; },
@@ -105,12 +110,13 @@ const click = dataset => eventHandlers.click({target:{closest(){return {dataset}
   app.handleBack();
   app.go('profile');
   await eventHandlers.submit({
-    target:{id:'online-auth-form',fields:{email:'student@school.edu',password:'securepassword'},reset(){}},
+    target:{id:'online-auth-form',fields:{kind:'student',identifier:'123456',password:'securepassword'},reset(){}},
     preventDefault(){}
   });
   await delay(); await delay();
   assert.equal(get('online-auth-panel').hidden,true,'logged-in screen should hide login');
   assert.equal(get('profile-name').textContent,'دانشجوی نمونه');
+  assert.equal(get('online-auth-panel').hidden,true,'login form should close after student auth');
   app.go('clubs');
   click({join:'0'});
   await delay(); await delay();

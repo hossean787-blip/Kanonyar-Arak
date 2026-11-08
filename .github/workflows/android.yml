@@ -1,4 +1,4 @@
-name: Kanonha release candidate, stable signing and regression validation
+name: Kanonha 0.9.2 Jalali onboarding, secure manager entry and regression
 on:
   push:
     branches: [main]
@@ -25,6 +25,8 @@ jobs:
       - name: Validate offline UI and SVG assets
         run: |
           node --check app/src/main/assets/app.js
+          node --check app/src/main/assets/jalali.js
+          node --check tests/jalali-auth-ux-smoke.cjs
           node --check tests/ui-smoke.cjs
           node --check app/src/main/assets/backend.js
           node --check app/src/main/assets/config.js
@@ -80,6 +82,7 @@ jobs:
           node tests/unified-auth-smoke.cjs
           node tests/admin-ui-smoke.cjs
           node tests/multi-role-ui-smoke.cjs
+          node tests/jalali-auth-ux-smoke.cjs
           node tests/role-workspaces-smoke.cjs
           node tests/multi-role-auth-smoke.cjs
       - name: Verify real isolated Supabase Data API and anonymous RLS
@@ -98,16 +101,16 @@ jobs:
           ! find app/src -type f -name '*.keystore' | grep -q .
           ! find app/src -type f -name '*.p12' | grep -q .
           grep -q 'applicationId = "ir.kanonha.app"' app/build.gradle.kts
-          grep -q 'versionCode = 16' app/build.gradle.kts
+          grep -q 'versionCode = 17' app/build.gradle.kts
           grep -q 'android:allowBackup="false"' app/src/main/AndroidManifest.xml
           echo 'Release output validated; unsigned candidate requires secure external signing'
       - uses: actions/upload-artifact@v4
         with:
-          name: kanonha-0.9.1-release-unsigned
+          name: kanonha-0.9.2-release-unsigned
           path: app/build/outputs/apk/release/app-release-unsigned.apk
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
-          name: kanonha-0.9.1-debug-validation
+          name: kanonha-0.9.2-debug-validation
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error

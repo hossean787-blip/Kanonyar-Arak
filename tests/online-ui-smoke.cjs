@@ -84,7 +84,7 @@ const delay = () => new Promise(r=>setImmediate(r));
 const click = dataset => eventHandlers.click({target:{closest(){return {dataset};}}});
 (async () => {
   await delay(); await delay();
-  assert.equal(app.screen,'home');
+  assert.equal(app.screen,'profile','connected app should present sign-in page first');
   assert.equal(app.state.joined.length,0,'prior demo membership must not leak online');
   assert.equal(app.state.registered.length,0,'prior demo registration must not leak online');
   assert.equal(app.state.name,'مهمان','prior demo name must not leak online');

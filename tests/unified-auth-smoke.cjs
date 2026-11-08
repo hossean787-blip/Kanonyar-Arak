@@ -44,7 +44,7 @@ vm.runInNewContext(source,{window,fetch:fetchMock,AbortController,setTimeout,cle
  {filename:'backend.js',timeout:3000});
 const api=window.KanonhaBackend;
 (async()=>{
- await assert.rejects(()=>api.studentSignUp({name:'invalid'}),/نامعتبر/);
+ await assert.rejects(()=>api.studentSignUp({name:'invalid'}),/معتبر نیست/);
  const fields={name:'دانشجوی تست',studentNumber:'99887766',nationalId:'0084575948',
  birthDate:'2002-05-15',university:'دانشگاه تست',faculty:'دانشکده تست',major:'حسابداری',password:'secure-password-123'};
  const result=await api.studentSignUp(fields);

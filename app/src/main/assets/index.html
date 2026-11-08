@@ -165,6 +165,28 @@
             </div>
           </div>
         </div>
+        <!-- Secretary panel: only shown after verified club assignments are returned by RLS. -->
+        <section id="secretary-panel" class="secretary-panel" hidden aria-labelledby="secretary-title">
+          <div class="secretary-hero">
+            <div class="secretary-hero-crest" aria-hidden="true">✦</div>
+            <div>
+              <p class="secretary-eyebrow">دسترسی ویژه کانون‌ها</p>
+              <h2 id="secretary-title">میز دبیر کانون</h2>
+              <p class="secretary-helper">مدیریت اعضا و برنامه‌های کانونِ اختصاص‌یافته</p>
+            </div>
+          </div>
+          <label class="secretary-select-label">کانون تحت مدیریت
+            <select id="secretary-club-select" aria-label="انتخاب کانون تحت مدیریت"></select>
+          </label>
+          <div id="secretary-tabs" class="secretary-tabs" role="group" aria-label="بخش‌های مدیریت دبیر">
+            <button type="button" data-secretary-tab="club">کانون</button>
+            <button type="button" data-secretary-tab="members">اعضا</button>
+            <button type="button" data-secretary-tab="events">رویدادها</button>
+            <button type="button" data-secretary-tab="attendance">حضور و غیاب</button>
+          </div>
+          <p id="secretary-message" class="secretary-message" role="status" aria-live="polite"></p>
+          <div id="secretary-content" aria-live="polite"></div>
+        </section>
         <div class="settings-menu" id="profile-menu">
           <button class="menu-item" type="button" data-action="edit">
             <span class="menu-ico" data-icon="user" aria-hidden="true"></span>

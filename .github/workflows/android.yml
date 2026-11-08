@@ -78,8 +78,6 @@ jobs:
         run: |
           node tests/live-api-smoke.cjs
           node tests/live-identity-smoke.cjs
-      - name: ONE-TIME live signup QA (temporary synthetic account)
-        run: node tests/live-registration-qa.cjs
       - name: Build Android connected-preview APK
         run: gradle :app:assembleDebug --no-daemon
       - uses: actions/upload-artifact@v4

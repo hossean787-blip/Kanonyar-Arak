@@ -1619,3 +1619,148 @@ button:focus-visible,input:focus-visible,select:focus-visible {outline-color:#39
 .biometric-settings-text span {font-size:10px;color:#586C85;line-height:1.6;}
 .biometric-enable-btn {background:#3944BC;color:white;padding:9px 10px;
  border-radius:10px;font-family:inherit;font-size:10px;font-weight:750;white-space:nowrap;}
+
+/* ===== KANONHA LOGIN 0.9.5 — focused sign-in only =====
+   Signup and signed-in profile retain their own layouts. */
+#screen-profile[data-auth-view="login"] {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: clamp(36px, 8vh, 74px) 21px 32px;
+  background:
+    radial-gradient(ellipse 72% 20% at 78% 6%, rgba(57,68,188,.08), transparent 90%),
+    radial-gradient(ellipse 70% 40% at 4% 100%, rgba(44,62,76,.045), transparent 88%),
+    #F9FAFF;
+}
+#screen-profile[data-auth-view="login"] > .screen-kicker,
+#screen-profile[data-auth-view="login"] > .screen-title,
+#screen-profile[data-auth-view="login"] > .screen-description,
+#screen-profile[data-auth-view="login"] > .online-connection {
+  display: none !important;
+}
+#screen-profile[data-auth-view="login"] #online-auth-panel {
+  width:100%;
+  max-width: 430px;
+  margin: clamp(8px, 4vh, 38px) auto auto;
+  padding: 31px 23px 25px;
+  background: linear-gradient(154deg,#FFFFFF 0%,#FFFFFF 55%,#F4F6FE 100%);
+  border: 1px solid #E1E5F2;
+  border-radius: 27px;
+  box-shadow: 0 23px 58px rgba(44,62,76,.10), 0 4px 13px rgba(57,68,188,.045);
+}
+#screen-profile[data-auth-view="login"] .v7-auth-hero {
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  gap:16px;
+  padding:0 0 29px;
+  margin-bottom:13px;
+}
+.v95-login-icon {
+  height:64px;
+  width:64px;
+  border-radius:20px;
+  flex-shrink:0;
+  display:grid;
+  place-items:center;
+  background:linear-gradient(137deg,#2C3E4C 0%,#3944BC 82%);
+  box-shadow:inset 0 1px 1px rgba(255,255,255,.32),
+    0 10px 20px rgba(57,68,188,.20);
+  position:relative;
+}
+.v95-login-icon::before {
+  content:'';
+  position:absolute;
+  inset:-5px;
+  border:1px solid rgba(57,68,188,.14);
+  border-radius:24px;
+}
+.v95-login-icon svg {width:48px;height:48px;filter:drop-shadow(0 1px 1px rgba(0,0,0,.09))}
+.v95-auth-heading {display:flex;flex-direction:column;gap:0;min-width:0;}
+#screen-profile[data-auth-view="login"] .v95-auth-title {
+  line-height:1.4;
+  margin:0;
+  font-size:26px;
+  color:#2C3E4C;
+  font-weight:900;
+}
+.v95-login-title-button {
+  display:inline-block;
+  appearance:none;
+  background:transparent;
+  padding:5px 0;
+  margin:0;
+  border:0;
+  font:inherit;
+  font-weight:inherit;
+  line-height:inherit;
+  letter-spacing:-.4px;
+  color:inherit;
+  text-align:right;
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+  user-select:none;
+}
+.v95-login-title-button:focus-visible {outline:2px solid #3944BC;outline-offset:4px;border-radius:6px}
+#screen-profile[data-auth-view="login"] .online-caption {display:none!important}
+#screen-profile[data-auth-view="login"] .v7-auth-form {gap:20px}
+#screen-profile[data-auth-view="login"] .v7-auth-form .field {
+  color:#2C3E4C;
+  font-size:12px;
+  font-weight:750;
+  gap:9px;
+}
+#screen-profile[data-auth-view="login"] .v7-auth-form input {
+  min-height:57px;
+  border-radius:15px;
+  font-size:13px;
+  padding:13px 16px;
+  background:#FFFFFF;
+  border:1px solid #DCE2F1;
+  color:#2C3E4C;
+  box-shadow:0 2px 5px rgba(44,62,76,.025);
+}
+#screen-profile[data-auth-view="login"] .v7-auth-form input:focus {
+  border-color:#3944BC;
+  outline:3px solid rgba(57,68,188,.12);
+  box-shadow:0 5px 14px rgba(57,68,188,.07);
+}
+#screen-profile[data-auth-view="login"] .v7-auth-form input::placeholder {color:#919BB2}
+#screen-profile[data-auth-view="login"] #online-auth-submit {
+  min-height:54px;
+  height:auto;
+  margin-top:9px;
+  border-radius:15px;
+  font-size:14px;
+  font-weight:850;
+  letter-spacing:.1px;
+  background:linear-gradient(110deg,#2C3E4C,#3944BC);
+  box-shadow:0 9px 21px rgba(57,68,188,.19);
+}
+#screen-profile[data-auth-view="login"] #online-auth-toggle {
+  color:#3944BC;
+  font-size:12.5px;
+  font-weight:850;
+  padding:9px 6px;
+  margin:18px auto 0;
+  background:transparent;
+}
+#screen-profile[data-auth-view="login"] #online-auth-status {
+  min-height:0;
+  margin:8px 0 0;
+  font-size:11px;
+}
+#screen-profile[data-auth-view="login"] #online-auth-status:empty {display:none}
+#screen-profile[data-auth-view="login"] .biometric-login-trigger {
+  height:56px;width:56px;border-radius:15px;
+  background:#E9EDFF;
+}
+#screen-profile[data-auth-view="login"] .biometric-login-trigger svg {width:28px;height:28px}
+#screen-profile[data-auth-view="login"] .password-biometric-row {gap:8px}
+@media (max-width:360px) {
+ #screen-profile[data-auth-view="login"] {padding:20px 12px 24px}
+ #screen-profile[data-auth-view="login"] #online-auth-panel {padding:24px 15px 20px}
+ #screen-profile[data-auth-view="login"] .v7-auth-hero {gap:12px}
+ .v95-login-icon {height:56px;width:56px;border-radius:17px}
+ .v95-login-icon svg {height:42px;width:42px}
+}

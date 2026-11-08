@@ -140,7 +140,7 @@
       el.setAttribute('aria-pressed',onlineRole === role ? 'true' : 'false');
     }
     for (const id of ['online-name','online-student','online-national','online-birth',
-      'online-university','online-faculty','online-major'])
+      'online-university','online-faculty','online-major','online-mobile'])
       $(id).required = student && onlineSignup;
     $('online-identifier').required = student && !onlineSignup;
     $('online-email').required = !student;
@@ -235,6 +235,7 @@
             studentNumber: String(values.get('studentNumber') || ''),
             nationalId: String(values.get('nationalId') || ''),
             birthDate: String(values.get('birthDate') || ''),
+            mobile: String(values.get('mobile') || ''),
             university: String(values.get('university') || ''),
             faculty: String(values.get('faculty') || ''),
             major: String(values.get('major') || ''),
@@ -608,7 +609,8 @@
           </label>
           ${onlineMode ? `<label class="field">دانشگاه<input name="university" maxlength="120" required value="${escapeHTML(state.academic?.university || '')}"></label>
           <label class="field">دانشکده<input name="faculty" maxlength="120" required value="${escapeHTML(state.academic?.faculty || '')}"></label>
-          <label class="field">رشته تحصیلی<input name="major" maxlength="120" required value="${escapeHTML(state.academic?.major || '')}"></label>` : ''}
+          <label class="field">رشته تحصیلی<input name="major" maxlength="120" required value="${escapeHTML(state.academic?.major || '')}"></label>
+          <label class="field">شماره موبایل<input name="mobile" inputmode="tel" maxlength="11" required value="${escapeHTML(state.academic?.mobile || '')}"></label>` : ''}
           <button type="submit" class="pill-btn sheet-action">${onlineMode ? 'ذخیره اطلاعات دانشجو' : 'ذخیره نمایشی'}</button>
         </form>`
       );
@@ -751,7 +753,7 @@
           await onlineBackend.saveProfile(name, number);
           if (typeof onlineBackend.saveAcademicDetails === 'function')
             await onlineBackend.saveAcademicDetails(String(form.get('university') || ''),
-              String(form.get('faculty') || ''),String(form.get('major') || ''));
+              String(form.get('faculty') || ''),String(form.get('major') || ''),String(form.get('mobile') || ''));
           await onlineRefreshPersonal();
           closeSheet();
           notify('اطلاعات دانشجویی در سرور ذخیره شد.');

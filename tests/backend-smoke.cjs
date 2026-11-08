@@ -51,7 +51,7 @@ async function fakeFetch(url, options) {
     return ok([storedProfile], 201);
   }
   if (url.includes('/rest/v1/kanonha_profiles?user_id=eq.') && options.method === 'PATCH') {
-    assert.deepEqual(Object.keys(JSON.parse(options.body)).sort(), ['full_name','student_number']);
+    assert.deepEqual(Object.keys(JSON.parse(options.body)).sort(), ['full_name']);
     storedProfile = { ...storedProfile, ...JSON.parse(options.body) };
     return ok([storedProfile]);
   }

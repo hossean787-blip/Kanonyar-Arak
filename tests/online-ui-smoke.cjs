@@ -11,6 +11,10 @@ const clubId = '3b45d692-201b-4111-b25e-029c0bc82e62';
 const eventId = '6afeed89-2d61-4216-b103-c28e80c85e7e';
 const studentId = 'af2c8d5d-ab17-4c54-aa22-11b572ad918a';
 const pages = ['home','clubs','events','activity','profile'];
+// Deliberately adversarial catalog strings supplied by a mocked backend.
+const untrustedClub = '<img src=x onerror=alert(1)> کانون';
+const untrustedEvent = '<svg onload=alert(2)> نشست';
+const untrustedLocation = '<iframe src=javascript:alert(3)></iframe>';
 class E {
   constructor(id) {
     this.id = id; this.value = ''; this.innerHTML = ''; this.textContent = '';
@@ -45,11 +49,11 @@ const actions = { joins:0, registrations:0 };
 const backend = {
   enabled:true,
   get currentUser() { return currentUser; },
-  async clubs() { return [{id:clubId,name:'کانون آزمایشی',description:'نمونه آنلاین',category:'فرهنگی'}]; },
+  async clubs() { return [{id:clubId,name:untrustedClub,description:untrustedClub,category:'فرهنگی'}]; },
   async events() { return [{
-    id:eventId,club_id:clubId,title:'رویداد آزمایشی',
+    id:eventId,club_id:clubId,title:untrustedEvent,
     starts_at:'2035-05-01T10:00:00Z',registration_deadline:'2035-04-30T10:00:00Z',
-    location:'آزمایش',capacity:3,registered_count:seats
+    location:untrustedLocation,capacity:3,registered_count:seats
   }]; },
   async signIn() { currentUser = {id:studentId}; return currentUser; },
   async signOut() { currentUser = null; },
@@ -83,6 +87,22 @@ const click = dataset => eventHandlers.click({target:{closest(){return {dataset}
   assert.equal(get('online-auth-panel').hidden,false,'auth should be shown to guests');
   assert.equal(get('online-profile-card').hidden,true,'guest cannot see account data');
   assert.ok(!get('home-clubs').innerHTML.includes('کانون فناوری'),'no demo content in online catalog');
+  assert.match(html,/Content-Security-Policy/,'CSP must be enabled');
+  assert.match(html,/connect-src https:\/\/\*\.supabase\.co/,'CSP should restrict network destinations');
+  assert.ok(get('clubs-list').innerHTML.includes('&lt;img'),'club names must be escaped in catalog');
+  assert.ok(get('home-clubs').innerHTML.includes('&lt;img'),'club names must be escaped in home carousel');
+  assert.ok(get('events-list').innerHTML.includes('&lt;svg'),'event titles must be escaped');
+  assert.ok(!get('clubs-list').innerHTML.includes('<img src=x onerror'),'XSS markup in club title');
+  assert.ok(!get('events-list').innerHTML.includes('<svg onload'),'XSS markup in event title');
+  app.go('events');
+  click({details:'0'});
+  assert.ok(get('sheet-content').innerHTML.includes('&lt;iframe'),'event location must be escaped in details');
+  assert.ok(!get('sheet-content').innerHTML.includes('<iframe'),'XSS markup in event details');
+  app.handleBack();
+  app.go('clubs');
+  click({clubDetails:'0'});
+  assert.ok(get('sheet-content').innerHTML.includes('&lt;img'),'club descriptions must be escaped in details');
+  app.handleBack();
   app.go('profile');
   await eventHandlers.submit({
     target:{id:'online-auth-form',fields:{email:'student@school.edu',password:'securepassword'},reset(){}},
@@ -96,11 +116,17 @@ const click = dataset => eventHandlers.click({target:{closest(){return {dataset}
   await delay(); await delay();
   assert.equal(actions.joins,1);
   assert.equal(app.state.requested.length,1,'pending membership not reflected');
+  assert.ok(get('activity-clubs').innerHTML.includes('&lt;img'),'club activity names must be escaped');
   app.go('events');
   click({register:'0'});
   await delay(); await delay(); await delay();
   assert.equal(actions.registrations,1);
   assert.equal(app.state.registered.length,1);
+  assert.ok(get('activity-events').innerHTML.includes('&lt;svg'),'event activity names must be escaped');
+  assert.ok(get('activity-tickets').innerHTML.includes('&lt;iframe'),'ticket venue text must be escaped');
+  click({register:'0'});
+  await delay();
+  assert.equal(actions.registrations,1,'duplicate online registration must be disabled');
   assert.ok(!get('activity-tickets').innerHTML.includes('sample-qr'),'online should never show fake QR');
   click({action:'confirm-exit'});
   await delay(); await delay();
@@ -109,5 +135,5 @@ const click = dataset => eventHandlers.click({target:{closest(){return {dataset}
   assert.equal(app.state.registered.length,0);
   assert.equal(storage.size,1,'online must not persist account records in demo storage');
   assert.equal(storage.get('kanonha-ui-v3'),previousDemo,'online mode must not mutate previous demo state');
-  console.log('PASS: five-screen online catalog, student login, pending memberships, registrations and logout');
+  console.log('PASS: online catalog, XSS escaping, CSP, secure account handling, registration deduplication and logout');
 })().catch(e=>{console.error(e);process.exitCode=1;});

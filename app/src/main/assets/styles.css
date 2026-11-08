@@ -1426,3 +1426,31 @@ body.native-app .bottom-nav{padding-bottom:5px!important}
 .admin-panel .secretary-form{gap:12px}
 .admin-panel select{min-height:44px;background:#fff;border:1px solid #cfe5d6;border-radius:10px;padding:9px 10px;color:#22583c;font-family:inherit;max-width:100%;font-size:12px}
 @media(max-width:360px){.home-management{padding:12px 10px}.home-management-btn{font-size:10px;padding:9px}.admin-tabs button{font-size:9px}}
+
+
+/* ── v0.8 multi-role home switcher: one identity, three strictly server-authorized personas ── */
+.role-switcher{margin:15px 0 12px;padding:16px;border-radius:24px;direction:rtl;color:#e9fff4;position:relative;overflow:hidden;
+  background:radial-gradient(circle at 0% 0%,rgba(127,221,171,.24),transparent 48%),
+  linear-gradient(142deg,#103a34 4%,#176149 58%,#1b7655 100%);
+  box-shadow:0 15px 29px rgba(19,75,51,.19)}
+.role-switcher[hidden],.role-switcher [hidden]{display:none!important}
+.role-switcher:before{content:"";position:absolute;top:-90px;left:-70px;width:205px;height:205px;border:1px solid rgba(236,255,245,.14);border-radius:50%;pointer-events:none}
+.role-switcher-top{display:flex;align-items:center;justify-content:space-between;gap:12px;position:relative}
+.role-switcher-eyebrow{color:#a5dfbf;font-weight:800;letter-spacing:.1px;font-size:10px}
+.role-switcher h2{font-size:17px;line-height:1.7;font-weight:900;color:#fff;margin:4px 0 14px}
+.role-switcher-refresh{width:37px;height:37px;flex-shrink:0;display:grid;place-items:center;border:1px solid #ffffff45;border-radius:12px;background:#ffffff16;color:#e9fff4;font-size:22px}
+.role-switcher-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;position:relative}
+.role-switcher-options button{display:flex;min-width:0;min-height:104px;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:10px 3px;
+  background:#ffffff15;border:1px solid #ffffff33;border-radius:16px;color:#effff7;transition:background .2s,border-color .2s,transform .2s}
+.role-switcher-options button:active{transform:scale(.97)}
+.role-switcher-options button.active{background:linear-gradient(153deg,#fafffc,#d9f8e7);border:1px solid #dfffe8;color:#175742;box-shadow:0 7px 17px rgba(4,42,27,.15)}
+.role-switcher-options button:focus-visible{outline:2px solid #fff;outline-offset:3px}
+.role-switcher-icon{width:30px;height:30px;border-radius:11px;display:grid;place-items:center;font-size:19px;background:#ffffff22;margin-bottom:2px}
+.role-switcher-options button.active .role-switcher-icon{background:#baf0cf}
+.role-switcher-options strong{font-size:11px;font-weight:900;white-space:nowrap}
+.role-switcher-options small{font-size:9px;white-space:nowrap;opacity:.8}
+.role-switcher-description{position:relative;margin:12px 0 0;color:#e0f8ec;font-size:10px;line-height:1.9;min-height:19px}
+.role-onboard-btn{margin-top:11px;background:#f6fffa;border:0;border-radius:11px;color:#1d6649;font-weight:900;font-size:11px;padding:11px 13px;width:100%}
+.role-onboard-btn[hidden]{display:none!important}
+.role-switcher+ .home-management{margin-top:10px}
+@media(max-width:350px){.role-switcher{padding:12px 10px}.role-switcher-options{gap:5px}.role-switcher-options button{padding:10px 2px}.role-switcher-options strong{font-size:10px}.role-switcher-options small{font-size:8px}}

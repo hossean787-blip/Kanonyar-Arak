@@ -25,7 +25,8 @@ assert.match(html, /رویدادهای نمونه/);
 for (const content of [html, css, manifest]) {
   assert.doesNotMatch(content, /همراه|hamrah/i, 'companion branding leaked into new app');
 }
-assert.doesNotMatch(js, /دی ۱۴۰۳|ثبت‌نام باز/);
+assert.doesNotMatch(js, /دی ۱۴۰۳/, 'old demo event dates must not be labeled current');
+assert.match(js, /onlineMode \? 'ثبت‌نام باز' : 'ثبت‌نام آزمایشی'/, 'status must distinguish live and demo events');
 assert.match(js, /'kanonha-ui-v3'/);
 assert.match(nativeActivity, /KanonhaPreview\.handleBack\(\)/);
 for (const res of [

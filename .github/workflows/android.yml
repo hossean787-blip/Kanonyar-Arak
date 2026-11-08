@@ -28,6 +28,9 @@ jobs:
           node --check tests/backend-smoke.cjs
           node --check tests/online-ui-smoke.cjs
           node --check tests/live-api-smoke.cjs
+          node --check app/src/main/assets/secretary.js
+          node --check tests/secretary-backend-smoke.cjs
+          node --check tests/secretary-ui-smoke.cjs
           python3 - <<'PY'
           from pathlib import Path
           import xml.etree.ElementTree as ET

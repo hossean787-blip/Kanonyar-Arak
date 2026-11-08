@@ -43,7 +43,8 @@ async function get(endpoint) {
   for (const item of [
     'kanonha_profiles?select=user_id&limit=1',
     'kanonha_memberships?select=user_id&limit=1',
-    'kanonha_registrations?select=user_id&limit=1'
+    'kanonha_registrations?select=user_id&limit=1',
+    'kanonha_secretaries?select=user_id&limit=1'
   ]) {
     const result = await get(item);
     assert.ok(result.status === 401 || result.status === 403,

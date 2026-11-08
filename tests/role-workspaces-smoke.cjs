@@ -13,7 +13,7 @@ for(const id of ['screen-workspace','workspace-title','workspace-role-menu',
 class Node {
  constructor(id) { this.id=id; this.innerHTML='';this.textContent='';this.style={};
   this.dataset=id.startsWith('screen-')?{screen:id.slice(7)}:{};
-  this.value='';this.hidden=id.startsWith('screen-')||id==='admin-panel'||id==='secretary-panel';
+  this.value='';this.hidden=id.startsWith('screen-')||id==='admin-panel'||id==='secretary-panel'||id==='workspace-role-menu';
   this.disabled=false;this.isConnected=true;this.attrs={};this.events={};
   this.classList={toggle(){},add(){}}; }
  addEventListener(type,fn){this.events[type]=fn}

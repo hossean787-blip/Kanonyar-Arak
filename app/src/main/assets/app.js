@@ -367,6 +367,8 @@
       button.classList.toggle('active', activePersona === role);
       button.setAttribute('aria-pressed', activePersona === role ? 'true' : 'false');
     }
+    const roleCount = Object.values(caps).filter(Boolean).length;
+    $('role-switcher-options').style.gridTemplateColumns = 'repeat(' + roleCount + ',minmax(0,1fr))';
     const needsProfile = activePersona === 'student' && state.isManager && !studentProfileReady;
     $('role-onboard-btn').hidden = !needsProfile;
     const descriptions = {

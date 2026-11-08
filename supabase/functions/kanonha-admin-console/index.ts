@@ -99,7 +99,7 @@ async function handle(op:string,d:Record<string,unknown>,actor:string){
  }
  if(op==="member.decide"){
   if(!uuid(id)||!["approved","rejected"].includes(String(d.status)))throw new Error("input");
-  return mutation("kanonha_memberships","PATCH",{status:d.status},"?id=eq."+id+"&status=eq.pending");
+  return mutation("kanonha_memberships","PATCH",{status:d.status,decided_by:actor},"?id=eq."+id+"&status=eq.pending");
  }
  if(op==="student.verify"){
   if(!uuid(d.user_id)||!allowedBool(d.verified))throw new Error("input");

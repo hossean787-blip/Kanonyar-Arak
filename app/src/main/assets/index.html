@@ -308,6 +308,50 @@
         </div>
       </section>
 
+      <!-- Dedicated route-based workspace for manager and secretary roles.
+           The secured panels are moved here once (not duplicated). -->
+      <section class="screen padded-screen role-workspace" id="screen-workspace"
+               data-screen="workspace" hidden aria-labelledby="workspace-title">
+        <header class="workspace-top">
+          <div class="workspace-overline"><span class="workspace-star">✦</span> <span id="workspace-overline">محیط اختصاصی کانون‌ها</span></div>
+          <h1 class="workspace-title" id="workspace-title">داشبورد مدیریت</h1>
+          <p id="workspace-caption" class="workspace-caption">ابزارهای متناسب با مسئولیت شما</p>
+          <div class="workspace-account">
+            <span class="workspace-account-icon" aria-hidden="true">◈</span>
+            <span class="workspace-account-text">نقش فعال: <strong id="workspace-current-role">—</strong></span>
+            <button type="button" id="workspace-change-role" class="workspace-change-role"
+                    aria-expanded="false" aria-controls="workspace-role-menu">تغییر نقش ⌄</button>
+          </div>
+          <div class="workspace-role-menu" id="workspace-role-menu" hidden
+               role="group" aria-label="تغییر نقش حساب کاربری">
+            <button type="button" id="workspace-choice-student" data-role-switch="student">🎓 دانشجو</button>
+            <button type="button" id="workspace-choice-secretary" data-role-switch="secretary" hidden>✦ دبیر کانون</button>
+            <button type="button" id="workspace-choice-manager" data-role-switch="manager" hidden>♛ مدیرکل</button>
+          </div>
+        </header>
+        <section class="workspace-secretary-summary" id="workspace-secretary-summary" hidden
+                 aria-label="نمای کلی کانون">
+          <div class="workspace-summary-head"><span>داشبورد دبیر کانون</span><small id="workspace-secretary-club">کانون تحت مدیریت</small></div>
+          <div class="workspace-stat-grid">
+            <div class="workspace-stat"><strong id="workspace-secretary-clubs">۰</strong><span>کانون‌ها</span></div>
+            <div class="workspace-stat"><strong id="workspace-secretary-members">۰</strong><span>عضویت‌ها</span></div>
+            <div class="workspace-stat"><strong id="workspace-secretary-events">۰</strong><span>رویدادها</span></div>
+          </div>
+          <div class="workspace-quick-actions">
+            <button type="button" data-workspace-route="secretary-members">مدیریت اعضا</button>
+            <button type="button" data-workspace-route="secretary-events">برنامه‌ریزی رویداد</button>
+          </div>
+          <p class="workspace-summary-note">آمار بر اساس اطلاعات دریافتی کانون‌های واگذارشده است. فقط دبیران تأییدشده به مدیریت دسترسی دارند.</p>
+        </section>
+        <div id="workspace-subnav" class="workspace-subnav" hidden role="group" aria-label="گزینه‌های این بخش">
+          <button type="button" id="workspace-subtab-students" data-workspace-subtab="students">دانشجویان</button>
+          <button type="button" id="workspace-subtab-secretaries" data-workspace-subtab="secretaries">دبیران</button>
+          <button type="button" id="workspace-subtab-members" data-workspace-subtab="members">درخواست‌ها</button>
+          <button type="button" id="workspace-subtab-attendance" data-workspace-subtab="attendance" hidden>حضور و غیاب</button>
+        </div>
+        <div class="workspace-panels" id="workspace-panels"></div>
+      </section>
+
     </main>
 
     <!-- Bottom navigation -->

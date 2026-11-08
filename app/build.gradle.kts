@@ -29,8 +29,8 @@ android {
         applicationId = "ir.kanonha.app"  // Do not change: preserves installed app identity.
         minSdk = 26
         targetSdk = 35
-        versionCode = 18
-        versionName = "0.9.3-navy-academic-bio-beta"
+        versionCode = 19
+        versionName = "0.9.4-biometric-relogin-beta"
     }
     signingConfigs {
         if (releaseSigningConfigured) {

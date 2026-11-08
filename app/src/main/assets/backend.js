@@ -217,9 +217,127 @@
       body: { user_id: mustUser(), event_id: eventId }
     });
   }
+  /* ——— Secretary APIs: every request is additionally limited by Postgres RLS. ——— */
+  function requireUuid(value, what = 'شناسه') {
+    if (!uuid(value)) throw new ApiError(what + ' معتبر نیست.');
+    return value;
+  }
+  function readRows(obj) {
+    return Array.isArray(obj) ? obj : [];
+  }
+  function checkClubFields(input) {
+    const name = String(input && input.name || '').trim();
+    const description = String(input && input.description || '').trim();
+    const category = String(input && input.category || '').trim();
+    if (name.length < 2 || name.length > 120) throw new ApiError('نام کانون باید بین ۲ و ۱۲۰ نویسه باشد.');
+    if (description.length > 2000 || !category || category.length > 80) throw new ApiError('توضیحات یا دسته‌بندی معتبر نیست.');
+    return { name, description, category };
+  }
+  function checkEventFields(input) {
+    const title = String(input && input.title || '').trim();
+    const location = String(input && input.location || '').trim();
+    const start = new Date(input && input.starts_at);
+    const deadline = new Date(input && input.registration_deadline);
+    const capacity = Number(input && input.capacity);
+    if (title.length < 2 || title.length > 160 || location.length > 250) throw new ApiError('عنوان یا مکان رویداد معتبر نیست.');
+    if (!Number.isInteger(capacity) || capacity < 1 || capacity > 100000) throw new ApiError('ظرفیت باید عدد مثبت باشد.');
+    if (!Number.isFinite(start.getTime()) || !Number.isFinite(deadline.getTime())
+        || start.getTime() <= Date.now() || deadline.getTime() <= Date.now() || deadline > start)
+      throw new ApiError('شروع و مهلت ثبت‌نام باید در آینده باشند و مهلت قبل از شروع باشد.');
+    return {
+      title, location, starts_at: start.toISOString(),
+      registration_deadline: deadline.toISOString(), capacity,
+      is_published: Boolean(input && input.is_published)
+    };
+  }
+  async function secretaryClubs() {
+    const userId = mustUser();
+    const rows = await request(restPath + 'kanonha_secretaries?select=club_id,appointed_at&user_id=eq.'
+      + encodeURIComponent(userId), { requireUser: true });
+    return readRows(rows);
+  }
+  async function secretaryEvents(clubId) {
+    requireUuid(clubId, 'کانون');
+    return readRows(await request(restPath + 'kanonha_events?select=id,club_id,title,location,starts_at,registration_deadline,capacity,registered_count,is_published'
+      + '&club_id=eq.' + encodeURIComponent(clubId) + '&order=starts_at.desc&limit=150', { requireUser: true }));
+  }
+  async function secretaryMemberships(clubId) {
+    requireUuid(clubId, 'کانون');
+    return readRows(await request(restPath + 'kanonha_memberships?select=id,user_id,club_id,status,requested_at'
+      + '&club_id=eq.' + encodeURIComponent(clubId) + '&order=requested_at.desc&limit=300', { requireUser: true }));
+  }
+  async function secretaryProfiles(userIds) {
+    if (!Array.isArray(userIds)) throw new ApiError('ورودی نامعتبر است.');
+    const ids = [...new Set(userIds)];
+    if (ids.length > 300 || ids.some(id => !uuid(id))) throw new ApiError('تعداد کاربران یا شناسه نامعتبر است.');
+    const result = [];
+    for (let i = 0; i < ids.length; i += 60) {
+      const part = ids.slice(i, i + 60);
+      const rows = await request(restPath + 'kanonha_profiles?select=user_id,full_name,student_number'
+        + '&user_id=in.(' + part.map(encodeURIComponent).join(',') + ')', { requireUser: true });
+      result.push(...readRows(rows));
+    }
+    return result;
+  }
+  async function secretaryUpdateClub(clubId, fields) {
+    requireUuid(clubId, 'کانون');
+    const rows = await request(restPath + 'kanonha_clubs?id=eq.' + encodeURIComponent(clubId), {
+      method: 'PATCH', requireUser: true, headers: { Prefer: 'return=representation' },
+      body: checkClubFields(fields)
+    });
+    if (!Array.isArray(rows) || rows.length !== 1) throw new ApiError('ویرایش کانون مجاز نبود.');
+    return rows[0];
+  }
+  async function secretaryCreateEvent(clubId, fields) {
+    requireUuid(clubId, 'کانون');
+    const rows = await request(restPath + 'kanonha_events', {
+      method: 'POST', requireUser: true, headers: { Prefer: 'return=representation' },
+      body: { club_id: clubId, ...checkEventFields(fields) }
+    });
+    if (!Array.isArray(rows) || rows.length !== 1) throw new ApiError('ثبت رویداد انجام نشد.');
+    return rows[0];
+  }
+  async function secretaryUpdateEvent(eventId, fields) {
+    requireUuid(eventId, 'رویداد');
+    const rows = await request(restPath + 'kanonha_events?id=eq.' + encodeURIComponent(eventId), {
+      method: 'PATCH', requireUser: true, headers: { Prefer: 'return=representation' },
+      body: checkEventFields(fields)
+    });
+    if (!Array.isArray(rows) || rows.length !== 1) throw new ApiError('ویرایش رویداد مجاز نبود یا ثبت‌نام شروع شده است.');
+    return rows[0];
+  }
+  async function secretaryDecideMembership(memberId, status) {
+    requireUuid(memberId, 'درخواست عضویت');
+    if (!['approved', 'rejected'].includes(status)) throw new ApiError('وضعیت عضویت نامعتبر است.');
+    const rows = await request(restPath + 'kanonha_memberships?id=eq.' + encodeURIComponent(memberId)
+      + '&status=eq.pending', {
+      method: 'PATCH', requireUser: true, headers: { Prefer: 'return=representation' },
+      body: { status }
+    });
+    if (!Array.isArray(rows) || rows.length !== 1) throw new ApiError('درخواست قبلاً بررسی شده یا دسترسی ندارید.');
+    return rows[0];
+  }
+  async function secretaryRoster(eventId) {
+    requireUuid(eventId, 'رویداد');
+    return readRows(await request(restPath + 'kanonha_registrations?select=id,user_id,event_id,status,attended_at,registered_at'
+      + '&event_id=eq.' + encodeURIComponent(eventId) + '&order=registered_at.asc&limit=300', { requireUser: true }));
+  }
+  async function secretarySetAttendance(registrationId, attended) {
+    requireUuid(registrationId, 'ثبت‌نام');
+    if (typeof attended !== 'boolean') throw new ApiError('وضعیت حضور نامعتبر است.');
+    const rows = await request(restPath + 'kanonha_registrations?id=eq.' + encodeURIComponent(registrationId), {
+      method: 'PATCH', requireUser: true, headers: { Prefer: 'return=representation' },
+      body: { attended_at: attended ? new Date().toISOString() : null }
+    });
+    if (!Array.isArray(rows) || rows.length !== 1) throw new ApiError('ثبت حضور مجاز نیست یا رویداد هنوز آغاز نشده است.');
+    return rows[0];
+  }
   window.KanonhaBackend = Object.freeze({
     enabled, signUp, signIn, signOut, me, profile, ensureProfile,
     saveProfile, clubs, events, memberships, registrations,
-    joinClub, registerEvent, get currentUser() { return user; }
+    joinClub, registerEvent, secretaryClubs, secretaryEvents, secretaryMemberships,
+    secretaryProfiles, secretaryUpdateClub, secretaryCreateEvent, secretaryUpdateEvent,
+    secretaryDecideMembership, secretaryRoster, secretarySetAttendance,
+    get currentUser() { return user; }
   });
 })();

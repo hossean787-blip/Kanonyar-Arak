@@ -464,6 +464,69 @@
     finally { $('role-refresh').disabled = false; }
   }
 
+  /* ——— Role-specific dashboards and five independent navigation routes ——— */
+  function renderWorkspace() {
+    if (!onlineMode || !onlineBackend.currentUser) return;
+    const manager = activePersona === 'manager' && adminPanelReady;
+    const secretary = activePersona === 'secretary' && secretaryPanelReady;
+    const workspace = $('screen-workspace');
+    if (!workspace) return;
+    workspace.dataset.persona = manager ? 'manager' : secretary ? 'secretary' : 'student';
+    const titles = {
+      'manager-home': ['داشبورد مدیرکل','آمار زنده و کنترل تمام کانون‌ها','مدیریت سراسری'],
+      'manager-clubs': ['مدیریت کانون‌ها','ایجاد، ویرایش و فعال‌سازی کانون‌ها','مدیرکل'],
+      'manager-users': ['کاربران و دبیران','مدیریت دانشجویان، انتصاب دبیر و درخواست‌ها','مدیرکل'],
+      'manager-events': ['رویدادهای سامانه','ایجاد و کنترل رویدادهای تمامی کانون‌ها','مدیرکل'],
+      'secretary-home': ['خانه کانون من','نمای کلی و دسترسی سریع به ابزارهای دبیر','دبیر کانون'],
+      'secretary-club': ['مدیریت کانون','مشخصات و اطلاعات کانون تحت مسئولیت','دبیر کانون'],
+      'secretary-events': ['رویدادهای کانون','ساخت، انتشار و ویرایش برنامه‌های کانون','دبیر کانون'],
+      'secretary-members': ['اعضا و حضور و غیاب','بررسی درخواست‌ها و ثبت حضور دانشجویان','دبیر کانون']
+    };
+    const info = titles[activeScreen] || ['محیط اختصاصی','ابزارهای متناسب با مسئولیت شما','حساب کانون‌ها'];
+    $('workspace-title').textContent = info[0];
+    $('workspace-caption').textContent = info[1];
+    $('workspace-overline').textContent = info[2];
+    $('workspace-current-role').textContent = manager ? 'مدیرکل' : secretary ? 'دبیر کانون' : 'دانشجو';
+    const secretaryHome = secretary && activeScreen === 'secretary-home';
+    $('workspace-secretary-summary').hidden = !secretaryHome;
+    const subnav = $('workspace-subnav');
+    const usersRoute = manager && activeScreen === 'manager-users';
+    const membersRoute = secretary && activeScreen === 'secretary-members';
+    subnav.hidden = !usersRoute && !membersRoute;
+    for (const name of ['students','secretaries','members','attendance']) {
+      const button = $('workspace-subtab-' + name);
+      if (!button) continue;
+      button.hidden = usersRoute ? name === 'attendance' :
+        membersRoute ? !['members','attendance'].includes(name) : true;
+      const tab = usersRoute ? managerUsersTab : secretaryMembersTab;
+      button.classList.toggle('active',tab === name);
+      button.setAttribute('aria-pressed',tab === name ? 'true' : 'false');
+    }
+    $('workspace-subtab-members').textContent = membersRoute ? 'اعضا و درخواست‌ها' : 'درخواست‌ها';
+    if (secretaryHome) {
+      const summary = window.KanonhaSecretaryPanel &&
+        typeof window.KanonhaSecretaryPanel.summary === 'function'
+        ? window.KanonhaSecretaryPanel.summary() : null;
+      $('workspace-secretary-club').textContent = summary?.club || 'کانون تحت مدیریت';
+      for (const name of ['clubs','members','events'])
+        $('workspace-secretary-' + name).textContent =
+          Number(summary?.[name] || 0).toLocaleString('fa-IR');
+    }
+    $('admin-panel').hidden = !manager;
+    $('secretary-panel').hidden = !secretary || secretaryHome;
+    if (manager && window.KanonhaAdminPanel?.showTab) {
+      const mapped = activeScreen === 'manager-home' ? 'dashboard' :
+        activeScreen === 'manager-clubs' ? 'clubs' :
+        activeScreen === 'manager-users' ? managerUsersTab : 'events';
+      window.KanonhaAdminPanel.showTab(mapped);
+    }
+    if (secretary && !secretaryHome && window.KanonhaSecretaryPanel?.showTab) {
+      const mapped = activeScreen === 'secretary-club' ? 'club' :
+        activeScreen === 'secretary-events' ? 'events' : secretaryMembersTab;
+      window.KanonhaSecretaryPanel.showTab(mapped);
+    }
+  }
+
   /* ——— Toast ——— */
   function notify(message) {
     const el = $('toast');

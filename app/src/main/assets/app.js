@@ -134,6 +134,8 @@
   let roleCapabilitiesChecked = false;
   let managerUsersTab = 'students';
   let secretaryMembersTab = 'members';
+  let managerEntryTaps = 0;
+  let managerEntryLastTap = 0;
   function onlineMessage(text, isError = false) {
     const el = $('online-connection');
     if (!el) return;
@@ -154,7 +156,9 @@
     $('online-auth-panel').hidden = signed;
     $('online-profile-card').hidden = !signed;
     $('profile-menu').hidden = !signed;
+    $('bottom-nav').hidden = !signed;
     const student = onlineRole === 'student';
+    $('auth-back-student').hidden = student;
     $('student-login-fields').hidden = !student || onlineSignup;
     $('student-signup-fields').hidden = !student || !onlineSignup;
     $('manager-login-fields').hidden = student;
@@ -164,7 +168,7 @@
       : student ? 'ورود دانشجو / دبیر' : 'ورود مدیر کل';
     $('online-auth-submit').textContent = onlineSignup ? 'ایجاد حساب' : 'ورود به حساب';
     $('online-auth-toggle').textContent = onlineSignup ? 'حساب دارم؛ ورود'
-      : student ? 'حساب ندارم؛ ثبت‌نام بدون ایمیل' : 'راه‌اندازی حساب مدیر کل با ایمیل';
+      : student ? 'حساب ندارم؛ ثبت‌نام بدون ایمیل' : 'راه‌اندازی حساب مدیرکل';
     for (const role of ['student','manager']) {
       const el = $('auth-role-' + role);
       el.classList.toggle('active',onlineRole === role);
@@ -251,6 +255,8 @@
     const status = $('online-auth-status');
     status.textContent = 'در حال بررسی حساب کاربری…';
     try {
+      if (window.KanonhaJalali && !window.KanonhaJalali.validateForm(form))
+        throw new Error('لطفاً تاریخ را در تقویم شمسی کامل انتخاب کنید.');
       const values = new FormData(form);
       const password = String(values.get('password') || '');
       const student = onlineRole === 'student';
@@ -382,8 +388,7 @@
     if (!onlineMode) return;
     const signed = Boolean(onlineBackend.currentUser);
     const picker = $('role-switcher'), banner = $('home-management');
-    picker.hidden = !signed;
-    if (!signed) { banner.hidden = true; return; }
+    if (!signed) { picker.hidden = true; banner.hidden = true; return; }
     const caps = {
       student: true,
       secretary: assignedSecretary && secretaryPanelReady,
@@ -404,6 +409,8 @@
       }
     }
     const roleCount = Object.values(caps).filter(Boolean).length;
+    // One-role students see their normal home, not a giant role chooser.
+    picker.hidden = roleCount <= 1;
     $('role-switcher-options').style.gridTemplateColumns = 'repeat(' + roleCount + ',minmax(0,1fr))';
     const needsProfile = activePersona === 'student' && state.isManager && !studentProfileReady;
     $('role-onboard-btn').hidden = !needsProfile;
@@ -728,6 +735,7 @@
     focusBeforeSheet = document.activeElement;
     $('sheet-title').textContent = title;
     $('sheet-content').innerHTML = html;
+    if (window.KanonhaJalali) window.KanonhaJalali.enhance($('sheet-content'));
     $('sheet-overlay').hidden = false;
     requestAnimationFrame(() => $('close-sheet').focus());
   }
@@ -806,7 +814,7 @@
           <label class="field">نام و نام خانوادگی<input name="full_name" maxlength="80" autocomplete="name" required></label>
           <label class="field">شماره دانشجویی<input name="student_number" inputmode="numeric" pattern="[0-9]{6,20}" maxlength="20" required></label>
           <label class="field">کد ملی<input name="national_id" inputmode="numeric" pattern="[0-9]{10}" maxlength="10" required></label>
-          <label class="field">تاریخ تولد میلادی<input name="birth_date" type="date" required></label>
+          <label class="field">تاریخ تولد شمسی<input name="birth_date" type="date" required></label>
           <label class="field">شماره موبایل (بدون پیامک تأیید)<input name="mobile" inputmode="tel" pattern="09[0-9]{9}" maxlength="11" required></label>
           <label class="field">دانشگاه<input name="university" maxlength="120" required></label>
           <label class="field">دانشکده<input name="faculty" maxlength="120" required></label>
@@ -842,7 +850,7 @@
       );
     } else if (name === 'about') {
       openSheet('درباره برنامه',
-        `<p>کانون‌ها — ${onlineMode ? 'نسخه ۰.۹.۰، محیط‌های اختصاصی مدیرکل، دبیر و دانشجو' : 'نسخه نمایشی آفلاین'}</p>
+        `<p>کانون‌ها — ${onlineMode ? 'نسخه ۰.۹.۲، رابط ثبت‌نام اختصاصی و تقویم شمسی' : 'نسخه نمایشی آفلاین'}</p>
          <p>${onlineMode ? 'ورود و ثبت‌نام متصل به پایگاه داده مستقل؛ بلیت معتبر و تأیید شماره دانشجویی هنوز فعال نیست. نشست در حافظه موقت است.' : 'پنج صفحه با HTML، CSS و JavaScript پیاده‌سازی شده‌اند. هیچ داده‌ای به سرور ارسال نمی‌شود.'}</p>
          ${onlineMode ? '' : '<button type="button" data-action="reset" class="pill-btn soft">بازنشانی داده‌های نمایشی</button>'}`
       );
@@ -917,11 +925,31 @@
 
     // Clubs search
     $('clubs-search').addEventListener('input', renderClubs);
+    if (window.KanonhaJalali) window.KanonhaJalali.enhance(document);
     if (onlineMode) {
       $('online-events-heading').textContent = 'رویدادهای در حال ثبت‌نام';
       onlineRenderAuth();
       $('online-auth-toggle').addEventListener('click', () => {
         onlineSignup = !onlineSignup;
+        $('online-auth-status').textContent = '';
+        onlineRenderAuth();
+      });
+      // Manager access is intentionally absent from public signup.
+      // Seven intentional taps on the app name unlock the separate manager login.
+      // Real security always remains in Supabase Auth + the verified admin role.
+      $('auth-admin-entry').addEventListener('click', () => {
+        if (onlineBackend.currentUser) return;
+        const now = Date.now();
+        managerEntryTaps = now - managerEntryLastTap > 9000 ? 1 : managerEntryTaps + 1;
+        managerEntryLastTap = now;
+        if (managerEntryTaps < 7) return;
+        managerEntryTaps = 0;
+        onlineRole = 'manager'; onlineSignup = false;
+        $('online-auth-status').textContent = '';
+        onlineRenderAuth();
+      });
+      $('auth-back-student').addEventListener('click', () => {
+        onlineRole = 'student'; onlineSignup = false;
         $('online-auth-status').textContent = '';
         onlineRenderAuth();
       });
@@ -991,6 +1019,9 @@
         e.preventDefault();
         if (!state.isManager || !onlineBackend.currentUser || studentProfileReady) return;
         const accountId = onlineBackend.currentUser.id;
+        if (window.KanonhaJalali && !window.KanonhaJalali.validateForm(e.target)) {
+          notify('لطفاً تاریخ تولد را به‌صورت شمسی کامل انتخاب کنید.'); return;
+        }
         const fd = new FormData(e.target);
         const fields = {};
         for (const key of ['full_name','student_number','national_id','birth_date',

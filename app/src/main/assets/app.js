@@ -244,20 +244,32 @@
     if(!onlineMode) return;
     const biometric=window.KanonhaBiometric;
     const available=Boolean(biometric && biometric.available && biometric.available());
+    const present=Boolean(biometric && biometric.present && biometric.present());
     const enrolled=available && biometric.enrolled();
     const signed=Boolean(onlineBackend.currentUser);
+    const currentId=signed?onlineBackend.currentUser.id:'';
+    const belongs=enrolled && Boolean(biometric.ownedBy && biometric.ownedBy(currentId));
     const button=$('biometric-login-btn');
     if(button)button.hidden=!enrolled||signed||onlineSignup;
     const hint=$('biometric-login-hint');
-    if(hint)hint.hidden=!enrolled||signed||onlineSignup;
+    if(hint){
+      hint.hidden=signed||onlineSignup||(!enrolled&&!present);
+      hint.textContent=enrolled?'برای ورود امن، روی نشان اثر انگشت کنار رمز بزنید.'
+        :'حسگر اثرانگشت امن این دستگاه قابل استفاده نیست؛ با رمز عبور وارد شوید.';
+    }
     const settings=$('biometric-settings');
-    if(settings)settings.hidden=!signed||!available;
+    if(settings)settings.hidden=!signed||!present;
     const stateLabel=$('biometric-settings-state');
-    if(stateLabel)stateLabel.textContent=enrolled
-      ? 'ورود با اثر انگشت در این دستگاه فعال است.'
-      : 'برای دفعات بعد، ورود سریع و رمزگذاری‌شده فعال کنید.';
+    if(stateLabel)stateLabel.textContent=!available
+      ? 'حسگر اثرانگشت امن در این دستگاه فعال یا پشتیبانی نمی‌شود.'
+      : belongs ? 'فعال است؛ پس از خروج هم می‌توانید با اثر انگشت وارد شوید.'
+      : enrolled ? 'اثر انگشت قبلی به این حساب متصل نیست؛ دوباره فعال کنید.'
+      : 'برای ورودهای بعدی روی همین دستگاه فعال کنید.';
     const enable=$('biometric-enable-btn');
-    if(enable)enable.textContent=enrolled?'غیرفعال‌سازی':'فعال‌سازی';
+    if(enable) {
+      enable.disabled=!available;
+      enable.textContent=belongs?'غیرفعال‌سازی':enrolled?'فعال‌سازی مجدد':'فعال‌سازی';
+    }
   }
   async function finishOnlineSignIn(manager,form=null) {
     state=defaultState();
@@ -288,7 +300,7 @@
         const manager=await onlineBackend.isManager();
         await finishOnlineSignIn(manager);
       }catch(error){
-        status.textContent='ورود اثرانگشتی ممکن نشد؛ با رمز عبور وارد شوید. '+onlineError(error);
+        status.textContent='ورود اثرانگشتی ممکن نشد؛ با رمز عبور وارد شوید و اثر انگشت را مجدداً فعال کنید. '+onlineError(error);
       }finally{
         onlineWorking=false;updateBiometricUI();
       }
@@ -296,8 +308,13 @@
       updateBiometricUI();
       if(status==='enabled')notify('ورود با اثر انگشت برای دفعات بعد فعال شد.');
       else if(status==='invalidated')notify('اطلاعات اثر انگشت تغییر کرده است؛ با رمز وارد شده و دوباره فعال کنید.');
-      else if(status==='unavailable')notify('اثر انگشت امن در این دستگاه آماده نیست.');
+      else if(status==='unavailable')notify('حسگر اثرانگشت امن در این دستگاه آماده نیست؛ از رمز عبور استفاده کنید.');
       else if(status==='error')notify('تنظیم اثر انگشت تکمیل نشد. دوباره تلاش کنید.');
+      else if(status==='cancelled') {
+        const label=$('online-auth-status');
+        if(label && !onlineBackend.currentUser)
+          label.textContent='اسکن اثر انگشت لغو شد. می‌توانید دوباره تلاش کنید یا رمز عبور بزنید.';
+      }
       else if(status==='cleared')notify('ورود اثرانگشتی غیرفعال شد.');
     });
     if(biometric.enrolled()){
@@ -462,16 +479,24 @@
       notify('ثبت‌نام رویداد در سرور تأیید شد.');
     } catch (error) { notify(onlineError(error)); }
   }
-  async function onlineLogout() {
+  async function onlineLogout({forgetBiometric=false}={}) {
+    // Normal logout keeps opt-in biometric refresh token ONLY on this device,
+    // encrypted behind a fresh prompt. Full logout revokes server refresh token.
+    const biom=window.KanonhaBiometric;
+    const currentId=onlineBackend.currentUser&&onlineBackend.currentUser.id;
+    const preserve=Boolean(!forgetBiometric && biom && biom.ownedBy && biom.ownedBy(currentId));
     // Invalidate pending account-bound fetches before the logout network call.
     ++onlinePersonalSequence;
     ++onlinePublicSequence;
     if (window.KanonhaSecretaryPanel) window.KanonhaSecretaryPanel.clear();
     if (window.KanonhaAdminPanel) window.KanonhaAdminPanel.clear();
     managerUsersTab = 'students'; secretaryMembersTab = 'members';
-    try { await onlineBackend.signOut(); }
+    try { await onlineBackend.signOut({preserveBiometric:preserve}); }
     catch (_) { /* local tokens still cleared by adapter */ }
-    if(window.KanonhaBiometric)window.KanonhaBiometric.clear();
+    if(biom){
+      if(forgetBiometric) biom.clear();
+      else if(biom.lock) biom.lock();
+    }
     state = defaultState();
     activePersona = 'student'; assignedSecretary = false; studentProfileReady = false;
     adminPanelReady = false; secretaryPanelReady = false;
@@ -482,7 +507,8 @@
     onlineRenderAuth();
     closeSheet();
     go('profile');
-    notify('از حساب خارج شدید.');
+    notify(preserve?'خارج شدید؛ برای ورود دوباره از اثر انگشت یا رمز استفاده کنید.':
+      'از حساب خارج شدید.');
   }
 
   /* ——— One account, independently authorized personas ——— */
@@ -975,11 +1001,15 @@
     } else if (name === 'exit') {
       openSheet('خروج از حساب',
         onlineMode
-          ? '<p>آیا از حساب کاربری خارج می‌شوید؟</p><button class="pill-btn sheet-action" type="button" data-action="confirm-exit">خروج از حساب</button>'
+          ? '<p>آیا از حساب کاربری خارج می‌شوید؟</p><p class="field-hint">اگر ورود با اثر انگشت را فعال کرده‌اید، برای ورود دوباره روی همین دستگاه محفوظ می‌ماند.</p>'+
+            '<button class="pill-btn sheet-action" type="button" data-action="confirm-exit">خروج از حساب (حفظ اثر انگشت)</button>'+
+            '<button class="auth-return-student" type="button" data-action="secure-exit">خروج کامل و حذف ورود اثرانگشتی</button>'
           : '<p>در نسخه نمایشی، حساب کاربری واقعی وجود ندارد. بنابراین خروج واقعی فعال نیست.</p>'
       );
     } else if (name === 'confirm-exit' && onlineMode) {
       void onlineLogout();
+    } else if (name === 'secure-exit' && onlineMode) {
+      void onlineLogout({forgetBiometric:true});
     } else if (name === 'reset' && !onlineMode) {
       state = defaultState();
       saveState();
@@ -1055,14 +1085,16 @@
       });
       $('online-university').addEventListener('change',updateSignupFaculty);
       $('biometric-login-btn').addEventListener('click',()=>{
-        if(window.KanonhaBiometric)window.KanonhaBiometric.unlock();
+        if(!window.KanonhaBiometric || !window.KanonhaBiometric.unlock())
+          $('online-auth-status').textContent='اثر انگشت هنوز فعال نیست؛ با رمز وارد شوید و از حساب کاربری فعال کنید.';
       });
       $('biometric-enable-btn').addEventListener('click',()=>{
         const b=window.KanonhaBiometric;
         if(!b||!onlineBackend.currentUser)return;
-        if(b.enrolled()){b.clear();updateBiometricUI();return;}
+        const uid=onlineBackend.currentUser.id;
+        if(b.ownedBy(uid)){b.clear();updateBiometricUI();return;}
         const token=onlineBackend.biometricRefreshToken();
-        if(!b.enroll(token))notify('ورود اثرانگشتی در دستگاه فعال نیست.');
+        if(!b.enroll(token,uid))notify('ورود اثرانگشتی در دستگاه فعال نیست.');
       });
       setupBiometric();
       // Manager access is intentionally absent from public signup.

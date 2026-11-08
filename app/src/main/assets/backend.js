@@ -70,6 +70,36 @@
       expires_at: Math.floor(Date.now() / 1000) + (Number(data.expires_in) || 3600)
     };
     user = data.user || user;
+    // On Android, a biometric-unlocked vault updates rotating refresh tokens
+    // in encrypted native storage. No token is placed in localStorage or logs.
+    if(typeof window !== 'undefined' && window.KanonhaNativeBiometric &&
+       typeof window.KanonhaNativeBiometric.rotateToken === 'function')
+      window.KanonhaNativeBiometric.rotateToken(session.refresh_token);
+  }
+  async function resumeFromBiometric(refreshToken) {
+    needConfig();
+    const token=String(refreshToken||'');
+    if(!token || token.length>4096)throw new ApiError('اطلاعات ورود بیومتریک معتبر نیست.');
+    try {
+      const data=await request(authPath+'token?grant_type=refresh_token',{
+        method:'POST',auth:false,refresh:false,body:{refresh_token:token}
+      });
+      setSession(data);
+      return await me();
+    } catch(error) { session=null;user=null;throw error; }
+  }
+  function biometricRefreshToken() {
+    return session && user ? session.refresh_token : null;
+  }
+  async function academicCatalog() {
+    const [universities,faculties]=await Promise.all([
+      request(restPath+'kanonha_universities?select=id,name&order=name.asc&limit=1000',{auth:false}),
+      request(restPath+'kanonha_faculties?select=id,university_id,name&order=name.asc&limit=5000',{auth:false})
+    ]);
+    return {
+      universities:Array.isArray(universities)?universities:[],
+      faculties:Array.isArray(faculties)?faculties:[]
+    };
   }
   async function refreshIfNeeded() {
     if (!session || session.expires_at - 60 > Math.floor(Date.now() / 1000)) return;
@@ -438,6 +468,7 @@
     secretaryProfiles, secretaryUpdateClub, secretaryCreateEvent, secretaryUpdateEvent,
     secretaryDecideMembership, secretaryRoster, secretarySetAttendance,
     studentSignUp,studentSignIn,managerSignUp,isManager,academicDetails,saveAcademicDetails,adminAction,
+    academicCatalog,resumeFromBiometric,biometricRefreshToken,
     get currentUser() { return user; }
   });
 })();

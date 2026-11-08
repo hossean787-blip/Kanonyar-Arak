@@ -73,6 +73,16 @@ async function create(input:Record<string,unknown>,req:Request) {
   const r=validRegistration(input);
   if(!r) return reply(422,{error:"اطلاعات ثبت‌نام معتبر نیست؛ کد ملی، تاریخ تولد و رمز را بررسی کنید."});
   if(!await limited(req,"register:"+r.student,true))return reply(429,{error:"تعداد تلاش‌ها بیش از حد مجاز است. بعداً دوباره اقدام کنید."});
+  // Read the trusted manager-defined directory; never accept a forged university/faculty pair.
+  const university=await http("/rest/v1/kanonha_universities?select=id&name=eq."+
+    encodeURIComponent(r.university)+"&limit=1");
+  if(!university.ok)return reply(503,{error:"دریافت فهرست دانشگاه‌ها ناموفق بود."});
+  const universityId=asRows(university.data)[0]?.id;
+  if(typeof universityId!=="string")return reply(422,{error:"دانشگاه انتخاب‌شده در فهرست تأییدشده وجود ندارد."});
+  const faculty=await http("/rest/v1/kanonha_faculties?select=id&university_id=eq."+
+    encodeURIComponent(universityId)+"&name=eq."+encodeURIComponent(r.faculty)+"&limit=1");
+  if(!faculty.ok)return reply(503,{error:"دریافت فهرست دانشکده‌ها ناموفق بود."});
+  if(asRows(faculty.data).length!==1)return reply(422,{error:"دانشکده انتخاب‌شده متعلق به این دانشگاه نیست."});
   const nationalHash=await digest("national:"+r.national);
   const existing=await http("/rest/v1/kanonha_student_credentials?select=user_id&or=(student_number.eq."+encodeURIComponent(r.student)+",national_digest.eq."+nationalHash+")&limit=1");
   if(!existing.ok) return reply(503,{error:"پایگاه داده ثبت‌نام در دسترس نیست."});

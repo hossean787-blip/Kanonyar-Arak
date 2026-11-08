@@ -132,13 +132,32 @@ function secretaries(){
  '<div class="secretary-actions">'+action('لغو مسئولیت','data-admin-revoke',a.user_id,
  'data-club-id="'+esc(a.club_id)+'" class="negative"')+'</div></div>').join(''):empty('هیچ دبیری تعیین نشده است.'));
 }
+function facultyOptions(university,selected=''){
+ const uni=(data?.universities||[]).find(x=>x.name===university);
+ const items=(data?.faculties||[]).filter(x=>x.university_id===uni?.id);
+ let out='<option value="">انتخاب دانشکده</option>';
+ if(selected&&!items.some(x=>x.name===selected))
+   out+='<option value="'+esc(selected)+'" selected>'+esc(selected)+' (ثبت‌شده قبلی)</option>';
+ return out+items.map(x=>'<option value="'+esc(x.name)+'"'+
+   (x.name===selected?' selected':'')+'>'+esc(x.name)+'</option>').join('');
+}
 function studentForm(){
  const u=data.users.find(x=>x.user_id===editor?.id);
  if(!u)return '';
  return '<form id="admin-student-form" class="secretary-card secretary-form"><h3 class="secretary-card-title">ویرایش اطلاعات دانشجو</h3>'+
  '<p class="secretary-card-p">'+esc(u.student_number)+'</p>'+
  '<label class="field">نام<input name="full_name" required maxlength="80" value="'+esc(u.full_name||'')+'"></label>'+
- ['university','faculty','major','mobile'].map((k,i)=>'<label class="field">'+['دانشگاه','دانشکده','رشته','شماره موبایل'][i]+
+ '<label class="field">دانشگاه<select name="university" data-admin-student-university required>'+
+ '<option value="">انتخاب دانشگاه</option>'+
+ (data.universities||[]).map(x=>'<option value="'+esc(x.name)+'"'+
+ (x.name===u.academic?.university?' selected':'')+'>'+esc(x.name)+'</option>').join('')+
+ (!(data.universities||[]).some(x=>x.name===u.academic?.university)&&u.academic?.university?
+ '<option selected value="'+esc(u.academic.university)+'">'+esc(u.academic.university)+' (ثبت‌شده قبلی)</option>':'')+
+ '</select></label>'+
+ '<label class="field">دانشکده<select name="faculty" data-admin-student-faculty required>'+
+ facultyOptions(u.academic?.university||'',u.academic?.faculty||'')+
+ '</select></label>'+
+ ['major','mobile'].map((k,i)=>'<label class="field">'+['رشته','شماره موبایل'][i]+
  '<input name="'+k+'" required maxlength="120" value="'+esc(u.academic?.[k]||'')+'"></label>').join('')+
  '<div class="secretary-actions"><button type="submit" class="positive">ذخیره</button>'+
  action('انصراف','data-admin-action','cancel')+'</div></form>';
@@ -243,6 +262,13 @@ root.addEventListener('click',ev=>{
  if(d.adminRevoke&&d.clubId){void perform('secretary.revoke',{user_id:d.adminRevoke,club_id:d.clubId});return}
  if(d.adminVerify&&['true','false'].includes(d.verify)){void perform('student.verify',{user_id:d.adminVerify,verified:d.verify==='true'});return}
  if(d.adminAttendance&&d.present){void perform('roster.attendance',{id:d.adminAttendance,present:d.present==='true'});return}
+});
+root.addEventListener('change',ev=>{
+ if(!ev.target || !ev.target.dataset || !('adminStudentUniversity' in ev.target.dataset))return;
+ const form=ev.target.closest('form');
+ if(!form)return;
+ const faculty=form.querySelector('select[data-admin-student-faculty]');
+ if(faculty)faculty.innerHTML=facultyOptions(ev.target.value);
 });
 root.addEventListener('submit',ev=>{
  const f=ev.target;

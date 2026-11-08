@@ -120,23 +120,38 @@ async function create(input:Record<string,unknown>,req:Request) {
   return reply(201,{session:signIn.data});
 }
 async function login(input:Record<string,unknown>,req:Request) {
-  const kind=input.kind;
+  const kind=String(input.kind);
   const id=digits(text(input.identifier,20));
   const password=input.password;
-  if(!["national","student"].includes(String(kind))||typeof password!=="string"||
+  if(!["national","student","auto"].includes(kind)||typeof password!=="string"||
     password.length<1||password.length>128)return bad();
-  if(kind==="national"?!nationalValid(id):!/^\d{6,20}$/.test(id))return bad();
-  if(!await limited(req,"login:"+String(kind)+":"+id,false))
+  // Student number can be any 6-20 digits, including ten-digit IDs.
+  // Auto mode also accepts a national code only if its checksum is valid.
+  const national=kind==="national";
+  const automatic=kind==="auto";
+  if(national?!nationalValid(id):!/^\d{6,20}$/.test(id))return bad();
+  if(!await limited(req,"login:"+kind+":"+id,false))
     return reply(429,{error:"تعداد تلاش‌ها بیش از حد مجاز است. بعداً دوباره اقدام کنید."});
-  const filter=kind==="national"?"national_digest=eq."+await digest("national:"+id)
-    :"student_number=eq."+encodeURIComponent(id);
-  const found=await http("/rest/v1/kanonha_student_credentials?select=internal_email&"+filter+"&limit=1");
+  const studentFilter="student_number=eq."+encodeURIComponent(id);
+  const nationalFilter="national_digest=eq."+await digest("national:"+id);
+  const useNational= national || (automatic && nationalValid(id));
+  const filter=national?nationalFilter:
+    automatic && useNational?"or=("+studentFilter+","+nationalFilter+")":studentFilter;
+  const found=await http("/rest/v1/kanonha_student_credentials?select=internal_email,student_number&"+
+    filter+"&limit=3");
   if(!found.ok)return reply(503,{error:"اتصال به سرویس ورود برقرار نشد."});
-  const row=asRows(found.data)[0];
-  const email=typeof row?.internal_email==="string"?row.internal_email:"unknown@student.kanonha.invalid";
-  const token=await http("/auth/v1/token?grant_type=password","POST",{email,password},true);
-  if(!token.ok)return bad();
-  return reply(200,{session:token.data});
+  // If a ten-digit student number is also somebody's national ID, verify
+  // credentials for both possible accounts without exposing which one exists.
+  // Prefer the explicit student-number match on ties.
+  const users=asRows(found.data).sort((a,b)=>
+    Number(b.student_number===id)-Number(a.student_number===id));
+  for(const row of users.slice(0,2)){
+    const email=typeof row?.internal_email==="string"?row.internal_email:"";
+    if(!email)continue;
+    const token=await http("/auth/v1/token?grant_type=password","POST",{email,password},true);
+    if(token.ok)return reply(200,{session:token.data});
+  }
+  return bad();
 }
 Deno.serve(async req=>{
   if(req.method==="OPTIONS")return new Response(null,{status:204,headers});

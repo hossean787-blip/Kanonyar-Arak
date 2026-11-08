@@ -423,7 +423,7 @@
       })&&password.length>=10&&password.length<=128;
   }
   async function studentSignIn(kind,identifier,password) {
-    if(!['student','national'].includes(kind))throw new ApiError('روش ورود نامعتبر است.');
+    if(!['student','national','auto'].includes(kind))throw new ApiError('روش ورود نامعتبر است.');
     const response=await edgeRequest('kanonha-student-auth',{action:'login',kind,
       identifier:String(identifier||'').trim(),password:String(password||'')});
     if(!response||!response.session)throw new ApiError('نشست ورود دریافت نشد.');

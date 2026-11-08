@@ -156,6 +156,8 @@
   function onlineRenderAuth() {
     if (!onlineMode) return;
     const signed = Boolean(onlineBackend.currentUser);
+    // Guest LOGIN is a standalone screen; keep registered profile/signup intact.
+    $('screen-profile').dataset.authView = signed ? 'signed' : onlineSignup ? 'signup' : 'login';
     $('online-auth-panel').hidden = signed;
     $('online-profile-card').hidden = !signed;
     $('profile-menu').hidden = !signed;
@@ -168,10 +170,10 @@
     $('signup-password-hint').hidden = !onlineSignup || !student;
     $('online-auth-title').textContent = onlineSignup
       ? student ? 'ثبت‌نام دانشجو' : 'ثبت حساب مدیر کل'
-      : student ? 'ورود دانشجو / دبیر' : 'ورود مدیر کل';
+      : student ? 'ورود' : 'ورود مدیرکل';
     $('online-auth-submit').textContent = onlineSignup ? 'ایجاد حساب' : 'ورود به حساب';
     $('online-auth-toggle').textContent = onlineSignup ? 'حساب دارم؛ ورود'
-      : student ? 'حساب ندارم؛ ثبت‌نام بدون ایمیل' : 'راه‌اندازی حساب مدیرکل';
+      : student ? 'ساخت حساب کاربری' : 'راه‌اندازی حساب مدیرکل';
     for (const role of ['student','manager']) {
       const el = $('auth-role-' + role);
       el.classList.toggle('active',onlineRole === role);
@@ -426,7 +428,7 @@
           }
         }
       } else if (student) {
-        await onlineBackend.studentSignIn(String(values.get('kind') || 'student'),
+        await onlineBackend.studentSignIn('auto',
           String(values.get('identifier') || ''),password);
       } else {
         await onlineBackend.signIn(String(values.get('email') || ''),password);
@@ -1097,11 +1099,10 @@
         if(!b.enroll(token,uid))notify('ورود اثرانگشتی در دستگاه فعال نیست.');
       });
       setupBiometric();
-      // Manager access is intentionally absent from public signup.
-      // Seven intentional taps on the app name unlock the separate manager login.
-      // Real security always remains in Supabase Auth + the verified admin role.
-      $('auth-admin-entry').addEventListener('click', () => {
-        if (onlineBackend.currentUser) return;
+      // Manager access remains absent from public signup. Seven taps on
+      // the visible "ورود" heading open its login. Authorization remains server-side.
+      $('online-auth-title').addEventListener('click', () => {
+        if (onlineBackend.currentUser || onlineSignup || onlineRole !== 'student') return;
         const now = Date.now();
         managerEntryTaps = now - managerEntryLastTap > 9000 ? 1 : managerEntryTaps + 1;
         managerEntryLastTap = now;

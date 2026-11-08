@@ -138,7 +138,7 @@ function studentForm(){
  return '<form id="admin-student-form" class="secretary-card secretary-form"><h3 class="secretary-card-title">ویرایش اطلاعات دانشجو</h3>'+
  '<p class="secretary-card-p">'+esc(u.student_number)+'</p>'+
  '<label class="field">نام<input name="full_name" required maxlength="80" value="'+esc(u.full_name||'')+'"></label>'+
- ...['university','faculty','major'].map((k,i)=>'<label class="field">'+['دانشگاه','دانشکده','رشته'][i]+
+ ['university','faculty','major'].map((k,i)=>'<label class="field">'+['دانشگاه','دانشکده','رشته'][i]+
  '<input name="'+k+'" required maxlength="120" value="'+esc(u.academic?.[k]||'')+'"></label>').join('')+
  '<div class="secretary-actions"><button type="submit" class="positive">ذخیره</button>'+
  action('انصراف','data-admin-action','cancel')+'</div></form>';

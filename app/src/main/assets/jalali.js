@@ -47,7 +47,7 @@
     option(s,'',placeholder);return s;
   }
   function enhance(root=document) {
-    if(!root || typeof root.querySelectorAll!=='function')return;
+    if(!root || typeof root.querySelectorAll!=='function' || typeof document.createElement!=='function')return;
     const inputs=root.querySelectorAll('input[type="date"], input[type="datetime-local"]');
     for(const input of inputs) {
       if(input.dataset.jalaliReady==='true')continue;
@@ -122,9 +122,6 @@
   }
   function validateForm(form) {
     if(!form||typeof form.querySelectorAll!=='function')return true;
-    for(const input of form.querySelectorAll('input[data-jalali-source="true"]')) {
-      if(input.value)return true; // corrected by loop below for multi-input forms
-    }
     for(const input of form.querySelectorAll('input[data-jalali-source="true"]')) {
       if(!input.value) {
         const root=input.parentNode;

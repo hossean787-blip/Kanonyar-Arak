@@ -136,6 +136,9 @@
   let secretaryMembersTab = 'members';
   let managerEntryTaps = 0;
   let managerEntryLastTap = 0;
+  let academicDirectory = {universities: [], faculties: []};
+  let academicDirectoryReady = false;
+  let academicDirectoryLoading = false;
   function onlineMessage(text, isError = false) {
     const el = $('online-connection');
     if (!el) return;
@@ -181,6 +184,61 @@
     $('online-email').required = !student;
     $('online-password').minLength = student && onlineSignup ? 10 : 8;
     $('online-password').autocomplete = onlineSignup ? 'new-password' : 'current-password';
+    updateBiometricUI();
+  }
+  function academyUniversityOptions(selected = '') {
+    let options = '<option value="">انتخاب دانشگاه</option>';
+    const known = academicDirectory.universities.some(x => x.name === selected);
+    if (selected && !known) options += '<option value="' + escapeHTML(selected) +
+      '">نام ثبت‌شده قبلی: ' + escapeHTML(selected) + '</option>';
+    return options + academicDirectory.universities.map(u =>
+      '<option value="' + escapeHTML(u.name) + '"' + (u.name===selected?' selected':'') +
+      '>' + escapeHTML(u.name) + '</option>').join('');
+  }
+  function academyFacultyOptions(university, selected='') {
+    let options = '<option value="">انتخاب دانشکده</option>';
+    const uni = academicDirectory.universities.find(x => x.name===university);
+    const faculties = uni ? academicDirectory.faculties.filter(x => x.university_id===uni.id) : [];
+    if (selected && !faculties.some(x=>x.name===selected))
+      options += '<option value="'+escapeHTML(selected)+'">نام ثبت‌شده قبلی: '+escapeHTML(selected)+'</option>';
+    return options + faculties.map(x =>
+      '<option value="'+escapeHTML(x.name)+'"'+(x.name===selected?' selected':'')+'>'+
+       escapeHTML(x.name)+'</option>').join('');
+  }
+  function updateSignupFaculty() {
+    const university=$('online-university'),faculty=$('online-faculty');
+    if(!university||!faculty)return;
+    faculty.innerHTML=academyFacultyOptions(university.value);
+    faculty.disabled=!university.value ||
+      !academicDirectory.universities.some(x=>x.name===university.value);
+  }
+  function updateAcademicSignup() {
+    if(!$('online-university'))return;
+    const previous=$('online-university').value;
+    $('online-university').innerHTML=academyUniversityOptions(previous);
+    $('online-university').value=academicDirectory.universities.some(x=>x.name===previous)
+       ? previous : '';
+    updateSignupFaculty();
+    const status=$('academic-catalog-status');
+    if(status)status.textContent=academicDirectory.universities.length
+       ? 'دانشگاه و دانشکده را از فهرست ثبت‌شده مدیرکل انتخاب کنید.'
+       : 'هنوز دانشگاهی توسط مدیرکل تعریف نشده است؛ ثبت‌نام پس از ثبت دانشگاه و دانشکده امکان‌پذیر می‌شود.';
+  }
+  async function refreshAcademicDirectory() {
+    if(!onlineMode || academicDirectoryLoading || typeof onlineBackend.academicCatalog !== 'function')return;
+    academicDirectoryLoading=true;
+    try {
+      const data=await onlineBackend.academicCatalog();
+      academicDirectory={
+        universities:Array.isArray(data.universities)?data.universities:[],
+        faculties:Array.isArray(data.faculties)?data.faculties:[]
+      };
+      academicDirectoryReady=true;
+      updateAcademicSignup();
+    } catch(error) {
+      const status=$('academic-catalog-status');
+      if(status)status.textContent='فهرست دانشگاه‌ها دریافت نشد؛ اتصال را بررسی کنید.';
+    } finally {academicDirectoryLoading=false;}
   }
   function onlineClubIcon(category) {
     const t = String(category || '');
@@ -502,7 +560,7 @@
     const usersRoute = manager && activeScreen === 'manager-users';
     const membersRoute = secretary && activeScreen === 'secretary-members';
     subnav.hidden = !usersRoute && !membersRoute;
-    for (const name of ['students','secretaries','members','attendance']) {
+    for (const name of ['students','secretaries','members','attendance','universities']) {
       const button = $('workspace-subtab-' + name);
       if (!button) continue;
       button.hidden = usersRoute ? name === 'attendance' :
@@ -818,8 +876,10 @@
           <label class="field">کد ملی<input name="national_id" inputmode="numeric" pattern="[0-9]{10}" maxlength="10" required></label>
           <label class="field">تاریخ تولد شمسی<input name="birth_date" type="date" required></label>
           <label class="field">شماره موبایل (بدون پیامک تأیید)<input name="mobile" inputmode="tel" pattern="09[0-9]{9}" maxlength="11" required></label>
-          <label class="field">دانشگاه<input name="university" maxlength="120" required></label>
-          <label class="field">دانشکده<input name="faculty" maxlength="120" required></label>
+          <label class="field">دانشگاه<select name="university" data-academic-select="university" required>
+            ${academyUniversityOptions()}</select></label>
+          <label class="field">دانشکده<select name="faculty" data-academic-select="faculty" required>
+            ${academyFacultyOptions('')}</select></label>
           <label class="field">رشته تحصیلی<input name="major" maxlength="120" required></label>
           <p class="field-hint">شماره دانشجویی و کد ملی یکتا خواهند بود. کد ملی فقط به‌شکل اثرانگشت رمزنگاری‌شده در سرور ثبت می‌شود.</p>
           <button class="pill-btn sheet-action" type="submit">ثبت و اتصال به همین حساب</button>
@@ -838,8 +898,10 @@
           <label class="field">شماره دانشجویی
             <input name="number" maxlength="20" required value="${escapeHTML(state.number)}" ${onlineMode ? 'readonly' : ''}>
           </label>
-          ${onlineMode ? `<label class="field">دانشگاه<input name="university" maxlength="120" required value="${escapeHTML(state.academic?.university || '')}"></label>
-          <label class="field">دانشکده<input name="faculty" maxlength="120" required value="${escapeHTML(state.academic?.faculty || '')}"></label>
+          ${onlineMode ? `<label class="field">دانشگاه<select name="university" data-academic-select="university" required>
+           ${academyUniversityOptions(state.academic?.university||'')}</select></label>
+          <label class="field">دانشکده<select name="faculty" data-academic-select="faculty" required>
+           ${academyFacultyOptions(state.academic?.university||'',state.academic?.faculty||'')}</select></label>
           <label class="field">رشته تحصیلی<input name="major" maxlength="120" required value="${escapeHTML(state.academic?.major || '')}"></label>
           <label class="field">شماره موبایل<input name="mobile" inputmode="tel" maxlength="11" required value="${escapeHTML(state.academic?.mobile || '')}"></label>` : ''}
           <button type="submit" class="pill-btn sheet-action">${onlineMode ? 'ذخیره اطلاعات دانشجو' : 'ذخیره نمایشی'}</button>
@@ -989,7 +1051,7 @@
       if (btn.dataset.workspaceSubtab && onlineMode) {
         const value = btn.dataset.workspaceSubtab;
         if (activePersona === 'manager' && activeScreen === 'manager-users' &&
-            ['students','secretaries','members'].includes(value)) managerUsersTab = value;
+            ['students','secretaries','members','universities'].includes(value)) managerUsersTab = value;
         else if (activePersona === 'secretary' && activeScreen === 'secretary-members' &&
             ['members','attendance'].includes(value)) secretaryMembersTab = value;
         else return;

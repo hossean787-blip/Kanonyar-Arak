@@ -51,10 +51,41 @@ async function overview(){
  return {clubs,events,memberships,registrations,secretaries,
   users:profiles.map(p=>({...p,academic:academics.find(a=>a.user_id===p.user_id)||null}))};
 }
+// A director may additionally be a student: attach academic records to the SAME auth.uid.
+function validNational(code:string){
+ if(!/^\d{10}$/.test(code)||/^(\d)\1{9}$/.test(code))return false;
+ const mod=[...code.slice(0,9)].reduce((sum,c,i)=>sum+Number(c)*(10-i),0)%11;
+ return Number(code[9])===(mod<2?mod:11-mod);
+}
+async function hashNational(code:string){
+ const pepper=Deno.env.get("KANONHA_ID_PEPPER")||SERVICE;
+ const key=await crypto.subtle.importKey("raw",new TextEncoder().encode(pepper),
+  {name:"HMAC",hash:"SHA-256"},false,["sign"]);
+ const bytes=new Uint8Array(await crypto.subtle.sign("HMAC",key,new TextEncoder().encode("national:"+code)));
+ return [...bytes].map(x=>x.toString(16).padStart(2,"0")).join("");
+}
+async function attachManagerStudent(d:Record<string,unknown>,actor:string){
+ const fullName=val(d.full_name,80),student=val(d.student_number,20);
+ const national=val(d.national_id,10),birth=val(d.birth_date,10);
+ const university=val(d.university,120),faculty=val(d.faculty,120),major=val(d.major,120);
+ const mobile=val(d.mobile,11),parsed=new Date(birth+"T00:00:00Z");
+ if(fullName.length<2||fullName.length>80||!/^\d{6,20}$/.test(student)
+   ||!validNational(national)||!/^09\d{9}$/.test(mobile)
+   ||[university,faculty,major].some(v=>v.length<2||v.length>120)
+   ||!/^\d{4}-\d{2}-\d{2}$/.test(birth)||!Number.isFinite(parsed.getTime())
+   ||parsed.toISOString().slice(0,10)!==birth||parsed.getUTCFullYear()<1920
+   ||parsed.getTime()>=Date.now())throw new Error("input");
+ return await api("/rest/v1/rpc/kanonha_manager_attach_student","POST",{
+   p_user_id:actor,p_full_name:fullName,p_student_number:student,
+   p_national_digest:await hashNational(national),p_birth_date:birth,
+   p_university:university,p_faculty:faculty,p_major:major,p_mobile:mobile
+ });
+}
 const allowedBool=(b:unknown)=>typeof b==="boolean";
 async function handle(op:string,d:Record<string,unknown>,actor:string){
  const id=val(d.id,40);
  if(op==="overview")return await overview();
+  if(op==="manager.student.attach")return await attachManagerStudent(d,actor);
  if(op==="club.create"||op==="club.update"){
   const name=val(d.name,120),description=val(d.description,2000),category=val(d.category,80);
   if(name.length<2||name.length>120||description.length>2000||category.length<2||category.length>80

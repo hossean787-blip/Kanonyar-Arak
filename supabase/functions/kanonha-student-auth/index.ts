@@ -47,7 +47,7 @@ async function limited(req:Request,identifier:string,signup:boolean) {
   const ip=(req.headers.get("cf-connecting-ip")||req.headers.get("x-forwarded-for")||"missing").split(",")[0].trim().slice(0,80);
   const ipHash=await digest("rate:ip:"+ip);
   const idHash=await digest("rate:identifier:"+identifier);
-  for(const [hash,max] of [[ipHash,signup?5:30],[idHash,signup?4:8]] as [string,number][]) {
+  for(const [hash,max] of [[ipHash,signup?5:20],[idHash,signup?4:8]] as [string,number][]) {
     const result=await http("/rest/v1/rpc/kanonha_rate_limit","POST",{p_key:hash,p_max:max,p_minutes:15});
     if(!result.ok || result.data!==true) return false;
   }

@@ -171,7 +171,16 @@ final class BiometricVault {
             final byte[] randomKey = new byte[32];
             new SecureRandom().nextBytes(randomKey);
             Cipher cipher = Cipher.getInstance(CIPHER);
-            cipher.init(Cipher.ENCRYPT_MODE, getKey());
+            try {
+                cipher.init(Cipher.ENCRYPT_MODE, getKey());
+            } catch (java.security.InvalidKeyException invalidated) {
+                // Only explicit enrollment may replace an unusable Keystore key.
+                // Previously enrolled fingerprints may have changed since v0.9.3.
+                KeyStore store = KeyStore.getInstance("AndroidKeyStore");
+                store.load(null);
+                if (store.containsAlias(KEY_ALIAS)) store.deleteEntry(KEY_ALIAS);
+                cipher.init(Cipher.ENCRYPT_MODE, getKey());
+            }
             prompt("فعال‌سازی ورود با اثر انگشت", cipher, authorized -> {
                 try {
                     byte[] wrapped = authorized.doFinal(randomKey);

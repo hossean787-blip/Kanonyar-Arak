@@ -103,6 +103,12 @@
   let onlineWorking = false;
   let onlinePublicSequence = 0;
   let onlinePersonalSequence = 0;
+  let activePersona = 'student';
+  let assignedSecretary = false;
+  let studentProfileReady = false;
+  let adminPanelReady = false;
+  let secretaryPanelReady = false;
+  let roleCapabilitiesChecked = false;
   function onlineMessage(text, isError = false) {
     const el = $('online-connection');
     if (!el) return;
@@ -193,15 +199,9 @@
     if (!onlineMode || !onlineBackend.currentUser) return;
     const ownerId = onlineBackend.currentUser.id;
     const refreshId = ++onlinePersonalSequence;
-    if (state.isManager) {
-      if (!onlineBackend.currentUser || onlineBackend.currentUser.id !== ownerId) return;
-      state.joined = []; state.requested = []; state.registered = [];
-      state.name = 'مدیر کل کانون‌ها'; state.number = 'حساب مدیریتی'; state.academic = null;
-      renderAll();
-      return;
-    }
     const [profile, memberRows, eventRows, academic] = await Promise.all([
-      onlineBackend.ensureProfile(), onlineBackend.memberships(), onlineBackend.registrations(),
+      state.isManager ? onlineBackend.profile() : onlineBackend.ensureProfile(),
+      onlineBackend.memberships(), onlineBackend.registrations(),
       typeof onlineBackend.academicDetails === 'function' ? onlineBackend.academicDetails() : null
     ]);
     if (refreshId !== onlinePersonalSequence ||
@@ -211,12 +211,13 @@
     state.joined = clubs.map((c, i) => memberMap.get(c.id) === 'approved' ? i : -1).filter(i => i >= 0);
     state.requested = clubs.map((c, i) => memberMap.get(c.id) === 'pending' ? i : -1).filter(i => i >= 0);
     state.registered = events.map((e, i) => eventIds.has(e.id) ? i : -1).filter(i => i >= 0);
-    state.name = profile ? profile.full_name : 'اطلاعات تکمیل نشده';
+    studentProfileReady = Boolean(profile);
+    state.name = profile ? profile.full_name : state.isManager ? 'مدیرکل کانون‌ها' : 'اطلاعات تکمیل نشده';
     state.number = profile ? profile.student_number : 'ثبت نشده';
     state.academic = academic;
     renderAll();
     onlineRenderAuth();
-    if (!profile) onlineMessage('برای درخواست عضویت، اطلاعات دانشجویی خود را تکمیل کنید.');
+    if (!profile && !state.isManager) onlineMessage('برای درخواست عضویت، اطلاعات دانشجویی خود را تکمیل کنید.');
   }
   async function onlineAuthenticate(form) {
     if (onlineWorking) return;
@@ -264,11 +265,15 @@
       }
       state = defaultState();
       state.isManager = !student;
+      activePersona = student ? 'student' : 'manager';
+      assignedSecretary = false; studentProfileReady = false;
+      roleCapabilitiesChecked = false;
       ++onlinePersonalSequence;
       form.reset();
       await onlineRefreshPublic();
       if (window.KanonhaSecretaryPanel) await window.KanonhaSecretaryPanel.refresh();
       if (window.KanonhaAdminPanel) await window.KanonhaAdminPanel.refresh();
+      updateAvailablePersonas();
       onlineRenderAuth();
       status.textContent = '';
       go('home');
@@ -285,8 +290,8 @@
     }
     if (!/^[0-9]{6,20}$/.test(state.number)) {
       go('profile');
-      notify('ابتدا نام و شماره دانشجویی را تکمیل کنید.');
-      action('edit');
+      notify('ابتدا پرونده دانشجویی را تکمیل کنید.');
+      action(state.isManager ? 'link-student' : 'edit');
       return false;
     }
     return true;
@@ -322,12 +327,98 @@
     try { await onlineBackend.signOut(); }
     catch (_) { /* local tokens still cleared by adapter */ }
     state = defaultState();
+    activePersona = 'student'; assignedSecretary = false; studentProfileReady = false;
+    adminPanelReady = false; secretaryPanelReady = false;
+    roleCapabilitiesChecked = false;
     $('home-management').hidden = true;
+    $('role-switcher').hidden = true;
     renderAll();
     onlineRenderAuth();
     closeSheet();
     go('profile');
     notify('از حساب خارج شدید.');
+  }
+
+  /* ——— One account, independently authorized personas ——— */
+  function updateAvailablePersonas() {
+    // Panels only become available after they complete their own server-verified refresh.
+    adminPanelReady = Boolean(state.isManager && !$('admin-panel').hidden);
+    secretaryPanelReady = Boolean(!$('secretary-panel').hidden);
+    assignedSecretary = secretaryPanelReady;
+    roleCapabilitiesChecked = true;
+    renderPersonaSelector();
+  }
+  function renderPersonaSelector() {
+    if (!onlineMode) return;
+    const signed = Boolean(onlineBackend.currentUser);
+    const picker = $('role-switcher'), banner = $('home-management');
+    picker.hidden = !signed;
+    if (!signed) { banner.hidden = true; return; }
+    const caps = {
+      student: true,
+      secretary: assignedSecretary && secretaryPanelReady,
+      manager: state.isManager && adminPanelReady
+    };
+    if (!caps[activePersona] && roleCapabilitiesChecked)
+      activePersona = caps.manager ? 'manager' : caps.secretary ? 'secretary' : 'student';
+    for (const role of ['student','secretary','manager']) {
+      const button = $('role-option-' + role);
+      button.hidden = !caps[role];
+      button.classList.toggle('active', activePersona === role);
+      button.setAttribute('aria-pressed', activePersona === role ? 'true' : 'false');
+    }
+    const roleCount = Object.values(caps).filter(Boolean).length;
+    $('role-switcher-options').style.gridTemplateColumns = 'repeat(' + roleCount + ',minmax(0,1fr))';
+    const needsProfile = activePersona === 'student' && state.isManager && !studentProfileReady;
+    $('role-onboard-btn').hidden = !needsProfile;
+    const descriptions = {
+      student: needsProfile
+        ? 'این همان حساب مدیرکل است. برای فعالیت دانشجویی فقط یک‌بار اطلاعات تحصیلی خود را ثبت کن.'
+        : 'در این نقش می‌توانی به کانون‌ها بپیوندی و در رویدادها ثبت‌نام کنی.',
+      secretary: 'مدیریت اعضا، رویدادها و حضور و غیابِ کانون‌هایی که دبیرشان هستی.',
+      manager: 'اختیارات سراسری برای مدیریت کانون‌ها، دبیران، دانشجویان و رویدادها.'
+    };
+    $('role-switcher-description').textContent = descriptions[activePersona];
+    const managerMode = activePersona === 'manager' && caps.manager;
+    const secretaryMode = activePersona === 'secretary' && caps.secretary;
+    banner.hidden = !managerMode && !secretaryMode;
+    if (managerMode || secretaryMode) {
+      $('home-management-overline').textContent = managerMode ? 'مدیریت سراسری فعال' : 'مدیریت کانون فعال';
+      $('home-management-title').textContent = managerMode ? 'مدیریت کل کانون‌ها' : 'مدیریت کانون من';
+      $('home-management-caption').textContent = managerMode
+        ? 'کانون‌ها، دبیران، دانشجویان و رویدادها' : 'اعضا، درخواست‌ها، رویدادها و حضور و غیاب';
+      $('home-management-btn').textContent = managerMode ? 'ورود به مدیریت کل' : 'ورود به مدیریت کانون';
+    }
+    // Selecting a persona changes what is presented, never server privileges.
+    $('admin-panel').hidden = !managerMode;
+    $('secretary-panel').hidden = !secretaryMode;
+  }
+  function setPersona(role) {
+    if (!onlineMode || !onlineBackend.currentUser) return;
+    if (role === 'manager' && (!state.isManager || !adminPanelReady)) return;
+    if (role === 'secretary' && (!assignedSecretary || !secretaryPanelReady)) return;
+    if (!['manager','secretary','student'].includes(role)) return;
+    activePersona = role;
+    renderPersonaSelector();
+    updateProfileDisplay();
+    if (role === 'student' && state.isManager && !studentProfileReady) {
+      action('link-student');
+    }
+  }
+  async function reloadPersonas() {
+    if (!onlineMode || !onlineBackend.currentUser) return;
+    const userId = onlineBackend.currentUser.id;
+    $('role-refresh').disabled = true;
+    try {
+      // The modules each recheck their own authorized server-side roles.
+      if (window.KanonhaSecretaryPanel) await window.KanonhaSecretaryPanel.refresh();
+      if (window.KanonhaAdminPanel) await window.KanonhaAdminPanel.refresh();
+      if (!onlineBackend.currentUser || onlineBackend.currentUser.id !== userId) return;
+      updateAvailablePersonas();
+      updateProfileDisplay();
+      notify('دسترسی‌های حساب بررسی و به‌روزرسانی شد.');
+    } catch (error) { notify(onlineError(error)); }
+    finally { $('role-refresh').disabled = false; }
   }
 
   /* ——— Toast ——— */
@@ -597,8 +688,28 @@
   }
 
   function action(name) {
+    if (name === 'link-student' && onlineMode && state.isManager) {
+      if (studentProfileReady) { notify('پرونده دانشجویی این حساب از قبل تکمیل شده است.'); return; }
+      openSheet('تکمیل هویت دانشجویی مدیرکل',
+        `<p class="secretary-card-p">پرونده زیر به حساب مدیریتی فعلی متصل می‌شود؛ حساب یا رمز دوم ساخته نخواهد شد.</p>
+        <form id="manager-student-form" class="secretary-form">
+          <label class="field">نام و نام خانوادگی<input name="full_name" maxlength="80" autocomplete="name" required></label>
+          <label class="field">شماره دانشجویی<input name="student_number" inputmode="numeric" pattern="[0-9]{6,20}" maxlength="20" required></label>
+          <label class="field">کد ملی<input name="national_id" inputmode="numeric" pattern="[0-9]{10}" maxlength="10" required></label>
+          <label class="field">تاریخ تولد میلادی<input name="birth_date" type="date" required></label>
+          <label class="field">شماره موبایل (بدون پیامک تأیید)<input name="mobile" inputmode="tel" pattern="09[0-9]{9}" maxlength="11" required></label>
+          <label class="field">دانشگاه<input name="university" maxlength="120" required></label>
+          <label class="field">دانشکده<input name="faculty" maxlength="120" required></label>
+          <label class="field">رشته تحصیلی<input name="major" maxlength="120" required></label>
+          <p class="field-hint">شماره دانشجویی و کد ملی یکتا خواهند بود. کد ملی فقط به‌شکل اثرانگشت رمزنگاری‌شده در سرور ثبت می‌شود.</p>
+          <button class="pill-btn sheet-action" type="submit">ثبت و اتصال به همین حساب</button>
+        </form>`
+      );
+      return;
+    }
     if (name === 'edit') {
-      if (onlineMode && state.isManager) { notify('اطلاعات مدیرکل از تنظیمات حساب ایمیلی مدیریت می‌شود.'); return; }
+      if (onlineMode && state.isManager && !studentProfileReady) { action('link-student'); return; }
+      if (onlineMode && state.isManager && activePersona === 'manager') { notify('برای ویرایش اطلاعات دانشجویی، ابتدا نقش دانشجو را انتخاب کنید.'); return; }
       openSheet('ویرایش اطلاعات',
         `<form id="edit-form">
           <label class="field">نام و نام خانوادگی
@@ -621,7 +732,7 @@
       );
     } else if (name === 'about') {
       openSheet('درباره برنامه',
-        `<p>کانون‌ها — ${onlineMode ? 'نسخه ۰.۷.۰، ورود دانشجویی و مدیریت یکپارچه' : 'نسخه نمایشی آفلاین'}</p>
+        `<p>کانون‌ها — ${onlineMode ? 'نسخه ۰.۸.۰، حساب چندنقشی و انتخاب نقش' : 'نسخه نمایشی آفلاین'}</p>
          <p>${onlineMode ? 'ورود و ثبت‌نام متصل به پایگاه داده مستقل؛ بلیت معتبر و تأیید شماره دانشجویی هنوز فعال نیست. نشست در حافظه موقت است.' : 'پنج صفحه با HTML، CSS و JavaScript پیاده‌سازی شده‌اند. هیچ داده‌ای به سرور ارسال نمی‌شود.'}</p>
          ${onlineMode ? '' : '<button type="button" data-action="reset" class="pill-btn soft">بازنشانی داده‌های نمایشی</button>'}`
       );
@@ -649,16 +760,17 @@
     renderEvents();
     renderActivity();
     updateProfileDisplay();
+    renderPersonaSelector();
   }
 
   function updateProfileDisplay() {
     const nameEl = $('profile-name');
     const numEl = $('profile-number');
-    if (nameEl) nameEl.textContent = state.name;
+    if (nameEl) nameEl.textContent = state.isManager && activePersona === 'manager' ? 'مدیرکل کانون‌ها' : state.name;
     if (numEl) numEl.textContent = `شماره دانشجویی: ${state.number}`;
     if (onlineMode) {
       onlineRenderAuth();
-      $('profile-service-note').textContent = state.isManager
+      $('profile-service-note').textContent = state.isManager && activePersona === 'manager'
         ? 'دسترسی مدیرکل؛ مدیریت همه کانون‌ها، دبیران و رویدادها.'
         : state.academic ? 'دانشگاه: '+state.academic.university+' | دانشکده: '+state.academic.faculty+' | رشته: '+state.academic.major
           : 'اطلاعات تحصیلی هنوز ثبت نشده است.';
@@ -717,9 +829,12 @@
         $('online-auth-status').textContent = '';
         onlineRenderAuth(); return;
       }
+      if (btn.dataset.roleSwitch && onlineMode) { setPersona(btn.dataset.roleSwitch); return; }
+      if (btn.id === 'role-refresh' && onlineMode) { void reloadPersonas(); return; }
+      if (btn.id === 'role-onboard-btn' && onlineMode) { action('link-student'); return; }
       if (btn.id === 'home-management-btn' && onlineMode) {
         go('profile');
-        const section = state.isManager ? $('admin-panel') : $('secretary-panel');
+        const section = activePersona === 'manager' ? $('admin-panel') : activePersona === 'secretary' ? $('secretary-panel') : null;
         if (section && !section.hidden && typeof section.scrollIntoView === 'function')
           section.scrollIntoView({behavior:'smooth',block:'start'});
         return;
@@ -740,6 +855,27 @@
       if (onlineMode && e.target.id === 'online-auth-form') {
         e.preventDefault();
         await onlineAuthenticate(e.target);
+        return;
+      }
+      if (onlineMode && e.target.id === 'manager-student-form') {
+        e.preventDefault();
+        if (!state.isManager || !onlineBackend.currentUser || studentProfileReady) return;
+        const accountId = onlineBackend.currentUser.id;
+        const fd = new FormData(e.target);
+        const fields = {};
+        for (const key of ['full_name','student_number','national_id','birth_date',
+          'university','faculty','major','mobile']) fields[key] = String(fd.get(key) || '').trim();
+        try {
+          await onlineBackend.adminAction('manager.student.attach', fields);
+          if (!onlineBackend.currentUser || onlineBackend.currentUser.id !== accountId) return;
+          await onlineRefreshPersonal();
+          closeSheet();
+          activePersona = 'student';
+          renderPersonaSelector();
+          updateProfileDisplay();
+          go('home');
+          notify('پرونده دانشجویی به همین حساب مدیرکل متصل شد.');
+        } catch (error) { notify(onlineError(error)); }
         return;
       }
       if (e.target.id !== 'edit-form') return;

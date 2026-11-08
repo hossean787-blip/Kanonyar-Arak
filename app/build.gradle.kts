@@ -1,5 +1,16 @@
 plugins { id("com.android.application") }
 
+// AndroidX Biometric 1.1 pulls old Kotlin JDK7/8 compatibility artifacts;
+// resolve all stdlib variants to a single merged Kotlin release to avoid
+// duplicate runtime classes. No Kotlin compiler plugin is used in this app.
+configurations.configureEach {
+    resolutionStrategy.force(
+        "org.jetbrains.kotlin:kotlin-stdlib:1.8.22",
+        "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22",
+        "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22"
+    )
+}
+
 // Release keys are NEVER checked into the repository. If all four environment
 // variables are absent, :app:assembleRelease creates an UNSIGNED artifact for
 // offline signing and validation.

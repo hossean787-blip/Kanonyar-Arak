@@ -35,6 +35,7 @@ jobs:
           node --check app/src/main/assets/admin.js
           node --check tests/unified-auth-smoke.cjs
           node --check tests/admin-ui-smoke.cjs
+          node --check tests/multi-role-ui-smoke.cjs
           node --check tests/live-identity-smoke.cjs
           deno check supabase/functions/kanonha-student-auth/index.ts
           deno check supabase/functions/kanonha-admin-console/index.ts

@@ -138,7 +138,7 @@ function studentForm(){
  return '<form id="admin-student-form" class="secretary-card secretary-form"><h3 class="secretary-card-title">ویرایش اطلاعات دانشجو</h3>'+
  '<p class="secretary-card-p">'+esc(u.student_number)+'</p>'+
  '<label class="field">نام<input name="full_name" required maxlength="80" value="'+esc(u.full_name||'')+'"></label>'+
- ['university','faculty','major'].map((k,i)=>'<label class="field">'+['دانشگاه','دانشکده','رشته'][i]+
+ ['university','faculty','major','mobile'].map((k,i)=>'<label class="field">'+['دانشگاه','دانشکده','رشته','شماره موبایل'][i]+
  '<input name="'+k+'" required maxlength="120" value="'+esc(u.academic?.[k]||'')+'"></label>').join('')+
  '<div class="secretary-actions"><button type="submit" class="positive">ذخیره</button>'+
  action('انصراف','data-admin-action','cancel')+'</div></form>';
@@ -222,7 +222,7 @@ root.addEventListener('submit',ev=>{
  }
  if(f.id==='admin-student-form'){
    void perform('student.edit',{user_id:editor?.id,full_name:v(fd,'full_name'),
-     university:v(fd,'university'),faculty:v(fd,'faculty'),major:v(fd,'major')});return;
+     university:v(fd,'university'),faculty:v(fd,'faculty'),major:v(fd,'major'),mobile:v(fd,'mobile')});return;
  }
  if(f.id==='admin-club-form'){
    void perform(editor?.id?'club.update':'club.create',{id:editor?.id,name:v(fd,'name'),

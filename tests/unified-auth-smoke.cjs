@@ -8,7 +8,7 @@ const source=fs.readFileSync(path.join(root,'app/src/main/assets/backend.js'),'u
 const html=fs.readFileSync(path.join(root,'app/src/main/assets/index.html'),'utf8');
 const authSql=fs.readFileSync(path.join(root,'supabase/unified-identity-v070.sql'),'utf8');
 for(const id of ['online-identifier','online-national','online-student','online-birth',
- 'online-university','online-faculty','online-major','auth-role-manager','home-management',
+ 'online-university','online-faculty','online-major','online-mobile','auth-role-manager','home-management',
  'admin-panel','admin-content','admin-tabs'])
  assert.ok(html.includes('id="'+id+'"'),id+' input not present');
 for(const word of ['kanonha_admins','kanonha_student_credentials','kanonha_academic_details',
@@ -46,13 +46,14 @@ const api=window.KanonhaBackend;
 (async()=>{
  await assert.rejects(()=>api.studentSignUp({name:'invalid'}),/معتبر نیست/);
  const fields={name:'دانشجوی تست',studentNumber:'99887766',nationalId:'0084575948',
- birthDate:'2002-05-15',university:'دانشگاه تست',faculty:'دانشکده تست',major:'حسابداری',password:'secure-password-123'};
+ birthDate:'2002-05-15',mobile:'09123456789',university:'دانشگاه تست',faculty:'دانشکده تست',major:'حسابداری',password:'secure-password-123'};
  const result=await api.studentSignUp(fields);
  assert.equal(result.id,id);
  const signup=calls.find(x=>x.body?.action==='register');
  assert.ok(signup,'missing student registration call');
  assert.equal(signup.body.email,undefined,'students must not enter an email');
  assert.equal(signup.body.nationalId,fields.nationalId);
+ assert.equal(signup.body.mobile,fields.mobile,'unverified mobile must be sent only to own server');
  assert.equal(signup.headers.apikey,'sb_publishable_testonly');
  assert.equal(signup.headers.Authorization,undefined,'signup must use public gateway, not service token');
  await api.studentSignIn('national',fields.nationalId,'secure-password-123');

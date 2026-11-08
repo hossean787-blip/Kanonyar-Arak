@@ -217,6 +217,7 @@
       ++onlinePersonalSequence;
       form.reset();
       await onlineRefreshPublic();
+      if (window.KanonhaSecretaryPanel) await window.KanonhaSecretaryPanel.refresh();
       onlineRenderAuth();
       status.textContent = '';
       notify('ورود به حساب انجام شد.');
@@ -264,6 +265,7 @@
     // Invalidate pending account-bound fetches before the logout network call.
     ++onlinePersonalSequence;
     ++onlinePublicSequence;
+    if (window.KanonhaSecretaryPanel) window.KanonhaSecretaryPanel.clear();
     try { await onlineBackend.signOut(); }
     catch (_) { /* local tokens still cleared by adapter */ }
     state = defaultState();
@@ -560,7 +562,7 @@
       );
     } else if (name === 'about') {
       openSheet('درباره برنامه',
-        `<p>کانون‌ها — ${onlineMode ? 'نسخه ۰.۴.۰، حساب کاربری و ثبت‌نام آنلاین' : 'نسخه نمایشی آفلاین'}</p>
+        `<p>کانون‌ها — ${onlineMode ? 'نسخه ۰.۶.۰، حساب دانشجویی و پنل دبیر کانون' : 'نسخه نمایشی آفلاین'}</p>
          <p>${onlineMode ? 'ورود و ثبت‌نام متصل به پایگاه داده مستقل؛ بلیت معتبر و تأیید شماره دانشجویی هنوز فعال نیست. نشست در حافظه موقت است.' : 'پنج صفحه با HTML، CSS و JavaScript پیاده‌سازی شده‌اند. هیچ داده‌ای به سرور ارسال نمی‌شود.'}</p>
          ${onlineMode ? '' : '<button type="button" data-action="reset" class="pill-btn soft">بازنشانی داده‌های نمایشی</button>'}`
       );

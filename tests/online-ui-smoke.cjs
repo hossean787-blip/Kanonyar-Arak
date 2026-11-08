@@ -88,7 +88,7 @@ const click = dataset => eventHandlers.click({target:{closest(){return {dataset}
   assert.equal(get('online-profile-card').hidden,true,'guest cannot see account data');
   assert.ok(!get('home-clubs').innerHTML.includes('کانون فناوری'),'no demo content in online catalog');
   assert.match(html,/Content-Security-Policy/,'CSP must be enabled');
-  assert.match(html,/connect-src https:\/\/\*\.supabase\.co/,'CSP should restrict network destinations');
+  assert.match(html,/connect-src https:\/\/cnqcysnjinghzzrzanpj\.supabase\.co/,'CSP must allow only the dedicated Kanonha backend');
   assert.ok(get('clubs-list').innerHTML.includes('&lt;img'),'club names must be escaped in catalog');
   assert.ok(get('home-clubs').innerHTML.includes('&lt;img'),'club names must be escaped in home carousel');
   assert.ok(get('events-list').innerHTML.includes('&lt;svg'),'event titles must be escaped');

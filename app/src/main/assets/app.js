@@ -13,13 +13,36 @@
   );
 
   /* ——— Navigation items ——— */
-  const navItems = [
+  const studentNavItems = [
     { id: 'home',     label: 'خانه',          icon: 'home'          },
     { id: 'clubs',    label: 'کانون‌ها',       icon: 'users'         },
     { id: 'events',   label: 'رویدادها',       icon: 'calendar'      },
     { id: 'activity', label: 'فعالیت‌های من', icon: 'check-square'  },
     { id: 'profile',  label: 'حساب کاربری',   icon: 'user'          }
   ];
+  const managerNavItems = [
+    {id:'manager-home', label:'خانه', art:'home'},
+    {id:'manager-clubs', label:'کانون‌ها', art:'clubs'},
+    {id:'manager-users', label:'کاربران', art:'activity'},
+    {id:'manager-events', label:'رویدادها', art:'events'},
+    {id:'manager-account', label:'حساب', art:'profile'}
+  ];
+  const secretaryNavItems = [
+    {id:'secretary-home', label:'خانه', art:'home'},
+    {id:'secretary-club', label:'کانون من', art:'clubs'},
+    {id:'secretary-events', label:'رویدادها', art:'events'},
+    {id:'secretary-members', label:'اعضا', art:'activity'},
+    {id:'secretary-account', label:'حساب', art:'profile'}
+  ];
+  function routeNavItems() {
+    if (!onlineMode || !onlineBackend.currentUser) return studentNavItems;
+    return activePersona === 'manager' ? managerNavItems :
+      activePersona === 'secretary' ? secretaryNavItems : studentNavItems;
+  }
+  function personaHome() {
+    return activePersona === 'manager' ? 'manager-home' :
+      activePersona === 'secretary' ? 'secretary-home' : 'home';
+  }
 
   /* ——— SVG icon paths ——— */
   const iconPaths = {
@@ -109,6 +132,8 @@
   let adminPanelReady = false;
   let secretaryPanelReady = false;
   let roleCapabilitiesChecked = false;
+  let managerUsersTab = 'students';
+  let secretaryMembersTab = 'members';
   function onlineMessage(text, isError = false) {
     const el = $('online-connection');
     if (!el) return;
@@ -276,7 +301,7 @@
       updateAvailablePersonas();
       onlineRenderAuth();
       status.textContent = '';
-      go('home');
+      go(personaHome());
       notify('ورود به حساب انجام شد.');
     } catch (error) {
       status.textContent = onlineError(error);
@@ -324,6 +349,7 @@
     ++onlinePublicSequence;
     if (window.KanonhaSecretaryPanel) window.KanonhaSecretaryPanel.clear();
     if (window.KanonhaAdminPanel) window.KanonhaAdminPanel.clear();
+    managerUsersTab = 'students'; secretaryMembersTab = 'members';
     try { await onlineBackend.signOut(); }
     catch (_) { /* local tokens still cleared by adapter */ }
     state = defaultState();
@@ -342,8 +368,12 @@
   /* ——— One account, independently authorized personas ——— */
   function updateAvailablePersonas() {
     // Panels only become available after they complete their own server-verified refresh.
-    adminPanelReady = Boolean(state.isManager && !$('admin-panel').hidden);
-    secretaryPanelReady = Boolean(!$('secretary-panel').hidden);
+    const admin = window.KanonhaAdminPanel;
+    const secretary = window.KanonhaSecretaryPanel;
+    adminPanelReady = Boolean(state.isManager && (admin && typeof admin.hasAccess === 'function'
+      ? admin.hasAccess() : !$('admin-panel').hidden));
+    secretaryPanelReady = Boolean(secretary && typeof secretary.hasAssignments === 'function'
+      ? secretary.hasAssignments() : !$('secretary-panel').hidden);
     assignedSecretary = secretaryPanelReady;
     roleCapabilitiesChecked = true;
     renderPersonaSelector();
@@ -366,6 +396,12 @@
       button.hidden = !caps[role];
       button.classList.toggle('active', activePersona === role);
       button.setAttribute('aria-pressed', activePersona === role ? 'true' : 'false');
+      const workspaceButton = $('workspace-choice-' + role);
+      if (workspaceButton) {
+        workspaceButton.hidden = !caps[role];
+        workspaceButton.classList.toggle('active',activePersona === role);
+        workspaceButton.setAttribute('aria-pressed',activePersona === role ? 'true' : 'false');
+      }
     }
     const roleCount = Object.values(caps).filter(Boolean).length;
     $('role-switcher-options').style.gridTemplateColumns = 'repeat(' + roleCount + ',minmax(0,1fr))';
@@ -399,8 +435,11 @@
     if (role === 'secretary' && (!assignedSecretary || !secretaryPanelReady)) return;
     if (!['manager','secretary','student'].includes(role)) return;
     activePersona = role;
+    $('workspace-role-menu').hidden = true;
+    $('workspace-change-role').setAttribute('aria-expanded','false');
     renderPersonaSelector();
     updateProfileDisplay();
+    go(personaHome());
     if (role === 'student' && state.isManager && !studentProfileReady) {
       action('link-student');
     }
@@ -416,9 +455,76 @@
       if (!onlineBackend.currentUser || onlineBackend.currentUser.id !== userId) return;
       updateAvailablePersonas();
       updateProfileDisplay();
+      if (!routeNavItems().some(x => x.id === activeScreen)) go(personaHome());
+      else if (activeScreen.startsWith('manager-') || activeScreen.startsWith('secretary-'))
+        renderWorkspace();
+      renderNav();
       notify('دسترسی‌های حساب بررسی و به‌روزرسانی شد.');
     } catch (error) { notify(onlineError(error)); }
     finally { $('role-refresh').disabled = false; }
+  }
+
+  /* ——— Role-specific dashboards and five independent navigation routes ——— */
+  function renderWorkspace() {
+    if (!onlineMode || !onlineBackend.currentUser) return;
+    const manager = activePersona === 'manager' && adminPanelReady;
+    const secretary = activePersona === 'secretary' && secretaryPanelReady;
+    const workspace = $('screen-workspace');
+    if (!workspace) return;
+    workspace.dataset.persona = manager ? 'manager' : secretary ? 'secretary' : 'student';
+    const titles = {
+      'manager-home': ['داشبورد مدیرکل','آمار زنده و کنترل تمام کانون‌ها','مدیریت سراسری'],
+      'manager-clubs': ['مدیریت کانون‌ها','ایجاد، ویرایش و فعال‌سازی کانون‌ها','مدیرکل'],
+      'manager-users': ['کاربران و دبیران','مدیریت دانشجویان، انتصاب دبیر و درخواست‌ها','مدیرکل'],
+      'manager-events': ['رویدادهای سامانه','ایجاد و کنترل رویدادهای تمامی کانون‌ها','مدیرکل'],
+      'secretary-home': ['خانه کانون من','نمای کلی و دسترسی سریع به ابزارهای دبیر','دبیر کانون'],
+      'secretary-club': ['مدیریت کانون','مشخصات و اطلاعات کانون تحت مسئولیت','دبیر کانون'],
+      'secretary-events': ['رویدادهای کانون','ساخت، انتشار و ویرایش برنامه‌های کانون','دبیر کانون'],
+      'secretary-members': ['اعضا و حضور و غیاب','بررسی درخواست‌ها و ثبت حضور دانشجویان','دبیر کانون']
+    };
+    const info = titles[activeScreen] || ['محیط اختصاصی','ابزارهای متناسب با مسئولیت شما','حساب کانون‌ها'];
+    $('workspace-title').textContent = info[0];
+    $('workspace-caption').textContent = info[1];
+    $('workspace-overline').textContent = info[2];
+    $('workspace-current-role').textContent = manager ? 'مدیرکل' : secretary ? 'دبیر کانون' : 'دانشجو';
+    const secretaryHome = secretary && activeScreen === 'secretary-home';
+    $('workspace-secretary-summary').hidden = !secretaryHome;
+    const subnav = $('workspace-subnav');
+    const usersRoute = manager && activeScreen === 'manager-users';
+    const membersRoute = secretary && activeScreen === 'secretary-members';
+    subnav.hidden = !usersRoute && !membersRoute;
+    for (const name of ['students','secretaries','members','attendance']) {
+      const button = $('workspace-subtab-' + name);
+      if (!button) continue;
+      button.hidden = usersRoute ? name === 'attendance' :
+        membersRoute ? !['members','attendance'].includes(name) : true;
+      const tab = usersRoute ? managerUsersTab : secretaryMembersTab;
+      button.classList.toggle('active',tab === name);
+      button.setAttribute('aria-pressed',tab === name ? 'true' : 'false');
+    }
+    $('workspace-subtab-members').textContent = membersRoute ? 'اعضا و درخواست‌ها' : 'درخواست‌ها';
+    if (secretaryHome) {
+      const summary = window.KanonhaSecretaryPanel &&
+        typeof window.KanonhaSecretaryPanel.summary === 'function'
+        ? window.KanonhaSecretaryPanel.summary() : null;
+      $('workspace-secretary-club').textContent = summary?.club || 'کانون تحت مدیریت';
+      for (const name of ['clubs','members','events'])
+        $('workspace-secretary-' + name).textContent =
+          Number(summary?.[name] || 0).toLocaleString('fa-IR');
+    }
+    $('admin-panel').hidden = !manager;
+    $('secretary-panel').hidden = !secretary || secretaryHome;
+    if (manager && window.KanonhaAdminPanel?.showTab) {
+      const mapped = activeScreen === 'manager-home' ? 'dashboard' :
+        activeScreen === 'manager-clubs' ? 'clubs' :
+        activeScreen === 'manager-users' ? managerUsersTab : 'events';
+      window.KanonhaAdminPanel.showTab(mapped);
+    }
+    if (secretary && !secretaryHome && window.KanonhaSecretaryPanel?.showTab) {
+      const mapped = activeScreen === 'secretary-club' ? 'club' :
+        activeScreen === 'secretary-events' ? 'events' : secretaryMembersTab;
+      window.KanonhaSecretaryPanel.showTab(mapped);
+    }
   }
 
   /* ——— Toast ——— */
@@ -432,11 +538,15 @@
 
   /* ——— Navigation ——— */
   function go(screen, { scroll = true } = {}) {
-    if (!navItems.some(x => x.id === screen)) return;
+    if (!routeNavItems().some(x => x.id === screen)) return;
     activeScreen = screen;
+    const container = screen.endsWith('-account') ? 'profile' :
+      screen.startsWith('manager-') || screen.startsWith('secretary-') ? 'workspace' : screen;
     document.querySelectorAll('.screen').forEach(el => {
-      el.hidden = el.dataset.screen !== screen;
+      el.hidden = el.dataset.screen !== container;
     });
+    if (container === 'workspace') renderWorkspace();
+    if (container === 'profile') updateProfileDisplay();
     renderNav();
     if (screen === 'activity') renderActivity();
     if (scroll) $('main').scrollTop = 0;
@@ -444,11 +554,11 @@
   }
 
   function renderNav() {
-    $('bottom-nav').innerHTML = navItems.map(x =>
+    $('bottom-nav').innerHTML = routeNavItems().map(x =>
       `<button type="button" data-screen-btn="${x.id}"
         class="${x.id === activeScreen ? 'active' : ''}"
         ${x.id === activeScreen ? 'aria-current="page"' : ''}>
-        <img class="nav-art" src="assets/nav-${x.id}.svg" alt="" width="34" height="34"><span>${x.label}</span>
+        <img class="nav-art" src="assets/nav-${x.art || x.id}.svg" alt="" width="34" height="34"><span>${x.label}</span>
       </button>`
     ).join('');
   }
@@ -631,7 +741,7 @@
   /* ——— Native Android back action: close the sheet first, then return Home. ——— */
   function handleBack() {
     if (!$('sheet-overlay').hidden) { closeSheet(); return true; }
-    if (activeScreen !== 'home') { go('home'); return true; }
+    if (activeScreen !== personaHome()) { go(personaHome()); return true; }
     return false;
   }
 
@@ -732,7 +842,7 @@
       );
     } else if (name === 'about') {
       openSheet('درباره برنامه',
-        `<p>کانون‌ها — ${onlineMode ? 'نسخه ۰.۸.۰، حساب چندنقشی و انتخاب نقش' : 'نسخه نمایشی آفلاین'}</p>
+        `<p>کانون‌ها — ${onlineMode ? 'نسخه ۰.۹.۰، محیط‌های اختصاصی مدیرکل، دبیر و دانشجو' : 'نسخه نمایشی آفلاین'}</p>
          <p>${onlineMode ? 'ورود و ثبت‌نام متصل به پایگاه داده مستقل؛ بلیت معتبر و تأیید شماره دانشجویی هنوز فعال نیست. نشست در حافظه موقت است.' : 'پنج صفحه با HTML، CSS و JavaScript پیاده‌سازی شده‌اند. هیچ داده‌ای به سرور ارسال نمی‌شود.'}</p>
          ${onlineMode ? '' : '<button type="button" data-action="reset" class="pill-btn soft">بازنشانی داده‌های نمایشی</button>'}`
       );
@@ -761,14 +871,21 @@
     renderActivity();
     updateProfileDisplay();
     renderPersonaSelector();
+    if (activeScreen.startsWith('manager-') || activeScreen.startsWith('secretary-'))
+      renderWorkspace();
   }
 
   function updateProfileDisplay() {
     const nameEl = $('profile-name');
     const numEl = $('profile-number');
+    if ($('title-profile')) $('title-profile').textContent = activePersona === 'manager'
+      ? 'حساب مدیرکل' : activePersona === 'secretary' ? 'حساب دبیر کانون' : 'حساب کاربری';
     if (nameEl) nameEl.textContent = state.isManager && activePersona === 'manager' ? 'مدیرکل کانون‌ها' : state.name;
     if (numEl) numEl.textContent = `شماره دانشجویی: ${state.number}`;
     if (onlineMode) {
+      const requests = typeof document.querySelector === 'function'
+        ? document.querySelector('[data-action="requests"]') : null;
+      if (requests) requests.hidden = activePersona === 'manager';
       onlineRenderAuth();
       $('profile-service-note').textContent = state.isManager && activePersona === 'manager'
         ? 'دسترسی مدیرکل؛ مدیریت همه کانون‌ها، دبیران و رویدادها.'
@@ -832,11 +949,24 @@
       if (btn.dataset.roleSwitch && onlineMode) { setPersona(btn.dataset.roleSwitch); return; }
       if (btn.id === 'role-refresh' && onlineMode) { void reloadPersonas(); return; }
       if (btn.id === 'role-onboard-btn' && onlineMode) { action('link-student'); return; }
+      if (btn.id === 'workspace-change-role' && onlineMode) {
+        const open = $('workspace-role-menu').hidden;
+        $('workspace-role-menu').hidden = !open;
+        btn.setAttribute('aria-expanded',open ? 'true' : 'false');
+        return;
+      }
+      if (btn.dataset.workspaceRoute && onlineMode) { go(btn.dataset.workspaceRoute); return; }
+      if (btn.dataset.workspaceSubtab && onlineMode) {
+        const value = btn.dataset.workspaceSubtab;
+        if (activePersona === 'manager' && activeScreen === 'manager-users' &&
+            ['students','secretaries','members'].includes(value)) managerUsersTab = value;
+        else if (activePersona === 'secretary' && activeScreen === 'secretary-members' &&
+            ['members','attendance'].includes(value)) secretaryMembersTab = value;
+        else return;
+        renderWorkspace(); return;
+      }
       if (btn.id === 'home-management-btn' && onlineMode) {
-        go('profile');
-        const section = activePersona === 'manager' ? $('admin-panel') : activePersona === 'secretary' ? $('secretary-panel') : null;
-        if (section && !section.hidden && typeof section.scrollIntoView === 'function')
-          section.scrollIntoView({behavior:'smooth',block:'start'});
+        go(activePersona === 'manager' ? 'manager-home' : activePersona === 'secretary' ? 'secretary-club' : 'profile');
         return;
       }
       if (btn.dataset.carousel) { moveHomeCarousel(btn.dataset.carousel==='next'?1:-1); return; }
@@ -905,18 +1035,24 @@
     });
 
     if (new URLSearchParams(window.location.search).get('native') === '1') { document.body.classList.add('native-app'); }
+    // Move the existing secured management desks once, preserving their listeners and state.
+    const workspacePanels = $('workspace-panels');
+    if (workspacePanels && typeof workspacePanels.appendChild === 'function') {
+      workspacePanels.appendChild($('admin-panel'));
+      workspacePanels.appendChild($('secretary-panel'));
+    }
     // Initial render
     renderAll();
     renderNav();
 
     // Handle hash navigation
     const requested = location.hash.replace('#', '');
-    go(navItems.some(x => x.id === requested) ? requested : onlineMode ? 'profile' : 'home');
+    go(routeNavItems().some(x => x.id === requested) ? requested : onlineMode ? 'profile' : 'home');
     if (onlineMode) void onlineRefreshPublic();
 
     window.addEventListener('hashchange', () => {
       const id = location.hash.slice(1);
-      if (navItems.some(x => x.id === id) && id !== activeScreen) go(id);
+      if (routeNavItems().some(x => x.id === id) && id !== activeScreen) go(id);
     });
   }
 
@@ -931,6 +1067,7 @@
   if (typeof window !== 'undefined') {
     window.KanonhaPreview = {
       get screen() { return activeScreen; },
+      get persona() { return activePersona; },
       get state() { return { ...state, joined: [...state.joined], registered: [...state.registered] }; },
       go,
       handleBack,

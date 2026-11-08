@@ -347,5 +347,20 @@
     event.preventDefault();
     void perform(() => form.id === 'secretary-club-form' ? submitClub(form) : submitEvent(form));
   });
-  window.KanonhaSecretaryPanel = Object.freeze({refresh, clear});
+  function hasAssignments() { return hasSession() && assigned.length > 0; }
+  function showTab(next) {
+    if (!hasAssignments() || !hasClub(activeClub) ||
+        !['club','events','members','attendance'].includes(next)) return false;
+    if (activeTab !== next) { activeTab = next; editor = null; render(); }
+    return true;
+  }
+  function summary() {
+    if (!hasAssignments()) return null;
+    return Object.freeze({
+      clubs: assigned.length, members: members.length, events: events.length,
+      pending: members.filter(x => x.status === 'pending').length,
+      club: clubName(activeClub)
+    });
+  }
+  window.KanonhaSecretaryPanel = Object.freeze({refresh, clear, hasAssignments, showTab, summary});
 })();

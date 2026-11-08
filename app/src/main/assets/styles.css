@@ -1454,3 +1454,64 @@ body.native-app .bottom-nav{padding-bottom:5px!important}
 .role-onboard-btn[hidden]{display:none!important}
 .role-switcher+ .home-management{margin-top:10px}
 @media(max-width:350px){.role-switcher{padding:12px 10px}.role-switcher-options{gap:5px}.role-switcher-options button{padding:10px 2px}.role-switcher-options strong{font-size:10px}.role-switcher-options small{font-size:8px}}
+
+/* ===== ROLE WORKSPACES v0.9 — independent admin and secretary surfaces ===== */
+.role-workspace { padding: 0 13px 32px; background: #f8fbf9; }
+.workspace-top { position: relative; margin: 0 -13px 18px; padding: 25px 20px 22px;
+  color: white; background: linear-gradient(140deg,#0e513b 0%,#227950 60%,#348b67 100%);
+  border-radius: 0 0 30px 30px; overflow: visible; }
+.role-workspace[data-persona="secretary"] .workspace-top {
+  background: linear-gradient(138deg,#164a65 0%,#2c7690 60%,#50a69c 100%);
+}
+.workspace-top::after { content: "✧"; position: absolute; font: 80px/1 Georgia,serif;
+  left: 25px; top: 13px; opacity: .09; pointer-events: none; }
+.workspace-overline { font-size: 11px; font-weight: 700; color: #def8e9; letter-spacing: .15px; }
+.workspace-star { color: #f6de83; font-size: 18px; vertical-align: middle; margin-left: 4px; }
+.workspace-title { font-size: 25px; font-weight: 850; margin: 8px 0 5px; line-height: 1.55; }
+.workspace-caption { font-size: 12px; opacity: .9; line-height: 1.8; margin: 0 0 16px; }
+.workspace-account { display: flex; align-items: center; gap: 7px; border: 1px solid #ffffff42;
+  background: #ffffff17; border-radius: 15px; padding: 9px; backdrop-filter: blur(8px); }
+.workspace-account-icon { display: grid; place-items: center; flex-shrink: 0; width: 32px; height: 32px;
+  background: #ffffff25; border-radius: 10px; font-size: 19px; }
+.workspace-account-text { flex: 1; min-width: 0; font-size: 11px; color: #f0fff9; }
+.workspace-account-text strong { font-size: 12px; display: inline; white-space: nowrap; }
+.workspace-change-role { font-weight: 750; font-size: 11px; border: 1px solid #ffffff71;
+  background: white; color: #194b38; border-radius: 10px; padding: 8px 10px; }
+.workspace-change-role:focus-visible, .workspace-role-menu button:focus-visible {
+  outline: 3px solid #ffe591; outline-offset: 2px; }
+.workspace-role-menu { position: absolute; z-index: 6; left: 20px; right: 20px; top: calc(100% - 15px);
+  display: grid; gap: 7px; padding: 10px; background: #fff; border: 1px solid #d5e5dc;
+  border-radius: 17px; box-shadow: 0 15px 28px #09271b35; }
+.workspace-role-menu button { text-align: right; background: #f3f9f5; color: #153d2c;
+  border: 1px solid transparent; padding: 12px; border-radius: 11px; font-weight: 750; }
+.workspace-role-menu button.active { background: #e0f4e8; border-color: #71b88e; }
+.workspace-secretary-summary { background: white; border-radius: 21px; padding: 17px 13px;
+  border: 1px solid #e1eaf0; box-shadow: 0 4px 17px #164a6520; }
+.workspace-summary-head { display: flex; flex-direction: column; gap: 3px; font-weight: 850; font-size: 17px; }
+.workspace-summary-head small { color: #517789; font-size: 11px; font-weight: 650; }
+.workspace-stat-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; margin: 16px 0; }
+.workspace-stat { border-radius: 14px; padding: 13px 6px; background: #edf6f8;
+  text-align: center; display: flex; flex-direction: column; gap: 3px; }
+.workspace-stat strong { font-size: 23px; font-weight: 900; color: #18546c; }
+.workspace-stat span { font-size: 10.5px; color: #51768a; }
+.workspace-quick-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.workspace-quick-actions button { font-size: 11px; font-weight: 800; border-radius: 12px;
+  padding: 13px 6px; color: #fff; background: #246e85; }
+.workspace-quick-actions button + button { background: #e0f3f0; color: #24685b; }
+.workspace-summary-note { margin: 13px 2px 0; color: #567884; font-size: 10.5px; line-height: 1.9; }
+.workspace-subnav { display: flex; align-items: center; gap: 7px; margin-bottom: 14px;
+  overflow-x: auto; padding: 2px 0 5px; }
+.workspace-subnav button { flex: 1; min-width: 0; white-space: nowrap; background: #e6eee8;
+  border-radius: 10px; padding: 10px 4px; font-weight: 750; font-size: 11px; color: #456052; }
+.workspace-subnav button.active { color: white; background: #287e57; }
+.role-workspace[data-persona="secretary"] .workspace-subnav button.active { background: #287b91; }
+.workspace-panels .admin-panel, .workspace-panels .secretary-panel { margin: 0; }
+.workspace-panels .admin-tabs, .workspace-panels .secretary-tabs { display: none; }
+.workspace-panels .admin-hero, .workspace-panels .secretary-hero { display: none; }
+.workspace-panels .admin-stats { margin-top: 0; }
+@media (max-width: 350px) {
+ .workspace-title { font-size: 22px; }
+ .workspace-account-text { font-size: 10px; }
+ .workspace-change-role { padding: 8px 5px; }
+ .workspace-top { padding-inline: 13px; }
+}

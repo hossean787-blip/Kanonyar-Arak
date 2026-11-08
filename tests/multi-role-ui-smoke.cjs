@@ -41,7 +41,7 @@ const wait=()=>new Promise(resolve=>setImmediate(resolve));
  await submit('online-auth-form',{email:'director@example.test',password:'test-password'});
  assert.equal(get('role-switcher').hidden,false);
  assert.equal(get('role-option-manager')['aria-pressed'],'true');
- click({roleSwitch:'secretary'});assert.equal(get('secretary-panel').hidden,false);
+ click({roleSwitch:'secretary'});assert.equal(get('workspace-secretary-summary').hidden,false);
  click({roleSwitch:'student'});assert.equal(get('role-onboard-btn').hidden,false);
  await submit('manager-student-form',{full_name:'Test Student',student_number:'12345678',national_id:'1234567891',
  birth_date:'2000-01-01',mobile:'09000000000',university:'Sample University',faculty:'Sample Faculty',major:'Sample Major'});

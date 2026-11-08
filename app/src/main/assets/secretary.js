@@ -48,6 +48,19 @@
   function activeClubInfo() {
     return clubCatalog.find(x => x.id === activeClub) || null;
   }
+  function secretaryHome(show) {
+    const banner = $('home-management');
+    if (!banner) return;
+    if (show) {
+      banner.hidden = false; banner.dataset.mode = 'secretary';
+      $('home-management-overline').textContent = 'دسترسی دبیر کانون فعال';
+      $('home-management-title').textContent = 'مدیریت کانون';
+      $('home-management-caption').textContent = 'درخواست‌های عضویت، رویدادها و حضور و غیاب';
+      $('home-management-btn').textContent = 'ورود به مدیریت کانون';
+    } else if (banner.dataset.mode === 'secretary') {
+      banner.hidden = true; banner.dataset.mode = '';
+    }
+  }
   function clear() {
     seq++;
     owner = null;
@@ -62,6 +75,7 @@
     editor = null;
     busy = false;
     root.hidden = true;
+    secretaryHome(false);
     $('secretary-content').innerHTML = '';
     $('secretary-message').textContent = '';
     $('secretary-club-select').innerHTML = '';
@@ -96,6 +110,7 @@
       clubCatalog = catalog.filter(x => x && validId(x.id));
       activeClub = assigned[0];
       root.hidden = false;
+      secretaryHome(true);
       fillAssignedSelect();
       status('برای مدیریت هر بخش، یکی از گزینه‌های زیر را انتخاب کنید.');
       await loadClubData(requestId);

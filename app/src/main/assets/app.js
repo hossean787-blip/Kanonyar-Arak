@@ -108,6 +108,7 @@
   let studentProfileReady = false;
   let adminPanelReady = false;
   let secretaryPanelReady = false;
+  let roleCapabilitiesChecked = false;
   function onlineMessage(text, isError = false) {
     const el = $('online-connection');
     if (!el) return;
@@ -266,6 +267,7 @@
       state.isManager = !student;
       activePersona = student ? 'student' : 'manager';
       assignedSecretary = false; studentProfileReady = false;
+      roleCapabilitiesChecked = false;
       ++onlinePersonalSequence;
       form.reset();
       await onlineRefreshPublic();
@@ -327,6 +329,7 @@
     state = defaultState();
     activePersona = 'student'; assignedSecretary = false; studentProfileReady = false;
     adminPanelReady = false; secretaryPanelReady = false;
+    roleCapabilitiesChecked = false;
     $('home-management').hidden = true;
     $('role-switcher').hidden = true;
     renderAll();
@@ -342,6 +345,7 @@
     adminPanelReady = Boolean(state.isManager && !$('admin-panel').hidden);
     secretaryPanelReady = Boolean(!$('secretary-panel').hidden);
     assignedSecretary = secretaryPanelReady;
+    roleCapabilitiesChecked = true;
     renderPersonaSelector();
   }
   function renderPersonaSelector() {
@@ -355,7 +359,8 @@
       secretary: assignedSecretary && secretaryPanelReady,
       manager: state.isManager && adminPanelReady
     };
-    if (!caps[activePersona]) activePersona = caps.manager ? 'manager' : caps.secretary ? 'secretary' : 'student';
+    if (!caps[activePersona] && roleCapabilitiesChecked)
+      activePersona = caps.manager ? 'manager' : caps.secretary ? 'secretary' : 'student';
     for (const role of ['student','secretary','manager']) {
       const button = $('role-option-' + role);
       button.hidden = !caps[role];

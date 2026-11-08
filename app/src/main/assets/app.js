@@ -883,7 +883,8 @@
     if (nameEl) nameEl.textContent = state.isManager && activePersona === 'manager' ? 'مدیرکل کانون‌ها' : state.name;
     if (numEl) numEl.textContent = `شماره دانشجویی: ${state.number}`;
     if (onlineMode) {
-      const requests = document.querySelector('[data-action="requests"]');
+      const requests = typeof document.querySelector === 'function'
+        ? document.querySelector('[data-action="requests"]') : null;
       if (requests) requests.hidden = activePersona === 'manager';
       onlineRenderAuth();
       $('profile-service-note').textContent = state.isManager && activePersona === 'manager'

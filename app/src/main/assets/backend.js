@@ -147,7 +147,11 @@
     // Column-level RLS grants never allow the client to UPDATE user_id.
     // Split insert/update so PostgREST does not attempt to update the primary key.
     const existing = await profile();
-    if (existing) return updateProfile(user_id, fields);
+    if (existing) {
+      if (fields.student_number !== existing.student_number)
+        throw new ApiError('تغییر شماره دانشجویی فقط از طریق مدیرکل انجام می‌شود.');
+      return updateProfile(user_id, { full_name: fields.full_name });
+    }
     try {
       const rows = await request(restPath + 'kanonha_profiles', {
         method: 'POST', requireUser: true,
@@ -332,12 +336,108 @@
     if (!Array.isArray(rows) || rows.length !== 1) throw new ApiError('ثبت حضور مجاز نیست یا رویداد هنوز آغاز نشده است.');
     return rows[0];
   }
+  /* v0.7: student login aliases are resolved only inside the rate-limited Edge Function. */
+  async function edgeRequest(slug, body, privileged = false) {
+    needConfig();
+    if (privileged) mustUser();
+    if (privileged) await refreshIfNeeded();
+    const headers = {apikey:key,'Content-Type':'application/json',Accept:'application/json'};
+    if (privileged) headers.Authorization = 'Bearer '+session.access_token;
+    const controller = new AbortController();
+    const timeout=setTimeout(()=>controller.abort(),20000);
+    try {
+      const response=await fetch(url+'/functions/v1/'+slug,{
+        method:'POST',headers,body:JSON.stringify(body),
+        signal:controller.signal,cache:'no-store'
+      });
+      const payload=await response.json();
+      if(!response.ok)throw parseResponseError(payload,response.status);
+      return payload;
+    }catch(error){
+      if(error instanceof ApiError)throw error;
+      if(error&&error.name==='AbortError')throw new ApiError('پاسخ سرور دیر رسید. دوباره تلاش کنید.');
+      throw new ApiError('اتصال به سرویس حساب کاربری برقرار نشد.');
+    }finally{clearTimeout(timeout)}
+  }
+  async function studentSignUp(fields) {
+    const name=String(fields.name||'').trim(),studentNumber=String(fields.studentNumber||'').trim();
+    const nationalId=String(fields.nationalId||'').trim(),birthDate=String(fields.birthDate||'').trim();
+    const mobile=String(fields.mobile||'').trim();
+    const university=String(fields.university||'').trim(),faculty=String(fields.faculty||'').trim();
+    const major=String(fields.major||'').trim();
+    if(name.length<2||!await checkStudentFields(fields))throw new ApiError('اطلاعات ثبت‌نام معتبر نیست.');
+    const response=await edgeRequest('kanonha-student-auth',{action:'register',
+      name,studentNumber,nationalId,birthDate,mobile,university,faculty,major,
+      password:fields.password});
+    if(!response||!response.session)throw new ApiError('نشست ثبت‌نام دریافت نشد.');
+    setSession(response.session);
+    const verified=await me();
+    if(!verified||!uuid(verified.id))throw new ApiError('حساب ایجاد شد؛ دوباره وارد شوید.');
+    return verified;
+  }
+  async function checkStudentFields(fields) {
+    const student=String(fields.studentNumber||'').trim(),national=String(fields.nationalId||'').trim();
+    const birth=String(fields.birthDate||'').trim();
+    const password=String(fields.password||'');
+    return /^\d{6,20}$/.test(student)&&/^\d{10}$/.test(national)
+      &&/^09\d{9}$/.test(String(fields.mobile||'').trim())
+      &&/^\d{4}-\d{2}-\d{2}$/.test(birth)
+      &&['university','faculty','major'].every(k=>{
+        const n=String(fields[k]||'').trim().length;return n>=2&&n<=120;
+      })&&password.length>=10&&password.length<=128;
+  }
+  async function studentSignIn(kind,identifier,password) {
+    if(!['student','national'].includes(kind))throw new ApiError('روش ورود نامعتبر است.');
+    const response=await edgeRequest('kanonha-student-auth',{action:'login',kind,
+      identifier:String(identifier||'').trim(),password:String(password||'')});
+    if(!response||!response.session)throw new ApiError('نشست ورود دریافت نشد.');
+    setSession(response.session);
+    return me();
+  }
+  async function managerSignUp(email,password) {
+    if(cleanEmail(email)!=='hossean787@gmail.com')throw new ApiError('این بخش فقط برای مدیرکل تعریف شده است.');
+    // Admin role is NOT created here; it requires verified mailbox ownership on server.
+    const data=await request(authPath+'signup',{method:'POST',auth:false,body:{
+      email:cleanEmail(email),password:checkPassword(password)
+    }});
+    if(data&&data.access_token&&data.refresh_token){setSession(data);await me();}
+    return {confirmationRequired:!session};
+  }
+  async function isManager() {
+    if(!user||!session)return false;
+    const id=mustUser();
+    const rows=await request(restPath+'kanonha_admins?select=user_id&user_id=eq.'+
+      encodeURIComponent(id)+'&limit=1',{requireUser:true});
+    return Array.isArray(rows)&&rows.length===1;
+  }
+  async function academicDetails() {
+    const uid=mustUser();
+    const rows=await request(restPath+'kanonha_academic_details?select=birth_date,university,faculty,major,mobile'
+      +'&user_id=eq.'+encodeURIComponent(uid),{requireUser:true});
+    return Array.isArray(rows)?rows[0]||null:null;
+  }
+  async function saveAcademicDetails(university,faculty,major,mobile) {
+    const uid=mustUser();
+    const fields={university:String(university||'').trim(),faculty:String(faculty||'').trim(),major:String(major||'').trim(),mobile:String(mobile||'').trim()};
+    if(Object.values(fields).some(v=>v.length<2||v.length>120)||!/^09\d{9}$/.test(fields.mobile))
+      throw new ApiError('مشخصات تحصیلی یا شماره موبایل معتبر نیست.');
+    const rows=await request(restPath+'kanonha_academic_details?user_id=eq.'+encodeURIComponent(uid),{
+      method:'PATCH',requireUser:true,headers:{Prefer:'return=representation'},body:fields
+    });
+    if(!Array.isArray(rows)||rows.length!==1)throw new ApiError('ذخیره مشخصات تحصیلی انجام نشد.');
+    return rows[0];
+  }
+  async function adminAction(action,fields={}) {
+    const result=await edgeRequest('kanonha-admin-console',{action,...fields},true);
+    return result.result;
+  }
   window.KanonhaBackend = Object.freeze({
     enabled, signUp, signIn, signOut, me, profile, ensureProfile,
     saveProfile, clubs, events, memberships, registrations,
     joinClub, registerEvent, secretaryClubs, secretaryEvents, secretaryMemberships,
     secretaryProfiles, secretaryUpdateClub, secretaryCreateEvent, secretaryUpdateEvent,
     secretaryDecideMembership, secretaryRoster, secretarySetAttendance,
+    studentSignUp,studentSignIn,managerSignUp,isManager,academicDetails,saveAcademicDetails,adminAction,
     get currentUser() { return user; }
   });
 })();

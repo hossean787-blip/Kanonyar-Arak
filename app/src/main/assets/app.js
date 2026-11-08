@@ -70,7 +70,7 @@
 
   /* ——— State ——— */
   const STORAGE_KEY = 'kanonha-ui-v3';
-  const defaultState = () => ({ joined: [], requested: [], registered: [], name: onlineMode ? 'مهمان' : 'کاربر آزمایشی', number: 'ثبت نشده' });
+  const defaultState = () => ({ joined: [], requested: [], registered: [], name: onlineMode ? 'مهمان' : 'کاربر آزمایشی', number: 'ثبت نشده', isManager: false, academic: null });
 
   function loadState() {
     // Never read a previous offline demo account while online mode is active.
@@ -99,6 +99,7 @@
 
   /* ——— Online catalog, account, and durable per-user records ——— */
   let onlineSignup = false;
+  let onlineRole = 'student';
   let onlineWorking = false;
   let onlinePublicSequence = 0;
   let onlinePersonalSequence = 0;
@@ -122,12 +123,28 @@
     $('online-auth-panel').hidden = signed;
     $('online-profile-card').hidden = !signed;
     $('profile-menu').hidden = !signed;
-    $('online-auth-title').textContent = onlineSignup ? 'ثبت‌نام دانشجو' : 'ورود دانشجو';
+    const student = onlineRole === 'student';
+    $('student-login-fields').hidden = !student || onlineSignup;
+    $('student-signup-fields').hidden = !student || !onlineSignup;
+    $('manager-login-fields').hidden = student;
+    $('signup-password-hint').hidden = !onlineSignup || !student;
+    $('online-auth-title').textContent = onlineSignup
+      ? student ? 'ثبت‌نام دانشجو' : 'ثبت حساب مدیر کل'
+      : student ? 'ورود دانشجو / دبیر' : 'ورود مدیر کل';
     $('online-auth-submit').textContent = onlineSignup ? 'ایجاد حساب' : 'ورود به حساب';
-    $('online-auth-toggle').textContent = onlineSignup ? 'قبلاً ثبت‌نام کرده‌ام؛ ورود' : 'حساب ندارم؛ ثبت‌نام';
-    Array.from($('online-auth-panel').querySelectorAll('.online-signup-only')).forEach(el => { el.hidden = !onlineSignup; });
-    $('online-name').required = onlineSignup;
-    $('online-student').required = onlineSignup;
+    $('online-auth-toggle').textContent = onlineSignup ? 'حساب دارم؛ ورود'
+      : student ? 'حساب ندارم؛ ثبت‌نام بدون ایمیل' : 'راه‌اندازی حساب مدیر کل با ایمیل';
+    for (const role of ['student','manager']) {
+      const el = $('auth-role-' + role);
+      el.classList.toggle('active',onlineRole === role);
+      el.setAttribute('aria-pressed',onlineRole === role ? 'true' : 'false');
+    }
+    for (const id of ['online-name','online-student','online-national','online-birth',
+      'online-university','online-faculty','online-major','online-mobile'])
+      $(id).required = student && onlineSignup;
+    $('online-identifier').required = student && !onlineSignup;
+    $('online-email').required = !student;
+    $('online-password').minLength = student && onlineSignup ? 10 : 8;
     $('online-password').autocomplete = onlineSignup ? 'new-password' : 'current-password';
   }
   function onlineClubIcon(category) {
@@ -176,10 +193,17 @@
     if (!onlineMode || !onlineBackend.currentUser) return;
     const ownerId = onlineBackend.currentUser.id;
     const refreshId = ++onlinePersonalSequence;
-    const [profile, memberRows, eventRows] = await Promise.all([
-      onlineBackend.ensureProfile(), onlineBackend.memberships(), onlineBackend.registrations()
+    if (state.isManager) {
+      if (!onlineBackend.currentUser || onlineBackend.currentUser.id !== ownerId) return;
+      state.joined = []; state.requested = []; state.registered = [];
+      state.name = 'مدیر کل کانون‌ها'; state.number = 'حساب مدیریتی'; state.academic = null;
+      renderAll();
+      return;
+    }
+    const [profile, memberRows, eventRows, academic] = await Promise.all([
+      onlineBackend.ensureProfile(), onlineBackend.memberships(), onlineBackend.registrations(),
+      typeof onlineBackend.academicDetails === 'function' ? onlineBackend.academicDetails() : null
     ]);
-    // Discard responses started for an older account or an invalidated session.
     if (refreshId !== onlinePersonalSequence ||
         !onlineBackend.currentUser || onlineBackend.currentUser.id !== ownerId) return;
     const memberMap = new Map(memberRows.map(m => [m.club_id, m.status]));
@@ -189,9 +213,10 @@
     state.registered = events.map((e, i) => eventIds.has(e.id) ? i : -1).filter(i => i >= 0);
     state.name = profile ? profile.full_name : 'اطلاعات تکمیل نشده';
     state.number = profile ? profile.student_number : 'ثبت نشده';
+    state.academic = academic;
     renderAll();
     onlineRenderAuth();
-    if (!profile) onlineMessage('برای درخواست عضویت یا ثبت‌نام رویداد، اطلاعات دانشجویی را تکمیل کنید.');
+    if (!profile) onlineMessage('برای درخواست عضویت، اطلاعات دانشجویی خود را تکمیل کنید.');
   }
   async function onlineAuthenticate(form) {
     if (onlineWorking) return;
@@ -201,25 +226,52 @@
     status.textContent = 'در حال بررسی حساب کاربری…';
     try {
       const values = new FormData(form);
-      const email = String(values.get('email') || '');
       const password = String(values.get('password') || '');
+      const student = onlineRole === 'student';
       if (onlineSignup) {
-        const result = await onlineBackend.signUp(
-          email, password, String(values.get('name') || ''), String(values.get('studentNumber') || '')
-        );
-        if (result.confirmationRequired) {
-          status.textContent = 'ایمیل تأیید برای شما ارسال شد. پس از تأیید ایمیل، از بخش ورود وارد شوید.';
-          onlineSignup = false;
-          onlineRenderAuth();
-          return;
+        if (student) {
+          await onlineBackend.studentSignUp({
+            name: String(values.get('name') || ''),
+            studentNumber: String(values.get('studentNumber') || ''),
+            nationalId: String(values.get('nationalId') || ''),
+            birthDate: String(values.get('birthDate') || ''),
+            mobile: String(values.get('mobile') || ''),
+            university: String(values.get('university') || ''),
+            faculty: String(values.get('faculty') || ''),
+            major: String(values.get('major') || ''),
+            password
+          });
+        } else {
+          const result = await onlineBackend.managerSignUp(String(values.get('email') || ''),password);
+          if (result.confirmationRequired) {
+            onlineSignup = false; onlineRenderAuth();
+            status.textContent = 'ایمیل تأیید مدیرکل ارسال شد. پس از تأیید مالکیت ایمیل وارد شوید.';
+            return;
+          }
         }
-      } else await onlineBackend.signIn(email, password);
+      } else if (student) {
+        await onlineBackend.studentSignIn(String(values.get('kind') || 'student'),
+          String(values.get('identifier') || ''),password);
+      } else {
+        await onlineBackend.signIn(String(values.get('email') || ''),password);
+      }
+      if (!student) {
+        const allowed = await onlineBackend.isManager();
+        if (!allowed) {
+          await onlineBackend.signOut();
+          throw new Error('حساب مدیرکل هنوز تأیید نشده یا دسترسی آن فعال نیست.');
+        }
+      }
+      state = defaultState();
+      state.isManager = !student;
       ++onlinePersonalSequence;
       form.reset();
       await onlineRefreshPublic();
       if (window.KanonhaSecretaryPanel) await window.KanonhaSecretaryPanel.refresh();
+      if (window.KanonhaAdminPanel) await window.KanonhaAdminPanel.refresh();
       onlineRenderAuth();
       status.textContent = '';
+      go('home');
       notify('ورود به حساب انجام شد.');
     } catch (error) {
       status.textContent = onlineError(error);
@@ -266,9 +318,11 @@
     ++onlinePersonalSequence;
     ++onlinePublicSequence;
     if (window.KanonhaSecretaryPanel) window.KanonhaSecretaryPanel.clear();
+    if (window.KanonhaAdminPanel) window.KanonhaAdminPanel.clear();
     try { await onlineBackend.signOut(); }
     catch (_) { /* local tokens still cleared by adapter */ }
     state = defaultState();
+    $('home-management').hidden = true;
     renderAll();
     onlineRenderAuth();
     closeSheet();
@@ -544,14 +598,19 @@
 
   function action(name) {
     if (name === 'edit') {
+      if (onlineMode && state.isManager) { notify('اطلاعات مدیرکل از تنظیمات حساب ایمیلی مدیریت می‌شود.'); return; }
       openSheet('ویرایش اطلاعات',
         `<form id="edit-form">
           <label class="field">نام و نام خانوادگی
             <input name="name" autocomplete="name" maxlength="60" required value="${escapeHTML(state.name)}">
           </label>
           <label class="field">شماره دانشجویی
-            <input name="number" maxlength="20" required value="${escapeHTML(state.number)}">
+            <input name="number" maxlength="20" required value="${escapeHTML(state.number)}" ${onlineMode ? 'readonly' : ''}>
           </label>
+          ${onlineMode ? `<label class="field">دانشگاه<input name="university" maxlength="120" required value="${escapeHTML(state.academic?.university || '')}"></label>
+          <label class="field">دانشکده<input name="faculty" maxlength="120" required value="${escapeHTML(state.academic?.faculty || '')}"></label>
+          <label class="field">رشته تحصیلی<input name="major" maxlength="120" required value="${escapeHTML(state.academic?.major || '')}"></label>
+          <label class="field">شماره موبایل<input name="mobile" inputmode="tel" maxlength="11" required value="${escapeHTML(state.academic?.mobile || '')}"></label>` : ''}
           <button type="submit" class="pill-btn sheet-action">${onlineMode ? 'ذخیره اطلاعات دانشجو' : 'ذخیره نمایشی'}</button>
         </form>`
       );
@@ -562,7 +621,7 @@
       );
     } else if (name === 'about') {
       openSheet('درباره برنامه',
-        `<p>کانون‌ها — ${onlineMode ? 'نسخه ۰.۶.۰، حساب دانشجویی و پنل دبیر کانون' : 'نسخه نمایشی آفلاین'}</p>
+        `<p>کانون‌ها — ${onlineMode ? 'نسخه ۰.۷.۰، ورود دانشجویی و مدیریت یکپارچه' : 'نسخه نمایشی آفلاین'}</p>
          <p>${onlineMode ? 'ورود و ثبت‌نام متصل به پایگاه داده مستقل؛ بلیت معتبر و تأیید شماره دانشجویی هنوز فعال نیست. نشست در حافظه موقت است.' : 'پنج صفحه با HTML، CSS و JavaScript پیاده‌سازی شده‌اند. هیچ داده‌ای به سرور ارسال نمی‌شود.'}</p>
          ${onlineMode ? '' : '<button type="button" data-action="reset" class="pill-btn soft">بازنشانی داده‌های نمایشی</button>'}`
       );
@@ -597,7 +656,13 @@
     const numEl = $('profile-number');
     if (nameEl) nameEl.textContent = state.name;
     if (numEl) numEl.textContent = `شماره دانشجویی: ${state.number}`;
-    if (onlineMode) onlineRenderAuth();
+    if (onlineMode) {
+      onlineRenderAuth();
+      $('profile-service-note').textContent = state.isManager
+        ? 'دسترسی مدیرکل؛ مدیریت همه کانون‌ها، دبیران و رویدادها.'
+        : state.academic ? 'دانشگاه: '+state.academic.university+' | دانشکده: '+state.academic.faculty+' | رشته: '+state.academic.major
+          : 'اطلاعات تحصیلی هنوز ثبت نشده است.';
+    }
   }
 
   /* ——— Init ——— */
@@ -646,6 +711,19 @@
     document.addEventListener('click', (e) => {
       const btn = e.target.closest('button');
       if (!btn) return;
+      if (btn.dataset.authRole && onlineMode) {
+        onlineRole = btn.dataset.authRole === 'manager' ? 'manager' : 'student';
+        onlineSignup = false;
+        $('online-auth-status').textContent = '';
+        onlineRenderAuth(); return;
+      }
+      if (btn.id === 'home-management-btn' && onlineMode) {
+        go('profile');
+        const section = state.isManager ? $('admin-panel') : $('secretary-panel');
+        if (section && !section.hidden && typeof section.scrollIntoView === 'function')
+          section.scrollIntoView({behavior:'smooth',block:'start'});
+        return;
+      }
       if (btn.dataset.carousel) { moveHomeCarousel(btn.dataset.carousel==='next'?1:-1); return; }
       if (btn.dataset.screenBtn)      { go(btn.dataset.screenBtn); return; }
       if (btn.dataset.goto)           { closeSheet(); go(btn.dataset.goto); return; }
@@ -673,6 +751,9 @@
       if (onlineMode) {
         try {
           await onlineBackend.saveProfile(name, number);
+          if (typeof onlineBackend.saveAcademicDetails === 'function')
+            await onlineBackend.saveAcademicDetails(String(form.get('university') || ''),
+              String(form.get('faculty') || ''),String(form.get('major') || ''),String(form.get('mobile') || ''));
           await onlineRefreshPersonal();
           closeSheet();
           notify('اطلاعات دانشجویی در سرور ذخیره شد.');
@@ -694,7 +775,7 @@
 
     // Handle hash navigation
     const requested = location.hash.replace('#', '');
-    go(navItems.some(x => x.id === requested) ? requested : 'home');
+    go(navItems.some(x => x.id === requested) ? requested : onlineMode ? 'profile' : 'home');
     if (onlineMode) void onlineRefreshPublic();
 
     window.addEventListener('hashchange', () => {

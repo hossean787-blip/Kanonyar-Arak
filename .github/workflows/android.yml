@@ -1,4 +1,4 @@
-name: Kanonha connected-backend validation and Android build
+name: Kanonha unified identity, superadmin and Android validation
 on:
   push:
     branches: [main]
@@ -16,6 +16,9 @@ jobs:
           distribution: temurin
           java-version: "17"
       - uses: android-actions/setup-android@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
@@ -29,6 +32,12 @@ jobs:
           node --check tests/online-ui-smoke.cjs
           node --check tests/live-api-smoke.cjs
           node --check app/src/main/assets/secretary.js
+          node --check app/src/main/assets/admin.js
+          node --check tests/unified-auth-smoke.cjs
+          node --check tests/admin-ui-smoke.cjs
+          node --check tests/live-identity-smoke.cjs
+          deno check supabase/functions/kanonha-student-auth/index.ts
+          deno check supabase/functions/kanonha-admin-console/index.ts
           node --check tests/secretary-backend-smoke.cjs
           node --check tests/secretary-ui-smoke.cjs
           python3 - <<'PY'
@@ -38,7 +47,7 @@ jobs:
           html=(root/'index.html').read_text(encoding='utf-8')
           for name in ('home','clubs','events','activity','profile'):
               assert 'data-screen="'+name+'"' in html, name
-          for name in ('styles.css','app.js','backend.js','config.js'):
+          for name in ('styles.css','app.js','backend.js','secretary.js','admin.js','config.js'):
               assert (root/name).is_file(), name
           for svg in (root/'assets').glob('*.svg'):
               ET.parse(svg)
@@ -65,12 +74,16 @@ jobs:
           node tests/online-ui-smoke.cjs
           node tests/secretary-backend-smoke.cjs
           node tests/secretary-ui-smoke.cjs
+          node tests/unified-auth-smoke.cjs
+          node tests/admin-ui-smoke.cjs
       - name: Verify real isolated Supabase Data API and anonymous RLS
-        run: node tests/live-api-smoke.cjs
+        run: |
+          node tests/live-api-smoke.cjs
+          node tests/live-identity-smoke.cjs
       - name: Build Android connected-preview APK
         run: gradle :app:assembleDebug --no-daemon
       - uses: actions/upload-artifact@v4
         with:
-          name: kanonha-0.6.0-secretary-debug
+          name: kanonha-0.7.0-unified-auth-debug
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error

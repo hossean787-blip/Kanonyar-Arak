@@ -24,7 +24,7 @@ for(const name of ['home','clubs','events','activity','profile']){
 }
 assert.match(app,/function refreshAcademicDirectory\(\)/);
 assert.match(app,/function academyFacultyOptions/);
-assert.match(app,/role==='manager'/);
+assert.match(app,/role\s*===\s*'manager'/);
 assert.match(admin,/function universities\(\)/);
 assert.match(admin,/university\.create/);
 assert.match(admin,/faculty\.create/);

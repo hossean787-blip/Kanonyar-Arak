@@ -162,11 +162,21 @@
         <section id="online-connection" class="online-connection" hidden aria-live="polite"></section>
         <section id="online-auth-panel" class="online-auth-panel v7-auth" hidden aria-labelledby="online-auth-title">
           <div class="v7-auth-hero">
-            <span class="v7-auth-spark" aria-hidden="true">✦</span>
-            <div><button id="auth-admin-entry" class="v7-overline auth-hidden-entry" type="button"
-                  aria-label="کانون‌ها">کانون‌ها</button>
-              <h2 id="online-auth-title">ورود دانشجو</h2>
-              <p class="online-caption">ورود و ثبت‌نام دانشجویان؛ دسترسی دبیر پس از انتصاب فعال می‌شود.</p>
+            <span class="v7-auth-spark v95-login-icon" aria-hidden="true">
+              <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="32" cy="32" r="23.5" stroke="white" stroke-opacity=".34" stroke-width="1.5"/>
+                <path d="M32 13.5C24.8 18.2 19.7 18.8 16 19.3v13.6c0 12 7.3 19.7 16 23.9 8.7-4.2 16-11.9 16-23.9V19.3c-3.7-.5-8.8-1.1-16-5.8Z"
+                  stroke="white" stroke-width="2.1" stroke-linejoin="round"/>
+                <circle cx="32" cy="28.5" r="5" fill="white"/>
+                <path d="M22.3 41.9c.8-4.6 4.5-7.5 9.7-7.5s8.9 2.9 9.7 7.5"
+                  stroke="white" stroke-width="2.6" stroke-linecap="round"/>
+                <path d="M46 13.5v8M42 17.5h8" stroke="#CBD0FF" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </span>
+            <div class="v95-auth-heading">
+              <h2 class="v95-auth-title"><button id="online-auth-title" class="v95-login-title-button"
+                type="button" aria-label="ورود">ورود</button></h2>
+              <p class="online-caption">برای ورود به حساب کاربری خود اطلاعات را وارد کنید.</p>
             </div>
           </div>
           <div class="v7-role-switch" role="group" aria-label="نوع حساب" hidden>
@@ -176,14 +186,11 @@
           <button id="auth-back-student" type="button" class="auth-return-student" hidden>بازگشت به ورود دانشجو</button>
           <form id="online-auth-form" class="v7-auth-form">
             <div id="student-login-fields">
-              <label class="field">ورود با کدام شناسه؟
-                <select id="student-login-kind" name="kind">
-                  <option value="student">شماره دانشجویی</option>
-                  <option value="national">کد ملی</option>
-                </select>
-              </label>
+              <select id="student-login-kind" name="kind" hidden aria-hidden="true">
+                <option value="auto" selected>تشخیص خودکار شناسه</option>
+              </select>
               <label class="field">شماره دانشجویی یا کد ملی
-                <input id="online-identifier" name="identifier" inputmode="numeric" autocomplete="username" maxlength="20" required placeholder="شناسه ورود را وارد کنید">
+                <input id="online-identifier" name="identifier" inputmode="numeric" autocomplete="username" maxlength="20" required placeholder="شماره دانشجویی یا کد ملی را وارد کنید">
               </label>
             </div>
             <div id="manager-login-fields" hidden>
@@ -246,7 +253,7 @@
             <p id="signup-password-hint" class="v7-hint" hidden>رمز حداقل ۱۰ نویسه داشته باشد؛ از رمز تکراری استفاده نکنید. بازیابی حساب بدون ایمیل نیازمند پشتیبانی مدیرکل است.</p>
             <button id="online-auth-submit" class="pill-btn sheet-action" type="submit">ورود به حساب</button>
           </form>
-          <button id="online-auth-toggle" class="online-auth-toggle" type="button">حساب ندارم؛ ثبت‌نام</button>
+          <button id="online-auth-toggle" class="online-auth-toggle" type="button">ساخت حساب کاربری</button>
           <p id="online-auth-status" class="online-auth-status" role="status" aria-live="polite"></p>
         </section>
         <div class="profile-card" id="online-profile-card">

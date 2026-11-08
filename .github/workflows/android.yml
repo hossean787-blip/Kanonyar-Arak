@@ -63,6 +63,8 @@ jobs:
         run: |
           node tests/backend-smoke.cjs
           node tests/online-ui-smoke.cjs
+          node tests/secretary-backend-smoke.cjs
+          node tests/secretary-ui-smoke.cjs
       - name: Verify real isolated Supabase Data API and anonymous RLS
         run: node tests/live-api-smoke.cjs
       - name: Build Android connected-preview APK

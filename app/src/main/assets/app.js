@@ -240,6 +240,73 @@
       if(status)status.textContent='فهرست دانشگاه‌ها دریافت نشد؛ اتصال را بررسی کنید.';
     } finally {academicDirectoryLoading=false;}
   }
+  function updateBiometricUI() {
+    if(!onlineMode) return;
+    const biometric=window.KanonhaBiometric;
+    const available=Boolean(biometric && biometric.available && biometric.available());
+    const enrolled=available && biometric.enrolled();
+    const signed=Boolean(onlineBackend.currentUser);
+    const button=$('biometric-login-btn');
+    if(button)button.hidden=!enrolled||signed||onlineSignup;
+    const hint=$('biometric-login-hint');
+    if(hint)hint.hidden=!enrolled||signed||onlineSignup;
+    const settings=$('biometric-settings');
+    if(settings)settings.hidden=!signed||!available;
+    const stateLabel=$('biometric-settings-state');
+    if(stateLabel)stateLabel.textContent=enrolled
+      ? 'ورود با اثر انگشت در این دستگاه فعال است.'
+      : 'برای دفعات بعد، ورود سریع و رمزگذاری‌شده فعال کنید.';
+    const enable=$('biometric-enable-btn');
+    if(enable)enable.textContent=enrolled?'غیرفعال‌سازی':'فعال‌سازی';
+  }
+  async function finishOnlineSignIn(manager,form=null) {
+    state=defaultState();
+    state.isManager=Boolean(manager);
+    activePersona=manager?'manager':'student';
+    assignedSecretary=false;studentProfileReady=false;roleCapabilitiesChecked=false;
+    ++onlinePersonalSequence;
+    if(form && typeof form.reset==='function')form.reset();
+    await onlineRefreshPublic();
+    if(window.KanonhaSecretaryPanel)await window.KanonhaSecretaryPanel.refresh();
+    if(window.KanonhaAdminPanel)await window.KanonhaAdminPanel.refresh();
+    updateAvailablePersonas();
+    onlineRenderAuth();
+    $('online-auth-status').textContent='';
+    go(personaHome());
+    notify('ورود به حساب انجام شد.');
+  }
+  function setupBiometric() {
+    if(!onlineMode || !window.KanonhaBiometric)return;
+    const biometric=window.KanonhaBiometric;
+    biometric.setHandlers(async refreshToken=>{
+      if(onlineWorking||onlineBackend.currentUser)return;
+      onlineWorking=true;
+      const status=$('online-auth-status');
+      status.textContent='در حال ورود امن با اثر انگشت…';
+      try{
+        await onlineBackend.resumeFromBiometric(refreshToken);
+        const manager=await onlineBackend.isManager();
+        await finishOnlineSignIn(manager);
+      }catch(error){
+        status.textContent='ورود اثرانگشتی ممکن نشد؛ با رمز عبور وارد شوید. '+onlineError(error);
+      }finally{
+        onlineWorking=false;updateBiometricUI();
+      }
+    },status=>{
+      updateBiometricUI();
+      if(status==='enabled')notify('ورود با اثر انگشت برای دفعات بعد فعال شد.');
+      else if(status==='invalidated')notify('اطلاعات اثر انگشت تغییر کرده است؛ با رمز وارد شده و دوباره فعال کنید.');
+      else if(status==='unavailable')notify('اثر انگشت امن در این دستگاه آماده نیست.');
+      else if(status==='error')notify('تنظیم اثر انگشت تکمیل نشد. دوباره تلاش کنید.');
+      else if(status==='cleared')notify('ورود اثرانگشتی غیرفعال شد.');
+    });
+    if(biometric.enrolled()){
+      // Auto prompt only after the user previously opted in to biometrics.
+      setTimeout(()=>{
+        if(!onlineBackend.currentUser && !onlineWorking && biometric.enrolled())biometric.unlock();
+      },450);
+    }
+  }
   function onlineClubIcon(category) {
     const t = String(category || '');
     if (/فناوری|کامپیوتر|نرم‌افزار/.test(t)) return 'code';
@@ -354,21 +421,7 @@
           throw new Error('حساب مدیرکل هنوز تأیید نشده یا دسترسی آن فعال نیست.');
         }
       }
-      state = defaultState();
-      state.isManager = !student;
-      activePersona = student ? 'student' : 'manager';
-      assignedSecretary = false; studentProfileReady = false;
-      roleCapabilitiesChecked = false;
-      ++onlinePersonalSequence;
-      form.reset();
-      await onlineRefreshPublic();
-      if (window.KanonhaSecretaryPanel) await window.KanonhaSecretaryPanel.refresh();
-      if (window.KanonhaAdminPanel) await window.KanonhaAdminPanel.refresh();
-      updateAvailablePersonas();
-      onlineRenderAuth();
-      status.textContent = '';
-      go(personaHome());
-      notify('ورود به حساب انجام شد.');
+      await finishOnlineSignIn(!student,form);
     } catch (error) {
       status.textContent = onlineError(error);
     } finally { onlineWorking = false; $('online-auth-submit').disabled = false; }
@@ -418,6 +471,7 @@
     managerUsersTab = 'students'; secretaryMembersTab = 'members';
     try { await onlineBackend.signOut(); }
     catch (_) { /* local tokens still cleared by adapter */ }
+    if(window.KanonhaBiometric)window.KanonhaBiometric.clear();
     state = defaultState();
     activePersona = 'student'; assignedSecretary = false; studentProfileReady = false;
     adminPanelReady = false; secretaryPanelReady = false;
@@ -997,7 +1051,20 @@
         onlineSignup = !onlineSignup;
         $('online-auth-status').textContent = '';
         onlineRenderAuth();
+        if(onlineSignup && onlineRole==='student')void refreshAcademicDirectory();
       });
+      $('online-university').addEventListener('change',updateSignupFaculty);
+      $('biometric-login-btn').addEventListener('click',()=>{
+        if(window.KanonhaBiometric)window.KanonhaBiometric.unlock();
+      });
+      $('biometric-enable-btn').addEventListener('click',()=>{
+        const b=window.KanonhaBiometric;
+        if(!b||!onlineBackend.currentUser)return;
+        if(b.enrolled()){b.clear();updateBiometricUI();return;}
+        const token=onlineBackend.biometricRefreshToken();
+        if(!b.enroll(token))notify('ورود اثرانگشتی در دستگاه فعال نیست.');
+      });
+      setupBiometric();
       // Manager access is intentionally absent from public signup.
       // Seven intentional taps on the app name unlock the separate manager login.
       // Real security always remains in Supabase Auth + the verified admin role.
@@ -1070,6 +1137,17 @@
       if (btn.dataset.details !== undefined)     { eventDetails(Number(btn.dataset.details)); return; }
       if (btn.dataset.clubDetails !== undefined) { clubDetails(Number(btn.dataset.clubDetails)); return; }
       if (btn.dataset.action)         { action(btn.dataset.action); }
+    });
+    document.addEventListener('change',e=>{
+      const target=e.target;
+      if(!target || !target.dataset || target.dataset.academicSelect!=='university')return;
+      const form=typeof target.closest==='function'?target.closest('form'):null;
+      const faculty=form&&typeof form.querySelector==='function'
+        ?form.querySelector('select[data-academic-select="faculty"]'):null;
+      if(faculty){
+        faculty.innerHTML=academyFacultyOptions(target.value);
+        faculty.disabled=!target.value;
+      }
     });
 
     // Profile edit form

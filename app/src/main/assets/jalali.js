@@ -123,6 +123,9 @@
   function validateForm(form) {
     if(!form||typeof form.querySelectorAll!=='function')return true;
     for(const input of form.querySelectorAll('input[data-jalali-source="true"]')) {
+      // The signup date exists in the login form DOM, but is only required
+      // when the student-signup branch is active. Never block ordinary login.
+      if(!input.required)continue;
       if(!input.value) {
         const root=input.parentNode;
         const select=root&&root.querySelector('.jalali-select');

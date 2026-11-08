@@ -12,6 +12,7 @@
   <script src="config.js" defer></script>
   <script src="backend.js" defer></script>
   <script src="jalali.js" defer></script>
+  <script src="biometric.js" defer></script>
   <script src="app.js" defer></script>
   <script src="secretary.js" defer></script>
   <script src="admin.js" defer></script>
@@ -211,19 +212,37 @@
               <p class="v7-hint">تاریخ را فقط در تقویم شمسی انتخاب کنید؛ هیچ پیامک یا کد تأیید شماره‌ای لازم نیست.</p>
               <div class="v7-signup-heading">اطلاعات تحصیلی</div>
               <label class="field">دانشگاه
-                <input id="online-university" name="university" maxlength="120" placeholder="نام دانشگاه">
+                <select id="online-university" name="university" required>
+                  <option value="">ابتدا دانشگاه را انتخاب کنید</option>
+                </select>
               </label>
               <label class="field">دانشکده
-                <input id="online-faculty" name="faculty" maxlength="120" placeholder="نام دانشکده">
+                <select id="online-faculty" name="faculty" required disabled>
+                  <option value="">پس از دانشگاه، دانشکده را انتخاب کنید</option>
+                </select>
               </label>
+              <p class="academy-choice-help" id="academic-catalog-status" role="status" aria-live="polite">فهرست دانشگاه‌ها توسط مدیرکل تعیین می‌شود.</p>
               <label class="field">رشته تحصیلی
                 <input id="online-major" name="major" maxlength="120" placeholder="نام رشته">
               </label>
               <p class="v7-hint">نام دانشگاه، دانشکده و رشته خود را دقیق وارد کنید. اطلاعات فعلاً خوداظهاری است.</p>
             </div>
             <label class="field">رمز عبور
-              <input id="online-password" name="password" type="password" autocomplete="current-password" minlength="8" maxlength="128" required placeholder="رمز عبور">
+              <span class="password-biometric-row">
+                <input id="online-password" name="password" type="password" autocomplete="current-password" minlength="8" maxlength="128" required placeholder="رمز عبور">
+                <button type="button" id="biometric-login-btn" class="biometric-login-trigger"
+                  hidden aria-label="ورود با اثر انگشت" title="ورود با اثر انگشت">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M12 3a9 9 0 0 1 9 9M3 12a9 9 0 0 1 9-9"/>
+                    <path d="M5.5 15v-3a6.5 6.5 0 0 1 13 0v3M9 21c1.8-2.8 2-5.5 2-9a1 1 0 0 1 2 0c0 4-.2 7.6-2.1 10"/>
+                    <path d="M15.8 19c1.2-2.5 1.1-4.7 1.1-7a4.9 4.9 0 0 0-9.8 0v3.3"/>
+                    <path d="M7.2 19c1.1-1.9 1.3-3.6 1.2-5.3M14 8.2a4.4 4.4 0 0 1 2.5 4"/>
+                  </svg>
+                </button>
+              </span>
             </label>
+            <p id="biometric-login-hint" class="biometric-helper" hidden>برای ورود سریع، روی نشان اثر انگشت بزنید.</p>
             <p id="signup-password-hint" class="v7-hint" hidden>رمز حداقل ۱۰ نویسه داشته باشد؛ از رمز تکراری استفاده نکنید. بازیابی حساب بدون ایمیل نیازمند پشتیبانی مدیرکل است.</p>
             <button id="online-auth-submit" class="pill-btn sheet-action" type="submit">ورود به حساب</button>
           </form>
@@ -283,9 +302,18 @@
             <button type="button" data-admin-tab="members">عضویت‌ها</button>
             <button type="button" data-admin-tab="secretaries">دبیران</button>
             <button type="button" data-admin-tab="students">دانشجویان</button>
+            <button type="button" data-admin-tab="universities">دانشگاه‌ها</button>
           </div>
           <p id="admin-message" class="admin-message" role="status" aria-live="polite"></p>
           <div id="admin-content"></div>
+        </section>
+        <section class="biometric-settings" id="biometric-settings" hidden aria-label="ورود امن با اثر انگشت">
+          <div class="biometric-settings-icon" aria-hidden="true">◉</div>
+          <div class="biometric-settings-text">
+            <strong>ورود با اثر انگشت</strong>
+            <span id="biometric-settings-state">برای ورودهای بعدی روی این دستگاه فعال کنید</span>
+          </div>
+          <button type="button" id="biometric-enable-btn" class="biometric-enable-btn">فعال‌سازی</button>
         </section>
         <div class="settings-menu" id="profile-menu">
           <button class="menu-item" type="button" data-action="edit">
@@ -350,6 +378,7 @@
           <button type="button" id="workspace-subtab-students" data-workspace-subtab="students">دانشجویان</button>
           <button type="button" id="workspace-subtab-secretaries" data-workspace-subtab="secretaries">دبیران</button>
           <button type="button" id="workspace-subtab-members" data-workspace-subtab="members">درخواست‌ها</button>
+          <button type="button" id="workspace-subtab-universities" data-workspace-subtab="universities">دانشگاه‌ها</button>
           <button type="button" id="workspace-subtab-attendance" data-workspace-subtab="attendance" hidden>حضور و غیاب</button>
         </div>
         <div class="workspace-panels" id="workspace-panels"></div>

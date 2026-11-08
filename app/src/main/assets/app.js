@@ -226,23 +226,48 @@
     status.textContent = 'در حال بررسی حساب کاربری…';
     try {
       const values = new FormData(form);
-      const email = String(values.get('email') || '');
       const password = String(values.get('password') || '');
+      const student = onlineRole === 'student';
       if (onlineSignup) {
-        const result = await onlineBackend.signUp(
-          email, password, String(values.get('name') || ''), String(values.get('studentNumber') || '')
-        );
-        if (result.confirmationRequired) {
-          status.textContent = 'ایمیل تأیید برای شما ارسال شد. پس از تأیید ایمیل، از بخش ورود وارد شوید.';
-          onlineSignup = false;
-          onlineRenderAuth();
-          return;
+        if (student) {
+          await onlineBackend.studentSignUp({
+            name: String(values.get('name') || ''),
+            studentNumber: String(values.get('studentNumber') || ''),
+            nationalId: String(values.get('nationalId') || ''),
+            birthDate: String(values.get('birthDate') || ''),
+            university: String(values.get('university') || ''),
+            faculty: String(values.get('faculty') || ''),
+            major: String(values.get('major') || ''),
+            password
+          });
+        } else {
+          const result = await onlineBackend.managerSignUp(String(values.get('email') || ''),password);
+          if (result.confirmationRequired) {
+            onlineSignup = false; onlineRenderAuth();
+            status.textContent = 'ایمیل تأیید مدیرکل ارسال شد. پس از تأیید مالکیت ایمیل وارد شوید.';
+            return;
+          }
         }
-      } else await onlineBackend.signIn(email, password);
+      } else if (student) {
+        await onlineBackend.studentSignIn(String(values.get('kind') || 'student'),
+          String(values.get('identifier') || ''),password);
+      } else {
+        await onlineBackend.signIn(String(values.get('email') || ''),password);
+      }
+      if (!student) {
+        const allowed = await onlineBackend.isManager();
+        if (!allowed) {
+          await onlineBackend.signOut();
+          throw new Error('حساب مدیرکل هنوز تأیید نشده یا دسترسی آن فعال نیست.');
+        }
+      }
+      state = defaultState();
+      state.isManager = !student;
       ++onlinePersonalSequence;
       form.reset();
       await onlineRefreshPublic();
       if (window.KanonhaSecretaryPanel) await window.KanonhaSecretaryPanel.refresh();
+      if (window.KanonhaAdminPanel) await window.KanonhaAdminPanel.refresh();
       onlineRenderAuth();
       status.textContent = '';
       notify('ورود به حساب انجام شد.');
@@ -291,9 +316,11 @@
     ++onlinePersonalSequence;
     ++onlinePublicSequence;
     if (window.KanonhaSecretaryPanel) window.KanonhaSecretaryPanel.clear();
+    if (window.KanonhaAdminPanel) window.KanonhaAdminPanel.clear();
     try { await onlineBackend.signOut(); }
     catch (_) { /* local tokens still cleared by adapter */ }
     state = defaultState();
+    $('home-management').hidden = true;
     renderAll();
     onlineRenderAuth();
     closeSheet();
@@ -569,6 +596,7 @@
 
   function action(name) {
     if (name === 'edit') {
+      if (onlineMode && state.isManager) { notify('اطلاعات مدیرکل از تنظیمات حساب ایمیلی مدیریت می‌شود.'); return; }
       openSheet('ویرایش اطلاعات',
         `<form id="edit-form">
           <label class="field">نام و نام خانوادگی
@@ -671,6 +699,19 @@
     document.addEventListener('click', (e) => {
       const btn = e.target.closest('button');
       if (!btn) return;
+      if (btn.dataset.authRole && onlineMode) {
+        onlineRole = btn.dataset.authRole === 'manager' ? 'manager' : 'student';
+        onlineSignup = false;
+        $('online-auth-status').textContent = '';
+        onlineRenderAuth(); return;
+      }
+      if (btn.id === 'home-management-btn' && onlineMode) {
+        go('profile');
+        const section = state.isManager ? $('admin-panel') : $('secretary-panel');
+        if (section && !section.hidden && typeof section.scrollIntoView === 'function')
+          section.scrollIntoView({behavior:'smooth',block:'start'});
+        return;
+      }
       if (btn.dataset.carousel) { moveHomeCarousel(btn.dataset.carousel==='next'?1:-1); return; }
       if (btn.dataset.screenBtn)      { go(btn.dataset.screenBtn); return; }
       if (btn.dataset.goto)           { closeSheet(); go(btn.dataset.goto); return; }

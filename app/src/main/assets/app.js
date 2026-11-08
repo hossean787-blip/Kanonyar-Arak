@@ -13,13 +13,36 @@
   );
 
   /* ——— Navigation items ——— */
-  const navItems = [
+  const studentNavItems = [
     { id: 'home',     label: 'خانه',          icon: 'home'          },
     { id: 'clubs',    label: 'کانون‌ها',       icon: 'users'         },
     { id: 'events',   label: 'رویدادها',       icon: 'calendar'      },
     { id: 'activity', label: 'فعالیت‌های من', icon: 'check-square'  },
     { id: 'profile',  label: 'حساب کاربری',   icon: 'user'          }
   ];
+  const managerNavItems = [
+    {id:'manager-home', label:'خانه', art:'home'},
+    {id:'manager-clubs', label:'کانون‌ها', art:'clubs'},
+    {id:'manager-users', label:'کاربران', art:'activity'},
+    {id:'manager-events', label:'رویدادها', art:'events'},
+    {id:'manager-account', label:'حساب', art:'profile'}
+  ];
+  const secretaryNavItems = [
+    {id:'secretary-home', label:'خانه', art:'home'},
+    {id:'secretary-club', label:'کانون من', art:'clubs'},
+    {id:'secretary-events', label:'رویدادها', art:'events'},
+    {id:'secretary-members', label:'اعضا', art:'activity'},
+    {id:'secretary-account', label:'حساب', art:'profile'}
+  ];
+  function routeNavItems() {
+    if (!onlineMode || !onlineBackend.currentUser) return studentNavItems;
+    return activePersona === 'manager' ? managerNavItems :
+      activePersona === 'secretary' ? secretaryNavItems : studentNavItems;
+  }
+  function personaHome() {
+    return activePersona === 'manager' ? 'manager-home' :
+      activePersona === 'secretary' ? 'secretary-home' : 'home';
+  }
 
   /* ——— SVG icon paths ——— */
   const iconPaths = {
@@ -109,6 +132,8 @@
   let adminPanelReady = false;
   let secretaryPanelReady = false;
   let roleCapabilitiesChecked = false;
+  let managerUsersTab = 'students';
+  let secretaryMembersTab = 'members';
   function onlineMessage(text, isError = false) {
     const el = $('online-connection');
     if (!el) return;
@@ -432,11 +457,15 @@
 
   /* ——— Navigation ——— */
   function go(screen, { scroll = true } = {}) {
-    if (!navItems.some(x => x.id === screen)) return;
+    if (!routeNavItems().some(x => x.id === screen)) return;
     activeScreen = screen;
+    const container = screen.endsWith('-account') ? 'profile' :
+      screen.startsWith('manager-') || screen.startsWith('secretary-') ? 'workspace' : screen;
     document.querySelectorAll('.screen').forEach(el => {
-      el.hidden = el.dataset.screen !== screen;
+      el.hidden = el.dataset.screen !== container;
     });
+    if (container === 'workspace') renderWorkspace();
+    if (container === 'profile') updateProfileDisplay();
     renderNav();
     if (screen === 'activity') renderActivity();
     if (scroll) $('main').scrollTop = 0;
@@ -444,11 +473,11 @@
   }
 
   function renderNav() {
-    $('bottom-nav').innerHTML = navItems.map(x =>
+    $('bottom-nav').innerHTML = routeNavItems().map(x =>
       `<button type="button" data-screen-btn="${x.id}"
         class="${x.id === activeScreen ? 'active' : ''}"
         ${x.id === activeScreen ? 'aria-current="page"' : ''}>
-        <img class="nav-art" src="assets/nav-${x.id}.svg" alt="" width="34" height="34"><span>${x.label}</span>
+        <img class="nav-art" src="assets/nav-${x.art || x.id}.svg" alt="" width="34" height="34"><span>${x.label}</span>
       </button>`
     ).join('');
   }
@@ -631,7 +660,7 @@
   /* ——— Native Android back action: close the sheet first, then return Home. ——— */
   function handleBack() {
     if (!$('sheet-overlay').hidden) { closeSheet(); return true; }
-    if (activeScreen !== 'home') { go('home'); return true; }
+    if (activeScreen !== personaHome()) { go(personaHome()); return true; }
     return false;
   }
 
@@ -911,12 +940,12 @@
 
     // Handle hash navigation
     const requested = location.hash.replace('#', '');
-    go(navItems.some(x => x.id === requested) ? requested : onlineMode ? 'profile' : 'home');
+    go(routeNavItems().some(x => x.id === requested) ? requested : onlineMode ? 'profile' : 'home');
     if (onlineMode) void onlineRefreshPublic();
 
     window.addEventListener('hashchange', () => {
       const id = location.hash.slice(1);
-      if (navItems.some(x => x.id === id) && id !== activeScreen) go(id);
+      if (routeNavItems().some(x => x.id === id) && id !== activeScreen) go(id);
     });
   }
 
@@ -931,6 +960,7 @@
   if (typeof window !== 'undefined') {
     window.KanonhaPreview = {
       get screen() { return activeScreen; },
+      get persona() { return activePersona; },
       get state() { return { ...state, joined: [...state.joined], registered: [...state.registered] }; },
       go,
       handleBack,

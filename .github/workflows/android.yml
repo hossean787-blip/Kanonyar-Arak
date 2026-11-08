@@ -77,6 +77,7 @@ jobs:
           node tests/secretary-ui-smoke.cjs
           node tests/unified-auth-smoke.cjs
           node tests/admin-ui-smoke.cjs
+          node tests/multi-role-ui-smoke.cjs
       - name: Verify real isolated Supabase Data API and anonymous RLS
         run: |
           node tests/live-api-smoke.cjs

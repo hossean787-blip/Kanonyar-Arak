@@ -9,7 +9,7 @@ const esc=x=>String(x==null?'':x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;'
 const date=x=>{const d=new Date(x);return Number.isFinite(d.getTime())?d.toLocaleString('fa-IR'):'—'};
 const inputTime=x=>{const d=new Date(x);return Number.isFinite(d.getTime())?new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16):''};
 const v=(fd,name)=>String(fd.get(name)||'').trim();
-let seq=0,owner='',data=null,tab='dashboard',editor=null,busy=false,confirmDelete='',rosterFor='';
+let seq=0,owner='',data=null,tab='dashboard',editor=null,busy=false,confirmDelete='',rosterFor='',authorized=false;
 function home(show){
  const box=$('home-management'); if(!box)return;
  if(show) {
@@ -22,7 +22,7 @@ function home(show){
  } else if(box.dataset.mode==='admin'){box.hidden=true;box.dataset.mode='';}
 }
 function clear(){
- seq++; owner='';data=null;editor=null;busy=false;confirmDelete='';rosterFor='';
+ seq++; owner='';data=null;editor=null;busy=false;confirmDelete='';rosterFor='';authorized=false;
  root.hidden=true;$('admin-content').innerHTML='';$('admin-message').textContent='';home(false);
 }
 function signed(){return Boolean(owner&&api.currentUser&&api.currentUser.id===owner)}
@@ -170,6 +170,8 @@ async function refresh(){
  owner=current.id;const attempt=seq;
  try{
   if(!await api.isManager()){clear();return}
+  if(attempt!==seq||!signed())return;
+  authorized=true;
   const result=await api.adminAction('overview');
   if(attempt!==seq||!signed())return;
   data=result;root.hidden=false;home(true);render();msg('داده‌ها از سرور اختصاصی کانون‌ها دریافت شدند.');
@@ -235,5 +237,11 @@ root.addEventListener('submit',ev=>{
   capacity:Number(fd.get('capacity')),is_published:fd.get('is_published')==='1'
  });
 });
-window.KanonhaAdminPanel=Object.freeze({refresh,clear});
+function hasAccess(){return signed()&&authorized}
+function showTab(next){
+ if(!hasAccess()||!['dashboard','clubs','events','students','secretaries','members'].includes(next))return false;
+ if(tab!==next){tab=next;editor=null;rosterFor='';confirmDelete='';render()}
+ return true;
+}
+window.KanonhaAdminPanel=Object.freeze({refresh,clear,hasAccess,showTab});
 })();

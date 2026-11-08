@@ -103,6 +103,11 @@
   let onlineWorking = false;
   let onlinePublicSequence = 0;
   let onlinePersonalSequence = 0;
+  let activePersona = 'student';
+  let assignedSecretary = false;
+  let studentProfileReady = false;
+  let adminPanelReady = false;
+  let secretaryPanelReady = false;
   function onlineMessage(text, isError = false) {
     const el = $('online-connection');
     if (!el) return;
@@ -193,15 +198,9 @@
     if (!onlineMode || !onlineBackend.currentUser) return;
     const ownerId = onlineBackend.currentUser.id;
     const refreshId = ++onlinePersonalSequence;
-    if (state.isManager) {
-      if (!onlineBackend.currentUser || onlineBackend.currentUser.id !== ownerId) return;
-      state.joined = []; state.requested = []; state.registered = [];
-      state.name = 'مدیر کل کانون‌ها'; state.number = 'حساب مدیریتی'; state.academic = null;
-      renderAll();
-      return;
-    }
     const [profile, memberRows, eventRows, academic] = await Promise.all([
-      onlineBackend.ensureProfile(), onlineBackend.memberships(), onlineBackend.registrations(),
+      state.isManager ? onlineBackend.profile() : onlineBackend.ensureProfile(),
+      onlineBackend.memberships(), onlineBackend.registrations(),
       typeof onlineBackend.academicDetails === 'function' ? onlineBackend.academicDetails() : null
     ]);
     if (refreshId !== onlinePersonalSequence ||
@@ -211,12 +210,13 @@
     state.joined = clubs.map((c, i) => memberMap.get(c.id) === 'approved' ? i : -1).filter(i => i >= 0);
     state.requested = clubs.map((c, i) => memberMap.get(c.id) === 'pending' ? i : -1).filter(i => i >= 0);
     state.registered = events.map((e, i) => eventIds.has(e.id) ? i : -1).filter(i => i >= 0);
-    state.name = profile ? profile.full_name : 'اطلاعات تکمیل نشده';
+    studentProfileReady = Boolean(profile);
+    state.name = profile ? profile.full_name : state.isManager ? 'مدیرکل کانون‌ها' : 'اطلاعات تکمیل نشده';
     state.number = profile ? profile.student_number : 'ثبت نشده';
     state.academic = academic;
     renderAll();
     onlineRenderAuth();
-    if (!profile) onlineMessage('برای درخواست عضویت، اطلاعات دانشجویی خود را تکمیل کنید.');
+    if (!profile && !state.isManager) onlineMessage('برای درخواست عضویت، اطلاعات دانشجویی خود را تکمیل کنید.');
   }
   async function onlineAuthenticate(form) {
     if (onlineWorking) return;
@@ -264,11 +264,14 @@
       }
       state = defaultState();
       state.isManager = !student;
+      activePersona = student ? 'student' : 'manager';
+      assignedSecretary = false; studentProfileReady = false;
       ++onlinePersonalSequence;
       form.reset();
       await onlineRefreshPublic();
       if (window.KanonhaSecretaryPanel) await window.KanonhaSecretaryPanel.refresh();
       if (window.KanonhaAdminPanel) await window.KanonhaAdminPanel.refresh();
+      updateAvailablePersonas();
       onlineRenderAuth();
       status.textContent = '';
       go('home');
@@ -285,8 +288,8 @@
     }
     if (!/^[0-9]{6,20}$/.test(state.number)) {
       go('profile');
-      notify('ابتدا نام و شماره دانشجویی را تکمیل کنید.');
-      action('edit');
+      notify('ابتدا پرونده دانشجویی را تکمیل کنید.');
+      action(state.isManager ? 'link-student' : 'edit');
       return false;
     }
     return true;
@@ -322,7 +325,10 @@
     try { await onlineBackend.signOut(); }
     catch (_) { /* local tokens still cleared by adapter */ }
     state = defaultState();
+    activePersona = 'student'; assignedSecretary = false; studentProfileReady = false;
+    adminPanelReady = false; secretaryPanelReady = false;
     $('home-management').hidden = true;
+    $('role-switcher').hidden = true;
     renderAll();
     onlineRenderAuth();
     closeSheet();
@@ -598,7 +604,8 @@
 
   function action(name) {
     if (name === 'edit') {
-      if (onlineMode && state.isManager) { notify('اطلاعات مدیرکل از تنظیمات حساب ایمیلی مدیریت می‌شود.'); return; }
+      if (onlineMode && state.isManager && !studentProfileReady) { action('link-student'); return; }
+      if (onlineMode && state.isManager && activePersona === 'manager') { notify('برای ویرایش اطلاعات دانشجویی، ابتدا نقش دانشجو را انتخاب کنید.'); return; }
       openSheet('ویرایش اطلاعات',
         `<form id="edit-form">
           <label class="field">نام و نام خانوادگی
@@ -621,7 +628,7 @@
       );
     } else if (name === 'about') {
       openSheet('درباره برنامه',
-        `<p>کانون‌ها — ${onlineMode ? 'نسخه ۰.۷.۰، ورود دانشجویی و مدیریت یکپارچه' : 'نسخه نمایشی آفلاین'}</p>
+        `<p>کانون‌ها — ${onlineMode ? 'نسخه ۰.۸.۰، حساب چندنقشی و انتخاب نقش' : 'نسخه نمایشی آفلاین'}</p>
          <p>${onlineMode ? 'ورود و ثبت‌نام متصل به پایگاه داده مستقل؛ بلیت معتبر و تأیید شماره دانشجویی هنوز فعال نیست. نشست در حافظه موقت است.' : 'پنج صفحه با HTML، CSS و JavaScript پیاده‌سازی شده‌اند. هیچ داده‌ای به سرور ارسال نمی‌شود.'}</p>
          ${onlineMode ? '' : '<button type="button" data-action="reset" class="pill-btn soft">بازنشانی داده‌های نمایشی</button>'}`
       );
@@ -649,16 +656,17 @@
     renderEvents();
     renderActivity();
     updateProfileDisplay();
+    renderPersonaSelector();
   }
 
   function updateProfileDisplay() {
     const nameEl = $('profile-name');
     const numEl = $('profile-number');
-    if (nameEl) nameEl.textContent = state.name;
+    if (nameEl) nameEl.textContent = state.isManager && activePersona === 'manager' ? 'مدیرکل کانون‌ها' : state.name;
     if (numEl) numEl.textContent = `شماره دانشجویی: ${state.number}`;
     if (onlineMode) {
       onlineRenderAuth();
-      $('profile-service-note').textContent = state.isManager
+      $('profile-service-note').textContent = state.isManager && activePersona === 'manager'
         ? 'دسترسی مدیرکل؛ مدیریت همه کانون‌ها، دبیران و رویدادها.'
         : state.academic ? 'دانشگاه: '+state.academic.university+' | دانشکده: '+state.academic.faculty+' | رشته: '+state.academic.major
           : 'اطلاعات تحصیلی هنوز ثبت نشده است.';
@@ -717,9 +725,12 @@
         $('online-auth-status').textContent = '';
         onlineRenderAuth(); return;
       }
+      if (btn.dataset.roleSwitch && onlineMode) { setPersona(btn.dataset.roleSwitch); return; }
+      if (btn.id === 'role-refresh' && onlineMode) { void reloadPersonas(); return; }
+      if (btn.id === 'role-onboard-btn' && onlineMode) { action('link-student'); return; }
       if (btn.id === 'home-management-btn' && onlineMode) {
         go('profile');
-        const section = state.isManager ? $('admin-panel') : $('secretary-panel');
+        const section = activePersona === 'manager' ? $('admin-panel') : activePersona === 'secretary' ? $('secretary-panel') : null;
         if (section && !section.hidden && typeof section.scrollIntoView === 'function')
           section.scrollIntoView({behavior:'smooth',block:'start'});
         return;

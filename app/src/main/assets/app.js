@@ -1221,7 +1221,11 @@
     // Handle hash navigation
     const requested = location.hash.replace('#', '');
     go(routeNavItems().some(x => x.id === requested) ? requested : onlineMode ? 'profile' : 'home');
-    if (onlineMode) void onlineRefreshPublic();
+    if (onlineMode) {
+      void onlineRefreshPublic();
+      // Directory is public read-only and cached in memory for signup/profile forms.
+      void refreshAcademicDirectory();
+    }
 
     window.addEventListener('hashchange', () => {
       const id = location.hash.slice(1);

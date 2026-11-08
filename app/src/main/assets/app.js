@@ -336,6 +336,84 @@
     notify('از حساب خارج شدید.');
   }
 
+  /* ——— One account, independently authorized personas ——— */
+  function updateAvailablePersonas() {
+    // Panels only become available after they complete their own server-verified refresh.
+    adminPanelReady = Boolean(state.isManager && !$('admin-panel').hidden);
+    secretaryPanelReady = Boolean(!$('secretary-panel').hidden);
+    assignedSecretary = secretaryPanelReady;
+    renderPersonaSelector();
+  }
+  function renderPersonaSelector() {
+    if (!onlineMode) return;
+    const signed = Boolean(onlineBackend.currentUser);
+    const picker = $('role-switcher'), banner = $('home-management');
+    picker.hidden = !signed;
+    if (!signed) { banner.hidden = true; return; }
+    const caps = {
+      student: true,
+      secretary: assignedSecretary && secretaryPanelReady,
+      manager: state.isManager && adminPanelReady
+    };
+    if (!caps[activePersona]) activePersona = caps.manager ? 'manager' : caps.secretary ? 'secretary' : 'student';
+    for (const role of ['student','secretary','manager']) {
+      const button = $('role-option-' + role);
+      button.hidden = !caps[role];
+      button.classList.toggle('active', activePersona === role);
+      button.setAttribute('aria-pressed', activePersona === role ? 'true' : 'false');
+    }
+    const needsProfile = activePersona === 'student' && state.isManager && !studentProfileReady;
+    $('role-onboard-btn').hidden = !needsProfile;
+    const descriptions = {
+      student: needsProfile
+        ? 'این همان حساب مدیرکل است. برای فعالیت دانشجویی فقط یک‌بار اطلاعات تحصیلی خود را ثبت کن.'
+        : 'در این نقش می‌توانی به کانون‌ها بپیوندی و در رویدادها ثبت‌نام کنی.',
+      secretary: 'مدیریت اعضا، رویدادها و حضور و غیابِ کانون‌هایی که دبیرشان هستی.',
+      manager: 'اختیارات سراسری برای مدیریت کانون‌ها، دبیران، دانشجویان و رویدادها.'
+    };
+    $('role-switcher-description').textContent = descriptions[activePersona];
+    const managerMode = activePersona === 'manager' && caps.manager;
+    const secretaryMode = activePersona === 'secretary' && caps.secretary;
+    banner.hidden = !managerMode && !secretaryMode;
+    if (managerMode || secretaryMode) {
+      $('home-management-overline').textContent = managerMode ? 'مدیریت سراسری فعال' : 'مدیریت کانون فعال';
+      $('home-management-title').textContent = managerMode ? 'مدیریت کل کانون‌ها' : 'مدیریت کانون من';
+      $('home-management-caption').textContent = managerMode
+        ? 'کانون‌ها، دبیران، دانشجویان و رویدادها' : 'اعضا، درخواست‌ها، رویدادها و حضور و غیاب';
+      $('home-management-btn').textContent = managerMode ? 'ورود به مدیریت کل' : 'ورود به مدیریت کانون';
+    }
+    // Selecting a persona changes what is presented, never server privileges.
+    $('admin-panel').hidden = !managerMode;
+    $('secretary-panel').hidden = !secretaryMode;
+  }
+  function setPersona(role) {
+    if (!onlineMode || !onlineBackend.currentUser) return;
+    if (role === 'manager' && (!state.isManager || !adminPanelReady)) return;
+    if (role === 'secretary' && (!assignedSecretary || !secretaryPanelReady)) return;
+    if (!['manager','secretary','student'].includes(role)) return;
+    activePersona = role;
+    renderPersonaSelector();
+    updateProfileDisplay();
+    if (role === 'student' && state.isManager && !studentProfileReady) {
+      action('link-student');
+    }
+  }
+  async function reloadPersonas() {
+    if (!onlineMode || !onlineBackend.currentUser) return;
+    const userId = onlineBackend.currentUser.id;
+    $('role-refresh').disabled = true;
+    try {
+      // The modules each recheck their own authorized server-side roles.
+      if (window.KanonhaSecretaryPanel) await window.KanonhaSecretaryPanel.refresh();
+      if (window.KanonhaAdminPanel) await window.KanonhaAdminPanel.refresh();
+      if (!onlineBackend.currentUser || onlineBackend.currentUser.id !== userId) return;
+      updateAvailablePersonas();
+      updateProfileDisplay();
+      notify('دسترسی‌های حساب بررسی و به‌روزرسانی شد.');
+    } catch (error) { notify(onlineError(error)); }
+    finally { $('role-refresh').disabled = false; }
+  }
+
   /* ——— Toast ——— */
   function notify(message) {
     const el = $('toast');

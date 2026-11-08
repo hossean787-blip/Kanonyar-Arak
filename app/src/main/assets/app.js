@@ -209,7 +209,9 @@
         const category = 'رویداد';
         return {
           id: e.id,
-          title: String(e.title || ''), date: Number.isFinite(start) ? new Date(start).toLocaleString('fa-IR') : 'زمان نامشخص',
+          title: String(e.title || ''), date: Number.isFinite(start) ? (window.KanonhaJalali
+            ? window.KanonhaJalali.formatDate(new Date(start),true)
+            : new Date(start).toLocaleString('fa-IR-u-ca-persian')) : 'زمان نامشخص',
           location: String(e.location || ''), capacity: free, poster: 'poster-books.svg',
           category, club: clubs.findIndex(c => c.id === e.club_id),
           registrationOpen: Number.isFinite(start) && Number.isFinite(close) && start > now && close > now && free > 0

@@ -11,10 +11,16 @@
     try { return native[method]() === true; } catch (_) { return false; }
   };
   function available() { return nativeBool('available'); }
+  function present() { return Boolean(native); }
   function enrolled() { return available() && nativeBool('enrolled'); }
-  function enroll(token) {
-    if (!available() || !token || typeof token !== 'string') return false;
-    try { native.enroll(token); return true; } catch (_) { return false; }
+  function ownedBy(accountId) {
+    if (!enrolled() || !accountId || typeof native.ownedBy !== 'function') return false;
+    try { return native.ownedBy(accountId) === true; } catch (_) { return false; }
+  }
+  function enroll(token, accountId) {
+    if (!available() || !token || typeof token !== 'string' ||
+      !accountId || typeof accountId !== 'string') return false;
+    try { native.enroll(token,accountId); return true; } catch (_) { return false; }
   }
   function unlock() {
     if (!enrolled()) return false;
@@ -24,12 +30,16 @@
     if (!native || typeof native.clear !== 'function') return;
     try { native.clear(); } catch (_) {}
   }
-  function rotateToken(token) {
-    if (!enrolled() || !token || typeof token !== 'string') return;
-    try { native.rotateToken(token); } catch (_) {}
+  function lock() {
+    if (!native || typeof native.lock !== 'function') return;
+    try { native.lock(); } catch (_) {}
+  }
+  function rotateToken(token, accountId) {
+    if (!enrolled() || !token || typeof token !== 'string' || !ownedBy(accountId)) return;
+    try { native.rotateToken(token,accountId); } catch (_) {}
   }
   window.KanonhaBiometric=Object.freeze({
-    available,enrolled,enroll,unlock,clear,rotateToken,
+    available,present,enrolled,ownedBy,enroll,unlock,clear,lock,rotateToken,
     setHandlers(tokenHandler,statusHandler) {
       onToken=typeof tokenHandler==='function'?tokenHandler:null;
       onStatus=typeof statusHandler==='function'?statusHandler:null;

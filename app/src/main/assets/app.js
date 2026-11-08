@@ -270,6 +270,7 @@
       if (window.KanonhaAdminPanel) await window.KanonhaAdminPanel.refresh();
       onlineRenderAuth();
       status.textContent = '';
+      go('home');
       notify('ورود به حساب انجام شد.');
     } catch (error) {
       status.textContent = onlineError(error);
@@ -772,7 +773,7 @@
 
     // Handle hash navigation
     const requested = location.hash.replace('#', '');
-    go(navItems.some(x => x.id === requested) ? requested : 'home');
+    go(navItems.some(x => x.id === requested) ? requested : onlineMode ? 'profile' : 'home');
     if (onlineMode) void onlineRefreshPublic();
 
     window.addEventListener('hashchange', () => {

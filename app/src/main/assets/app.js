@@ -100,6 +100,8 @@
   /* ——— Online catalog, account, and durable per-user records ——— */
   let onlineSignup = false;
   let onlineWorking = false;
+  let onlinePublicSequence = 0;
+  let onlinePersonalSequence = 0;
   function onlineMessage(text, isError = false) {
     const el = $('online-connection');
     if (!el) return;
@@ -138,8 +140,10 @@
   }
   async function onlineRefreshPublic() {
     if (!onlineMode) return;
+    const refreshId = ++onlinePublicSequence;
     try {
       const [rawClubs, rawEvents] = await Promise.all([onlineBackend.clubs(), onlineBackend.events()]);
+      if (refreshId !== onlinePublicSequence) return;
       clubs = rawClubs.filter(c => c && typeof c.id === 'string').map(c => ({
         id: c.id, title: String(c.name || ''), short: String(c.name || '').slice(0, 28),
         desc: String(c.description || ''), icon: onlineClubIcon(c.category),
@@ -163,15 +167,21 @@
       if (onlineBackend.currentUser) await onlineRefreshPersonal();
       else renderAll();
     } catch (error) {
+      if (refreshId !== onlinePublicSequence) return;
       onlineMessage('بارگذاری اطلاعات آنلاین ناموفق بود: ' + onlineError(error), true);
       renderAll();
     }
   }
   async function onlineRefreshPersonal() {
     if (!onlineMode || !onlineBackend.currentUser) return;
+    const ownerId = onlineBackend.currentUser.id;
+    const refreshId = ++onlinePersonalSequence;
     const [profile, memberRows, eventRows] = await Promise.all([
       onlineBackend.ensureProfile(), onlineBackend.memberships(), onlineBackend.registrations()
     ]);
+    // Discard responses started for an older account or an invalidated session.
+    if (refreshId !== onlinePersonalSequence ||
+        !onlineBackend.currentUser || onlineBackend.currentUser.id !== ownerId) return;
     const memberMap = new Map(memberRows.map(m => [m.club_id, m.status]));
     const eventIds = new Set(eventRows.filter(e => e.status === 'confirmed').map(e => e.event_id));
     state.joined = clubs.map((c, i) => memberMap.get(c.id) === 'approved' ? i : -1).filter(i => i >= 0);
@@ -204,6 +214,7 @@
           return;
         }
       } else await onlineBackend.signIn(email, password);
+      ++onlinePersonalSequence;
       form.reset();
       await onlineRefreshPublic();
       onlineRenderAuth();
@@ -229,6 +240,7 @@
   }
   async function onlineJoin(i) {
     if (!clubs[i] || !onlineRequireProfile()) return;
+    if (state.joined.includes(i) || state.requested.includes(i)) { notify('این درخواست قبلاً ثبت شده است.'); return; }
     try {
       await onlineBackend.joinClub(clubs[i].id);
       await onlineRefreshPersonal();
@@ -238,6 +250,7 @@
   }
   async function onlineRegister(i) {
     if (!events[i] || !onlineRequireProfile()) return;
+    if (state.registered.includes(i)) { notify('قبلاً در این رویداد ثبت‌نام کرده‌اید.'); return; }
     if (!events[i].registrationOpen) { notify('ثبت‌نام این رویداد باز نیست.'); return; }
     try {
       await onlineBackend.registerEvent(events[i].id);
@@ -248,6 +261,9 @@
     } catch (error) { notify(onlineError(error)); }
   }
   async function onlineLogout() {
+    // Invalidate pending account-bound fetches before the logout network call.
+    ++onlinePersonalSequence;
+    ++onlinePublicSequence;
     try { await onlineBackend.signOut(); }
     catch (_) { /* local tokens still cleared by adapter */ }
     state = defaultState();
@@ -299,13 +315,13 @@
         <h3>${escapeHTML(event.title)}</h3>
         <div class="event-meta">${svg('calendar', 13)}<span>${escapeHTML(event.date)}</span></div>
         ${compact ? '' : `<div class="event-meta">${svg('map-pin', 13)}<span>${escapeHTML(event.location)}</span></div>
-        <div class="capacity">ظرفیت نمونه: <strong>${event.capacity} نفر</strong></div>`}
+        <div class="capacity">${onlineMode ? 'ظرفیت باقی‌مانده' : 'ظرفیت نمونه'}: <strong>${event.capacity} نفر</strong></div>`}
       </div>
       <button type="button"
         class="pill-btn ${compact ? 'view-btn' : registered ? 'signed' : ''}"
-        data-${compact ? 'details' : 'register'}="${index}"
+        ${onlineMode && !compact && (registered || !event.registrationOpen) ? 'disabled' : `data-${compact ? 'details' : 'register'}="${index}"`}
         aria-label="${compact ? 'مشاهده' : 'ثبت‌نام'} ${escapeHTML(event.title)}">
-        ${compact ? 'مشاهده' : registered ? 'ثبت‌نام‌شده' : 'ثبت‌نام'}
+        ${compact ? 'مشاهده' : registered ? 'ثبت‌نام‌شده' : onlineMode && !event.registrationOpen ? 'ثبت‌نام بسته است' : 'ثبت‌نام'}
       </button>
     </article>`;
   }
@@ -318,8 +334,8 @@
     return `<article class="card club-card">
       <div class="club-icon ${club.tone === 'blue' ? '' : club.tone}"><img class="club-art" src="assets/club-${club.icon === "book" ? "book" : club.icon === "code" ? "tech" : club.icon === "leaf" ? "leaf" : club.icon === "flask" ? "science" : "sport"}.svg" alt="" width="48" height="48"></div>
       <div class="club-info">
-        <h3>${club.title}</h3>
-        <p>${club.desc}</p>
+        <h3>${escapeHTML(club.title)}</h3>
+        <p>${escapeHTML(club.desc)}</p>
         <button type="button"
           ${member || pending || isViewOnly ? `data-club-details="${index}"` : `data-join="${index}"`}
           class="pill-btn ${member ? 'joined' : pending ? 'signed' : isViewOnly ? 'view-btn' : ''}">
@@ -334,7 +350,7 @@
     return `<article class="home-event-slide" role="group" aria-label="${escapeHTML(event.title)}">
       <div class="home-slide-cover">
         <img src="assets/${event.poster}" alt="پوستر ${escapeHTML(event.title)}" width="244" height="119" loading="lazy">
-        <span class="home-slide-status"><span class="home-slide-pulse" aria-hidden="true"></span> ثبت‌نام آزمایشی</span>
+        <span class="home-slide-status"><span class="home-slide-pulse" aria-hidden="true"></span> ${onlineMode ? 'ثبت‌نام باز' : 'ثبت‌نام آزمایشی'}</span>
       </div>
       <div class="home-slide-info">
         <h3>${escapeHTML(event.title)}</h3>
@@ -364,7 +380,7 @@
   }
 
   function renderHome(query=$('home-search').value.trim()){
-    // Explicit demo registration statuses; replace with backend results before production.
+    // Online content uses published server records; offline fixtures are clearly labeled.
     const found=events.map((event,index)=>[event,index]).filter(([event])=>event.registrationOpen===true&&event.capacity>0&&(!query||event.title.includes(query)));
     $('home-events').innerHTML=found.length?found.map(([event,index])=>homeCarouselCard(event,index)).join(''):'<div class="home-carousel-empty" role="status">رویداد دارای ثبت‌نام فعال پیدا نشد.</div>';
     $('home-events').scrollLeft=0;updateHomeCarouselControls();
@@ -372,7 +388,7 @@
     $('home-clubs').innerHTML=foundClubs.length?foundClubs.map(i=>
       `<button type="button" class="home-mini-club" data-club-details="${i}">
       <span class="mini-club-icon ${clubs[i].tone==='green'?'green':clubs[i].tone==='mint'?'mint':clubs[i].tone==='orange'?'orange':''}"><img class="mini-art" src="assets/club-${clubs[i].icon==='book'?'book':clubs[i].icon==='code'?'tech':clubs[i].icon==='leaf'?'leaf':clubs[i].icon==='flask'?'science':'sport'}.svg" alt="" width="57" height="57"></span>
-      ${clubs[i].short}</button>`).join(''):'<div class="empty">کانونی یافت نشد.</div>';
+      ${escapeHTML(clubs[i].short)}</button>`).join(''):'<div class="empty">کانونی یافت نشد.</div>';
   }
 
   function renderClubs() {
@@ -419,7 +435,7 @@
       ? activityMembers.filter(i => clubs[i]).map(i =>
           `<button class="activity-row" type="button" data-club-details="${i}">
             <span class="club-icon ${clubs[i].tone}"><img class="row-club-art" src="assets/club-${clubs[i].icon === "book" ? "book" : clubs[i].icon === "code" ? "tech" : clubs[i].icon === "leaf" ? "leaf" : clubs[i].icon === "flask" ? "science" : "sport"}.svg" alt="" width="31" height="31"></span>
-            <span class="activity-copy">${clubs[i].title}${state.requested.includes(i) ? '<small>در انتظار تأیید عضویت</small>' : ''}</span>
+            <span class="activity-copy">${escapeHTML(clubs[i].title)}${state.requested.includes(i) ? '<small>در انتظار تأیید عضویت</small>' : ''}</span>
             <span class="arrow">${svg('chevron-left', 15)}</span>
           </button>`
         ).join('')
@@ -428,7 +444,7 @@
     $('activity-events').innerHTML = state.registered.length
       ? state.registered.filter(i => events[i]).map(i =>
           `<button class="activity-row" type="button" data-details="${i}">
-            <span class="activity-copy">${events[i].title}<small>${events[i].date}</small></span>
+            <span class="activity-copy">${escapeHTML(events[i].title)}<small>${escapeHTML(events[i].date)}</small></span>
             <span class="arrow">${svg('chevron-left', 15)}</span>
           </button>`
         ).join('')
@@ -438,10 +454,10 @@
       ? state.registered.filter(i => events[i]).map(i =>
           `<article class="ticket-card">
             <div class="ticket-details">
-              <h3>${events[i].title}</h3>
-              <p>${svg('calendar', 12)} ${events[i].date}</p>
-              <p>${svg('map-pin', 12)} ${events[i].location}</p>
-              <div class="ticket-label">بلیت نمونه — فاقد اعتبار ورود</div>
+              <h3>${escapeHTML(events[i].title)}</h3>
+              <p>${svg('calendar', 12)} ${escapeHTML(events[i].date)}</p>
+              <p>${svg('map-pin', 12)} ${escapeHTML(events[i].location)}</p>
+              <div class="ticket-label">${onlineMode ? 'ثبت‌نام تأیید شده — بلیت صادر نشده' : 'بلیت نمونه — فاقد اعتبار ورود'}</div>
             </div>
             ${onlineMode ? '<div class="ticket-label">بلیت قابل‌استفاده پس از راه‌اندازی صدور بلیت ارائه می‌شود.</div>' : qrMarkup(i)}
           </article>`
@@ -477,8 +493,8 @@
     const ev = events[i];
     if (!ev) return;
     openSheet(ev.title,
-      `<p>${svg('calendar', 15)} ${ev.date}<br>${svg('map-pin', 15)} ${ev.location}<br>
-       کانون برگزارکننده: ${clubs[ev.club] ? clubs[ev.club].title : 'نامشخص'}</p>
+      `<p>${svg('calendar', 15)} ${escapeHTML(ev.date)}<br>${svg('map-pin', 15)} ${escapeHTML(ev.location)}<br>
+       کانون برگزارکننده: ${clubs[ev.club] ? escapeHTML(clubs[ev.club].title) : 'نامشخص'}</p>
        <p>${onlineMode ? 'ثبت‌نام آنلاین با تأیید سرور انجام می‌شود.' : 'این یک رویداد نمونه رابط کاربری است. ثبت‌نام واقعی انجام نمی‌شود.'}</p>
        <button class="pill-btn sheet-action" type="button" ${onlineMode && (!ev.registrationOpen || state.registered.includes(i)) ? "disabled" : `data-register="${i}"`}>
          ${state.registered.includes(i) ? 'ثبت‌نام‌شده' : onlineMode ? (ev.registrationOpen ? 'ثبت‌نام آنلاین' : 'ثبت‌نام بسته است') : 'ثبت‌نام نمایشی'}
@@ -490,7 +506,7 @@
     const club = clubs[i];
     if (!club) return;
     openSheet(club.title,
-      `<p>${club.desc}</p>
+      `<p>${escapeHTML(club.desc)}</p>
        <p>${onlineMode ? 'عضویت در کانون پس از تأیید مدیر کانون فعال می‌شود.' : 'برای مشاهده عملکرد ظاهری عضویت می‌توانید روی دکمه زیر بزنید. هیچ اطلاعاتی به سرور ارسال نمی‌شود.'}</p>
        <button class="pill-btn sheet-action" type="button" ${state.joined.includes(i) || state.requested.includes(i) ? 'disabled' : 'data-join="' + i + '"'}>
          ${state.joined.includes(i) ? 'عضو هستید' : state.requested.includes(i) ? 'در انتظار تأیید' : onlineMode ? 'درخواست عضویت' : 'درخواست عضویت نمایشی'}

@@ -18,8 +18,8 @@ android {
         applicationId = "ir.kanonha.app"  // Do not change: preserves installed app identity.
         minSdk = 26
         targetSdk = 35
-        versionCode = 17
-        versionName = "0.9.2-fa-calendar-auth-beta"
+        versionCode = 18
+        versionName = "0.9.3-navy-academic-bio-beta"
     }
     signingConfigs {
         if (releaseSigningConfigured) {
@@ -47,4 +47,6 @@ android {
 dependencies {
     implementation("androidx.webkit:webkit:1.12.1")
     implementation("androidx.core:core:1.15.0")
+    implementation("androidx.fragment:fragment:1.7.1")
+    implementation("androidx.biometric:biometric:1.1.0")
 }

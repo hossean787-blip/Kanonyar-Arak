@@ -6,7 +6,7 @@ const root=document.getElementById('admin-panel');
 if(!root||!api||!api.enabled)return;
 const $=id=>document.getElementById(id);
 const esc=x=>String(x==null?'':x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const date=x=>{const d=new Date(x);return Number.isFinite(d.getTime())?d.toLocaleString('fa-IR'):'—'};
+const date=x=>window.KanonhaJalali?window.KanonhaJalali.formatDate(x,true):new Date(x).toLocaleString('fa-IR');
 const inputTime=x=>{const d=new Date(x);return Number.isFinite(d.getTime())?new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16):''};
 const v=(fd,name)=>String(fd.get(name)||'').trim();
 let seq=0,owner='',data=null,tab='dashboard',editor=null,busy=false,confirmDelete='',rosterFor='',authorized=false;
@@ -163,6 +163,7 @@ function render(){
  }
  $('admin-content').innerHTML=tab==='dashboard'?dashboard():tab==='clubs'?clubs():tab==='events'?events():
   tab==='members'?memberships():tab==='secretaries'?secretaries():students();
+ if(window.KanonhaJalali)window.KanonhaJalali.enhance($('admin-content'));
 }
 async function refresh(){
  clear();const current=api.currentUser;
@@ -218,6 +219,9 @@ root.addEventListener('submit',ev=>{
  const f=ev.target;
  if(!['admin-club-form','admin-event-form','admin-secretary-form','admin-student-form'].includes(f.id))return;
  ev.preventDefault();
+ if(window.KanonhaJalali&&!window.KanonhaJalali.validateForm(f)){
+   msg('لطفاً تاریخ و ساعت را به صورت شمسی کامل انتخاب کنید.',true);return;
+ }
  const fd=new FormData(f);
  if(f.id==='admin-secretary-form'){
    void perform('secretary.assign',{user_id:v(fd,'user_id'),club_id:v(fd,'club_id')});return;

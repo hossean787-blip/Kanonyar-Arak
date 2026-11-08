@@ -14,7 +14,9 @@
   const formValue = (fd, key) => safeText(fd.get(key));
   const stamp = (time) => {
     const date = new Date(time);
-    return Number.isFinite(date.getTime()) ? date.toLocaleString('fa-IR') : 'تاریخ نامشخص';
+    return Number.isFinite(date.getTime())
+      ? (window.KanonhaJalali ? window.KanonhaJalali.formatDate(date,true) : date.toLocaleString('fa-IR'))
+      : 'تاریخ نامشخص';
   };
   function inputDate(time) {
     const d = new Date(time);
@@ -249,6 +251,7 @@
       activeTab === 'club' ? renderClub() :
       activeTab === 'members' ? renderMembers() :
       activeTab === 'events' ? renderEvents() : renderAttendance();
+    if (window.KanonhaJalali) window.KanonhaJalali.enhance($('secretary-content'));
   }
   async function loadRoster(eventId) {
     if (!hasClub(activeClub) || !events.some(e => e.id === eventId)) return;
@@ -345,6 +348,9 @@
     const form = event.target;
     if (form.id !== 'secretary-club-form' && form.id !== 'secretary-event-form') return;
     event.preventDefault();
+    if(window.KanonhaJalali && !window.KanonhaJalali.validateForm(form)){
+      status('لطفاً تاریخ و ساعت را به‌صورت شمسی کامل انتخاب کنید.',true);return;
+    }
     void perform(() => form.id === 'secretary-club-form' ? submitClub(form) : submitEvent(form));
   });
   function hasAssignments() { return hasSession() && assigned.length > 0; }

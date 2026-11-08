@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="styles.css">
   <script src="config.js" defer></script>
   <script src="backend.js" defer></script>
+  <script src="jalali.js" defer></script>
   <script src="app.js" defer></script>
   <script src="secretary.js" defer></script>
   <script src="admin.js" defer></script>
@@ -161,15 +162,17 @@
         <section id="online-auth-panel" class="online-auth-panel v7-auth" hidden aria-labelledby="online-auth-title">
           <div class="v7-auth-hero">
             <span class="v7-auth-spark" aria-hidden="true">✦</span>
-            <div><p class="v7-overline">کانون‌ها | حساب کاربری</p>
+            <div><button id="auth-admin-entry" class="v7-overline auth-hidden-entry" type="button"
+                  aria-label="کانون‌ها">کانون‌ها</button>
               <h2 id="online-auth-title">ورود دانشجو</h2>
-              <p class="online-caption">پنل مشترک دانشجو، دبیر کانون و مدیرکل</p>
+              <p class="online-caption">ورود و ثبت‌نام دانشجویان؛ دسترسی دبیر پس از انتصاب فعال می‌شود.</p>
             </div>
           </div>
-          <div class="v7-role-switch" role="group" aria-label="نوع حساب">
+          <div class="v7-role-switch" role="group" aria-label="نوع حساب" hidden>
             <button type="button" id="auth-role-student" class="active" data-auth-role="student" aria-pressed="true">دانشجو / دبیر</button>
             <button type="button" id="auth-role-manager" data-auth-role="manager" aria-pressed="false">مدیر کل</button>
           </div>
+          <button id="auth-back-student" type="button" class="auth-return-student" hidden>بازگشت به ورود دانشجو</button>
           <form id="online-auth-form" class="v7-auth-form">
             <div id="student-login-fields">
               <label class="field">ورود با کدام شناسه؟
@@ -205,7 +208,7 @@
               <label class="field">تاریخ تولد
                 <input id="online-birth" name="birthDate" type="date">
               </label>
-              <p class="v7-hint">تاریخ تولد را در تقویم میلادی انتخاب کنید. هیچ پیامک یا کد تأیید شماره‌ای لازم نیست.</p>
+              <p class="v7-hint">تاریخ را فقط در تقویم شمسی انتخاب کنید؛ هیچ پیامک یا کد تأیید شماره‌ای لازم نیست.</p>
               <div class="v7-signup-heading">اطلاعات تحصیلی</div>
               <label class="field">دانشگاه
                 <input id="online-university" name="university" maxlength="120" placeholder="نام دانشگاه">
@@ -354,6 +357,7 @@
 
     </main>
 
+    <!-- The navigation is hidden while the login or registration screen is open. -->
     <!-- Bottom navigation -->
     <nav class="bottom-nav" id="bottom-nav" aria-label="منوی اصلی"></nav>
 

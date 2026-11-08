@@ -137,6 +137,7 @@ Deno.serve(async req=>{
   if(!body||typeof body!=="object"||Array.isArray(body))return reply(400,{error:"ساختار درخواست نامعتبر است."});
   const input=body as Record<string,unknown>;
   try {
+    if(input.action==="health")return reply(200,{ready:true,service:"kanonha-student-auth"});
     if(input.action==="register")return await create(input,req);
     if(input.action==="login")return await login(input,req);
     return reply(400,{error:"عملیات نامعتبر است."});

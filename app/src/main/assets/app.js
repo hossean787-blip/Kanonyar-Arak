@@ -681,6 +681,25 @@
   }
 
   function action(name) {
+    if (name === 'link-student' && onlineMode && state.isManager) {
+      if (studentProfileReady) { notify('پرونده دانشجویی این حساب از قبل تکمیل شده است.'); return; }
+      openSheet('تکمیل هویت دانشجویی مدیرکل',
+        `<p class="secretary-card-p">پرونده زیر به حساب مدیریتی فعلی متصل می‌شود؛ حساب یا رمز دوم ساخته نخواهد شد.</p>
+        <form id="manager-student-form" class="secretary-form">
+          <label class="field">نام و نام خانوادگی<input name="full_name" maxlength="80" autocomplete="name" required></label>
+          <label class="field">شماره دانشجویی<input name="student_number" inputmode="numeric" pattern="[0-9]{6,20}" maxlength="20" required></label>
+          <label class="field">کد ملی<input name="national_id" inputmode="numeric" pattern="[0-9]{10}" maxlength="10" required></label>
+          <label class="field">تاریخ تولد میلادی<input name="birth_date" type="date" required></label>
+          <label class="field">شماره موبایل (بدون پیامک تأیید)<input name="mobile" inputmode="tel" pattern="09[0-9]{9}" maxlength="11" required></label>
+          <label class="field">دانشگاه<input name="university" maxlength="120" required></label>
+          <label class="field">دانشکده<input name="faculty" maxlength="120" required></label>
+          <label class="field">رشته تحصیلی<input name="major" maxlength="120" required></label>
+          <p class="field-hint">شماره دانشجویی و کد ملی یکتا خواهند بود. کد ملی فقط به‌شکل اثرانگشت رمزنگاری‌شده در سرور ثبت می‌شود.</p>
+          <button class="pill-btn sheet-action" type="submit">ثبت و اتصال به همین حساب</button>
+        </form>`
+      );
+      return;
+    }
     if (name === 'edit') {
       if (onlineMode && state.isManager && !studentProfileReady) { action('link-student'); return; }
       if (onlineMode && state.isManager && activePersona === 'manager') { notify('برای ویرایش اطلاعات دانشجویی، ابتدا نقش دانشجو را انتخاب کنید.'); return; }
@@ -829,6 +848,27 @@
       if (onlineMode && e.target.id === 'online-auth-form') {
         e.preventDefault();
         await onlineAuthenticate(e.target);
+        return;
+      }
+      if (onlineMode && e.target.id === 'manager-student-form') {
+        e.preventDefault();
+        if (!state.isManager || !onlineBackend.currentUser || studentProfileReady) return;
+        const accountId = onlineBackend.currentUser.id;
+        const fd = new FormData(e.target);
+        const fields = {};
+        for (const key of ['full_name','student_number','national_id','birth_date',
+          'university','faculty','major','mobile']) fields[key] = String(fd.get(key) || '').trim();
+        try {
+          await onlineBackend.adminAction('manager.student.attach', fields);
+          if (!onlineBackend.currentUser || onlineBackend.currentUser.id !== accountId) return;
+          await onlineRefreshPersonal();
+          closeSheet();
+          activePersona = 'student';
+          renderPersonaSelector();
+          updateProfileDisplay();
+          go('home');
+          notify('پرونده دانشجویی به همین حساب مدیرکل متصل شد.');
+        } catch (error) { notify(onlineError(error)); }
         return;
       }
       if (e.target.id !== 'edit-form') return;

@@ -603,8 +603,11 @@
             <input name="name" autocomplete="name" maxlength="60" required value="${escapeHTML(state.name)}">
           </label>
           <label class="field">شماره دانشجویی
-            <input name="number" maxlength="20" required value="${escapeHTML(state.number)}">
+            <input name="number" maxlength="20" required value="${escapeHTML(state.number)}" ${onlineMode ? 'readonly' : ''}>
           </label>
+          ${onlineMode ? `<label class="field">دانشگاه<input name="university" maxlength="120" required value="${escapeHTML(state.academic?.university || '')}"></label>
+          <label class="field">دانشکده<input name="faculty" maxlength="120" required value="${escapeHTML(state.academic?.faculty || '')}"></label>
+          <label class="field">رشته تحصیلی<input name="major" maxlength="120" required value="${escapeHTML(state.academic?.major || '')}"></label>` : ''}
           <button type="submit" class="pill-btn sheet-action">${onlineMode ? 'ذخیره اطلاعات دانشجو' : 'ذخیره نمایشی'}</button>
         </form>`
       );
@@ -615,7 +618,7 @@
       );
     } else if (name === 'about') {
       openSheet('درباره برنامه',
-        `<p>کانون‌ها — ${onlineMode ? 'نسخه ۰.۶.۰، حساب دانشجویی و پنل دبیر کانون' : 'نسخه نمایشی آفلاین'}</p>
+        `<p>کانون‌ها — ${onlineMode ? 'نسخه ۰.۷.۰، ورود دانشجویی و مدیریت یکپارچه' : 'نسخه نمایشی آفلاین'}</p>
          <p>${onlineMode ? 'ورود و ثبت‌نام متصل به پایگاه داده مستقل؛ بلیت معتبر و تأیید شماره دانشجویی هنوز فعال نیست. نشست در حافظه موقت است.' : 'پنج صفحه با HTML، CSS و JavaScript پیاده‌سازی شده‌اند. هیچ داده‌ای به سرور ارسال نمی‌شود.'}</p>
          ${onlineMode ? '' : '<button type="button" data-action="reset" class="pill-btn soft">بازنشانی داده‌های نمایشی</button>'}`
       );
@@ -650,7 +653,13 @@
     const numEl = $('profile-number');
     if (nameEl) nameEl.textContent = state.name;
     if (numEl) numEl.textContent = `شماره دانشجویی: ${state.number}`;
-    if (onlineMode) onlineRenderAuth();
+    if (onlineMode) {
+      onlineRenderAuth();
+      $('profile-service-note').textContent = state.isManager
+        ? 'دسترسی مدیرکل؛ مدیریت همه کانون‌ها، دبیران و رویدادها.'
+        : state.academic ? 'دانشگاه: '+state.academic.university+' | دانشکده: '+state.academic.faculty+' | رشته: '+state.academic.major
+          : 'اطلاعات تحصیلی هنوز ثبت نشده است.';
+    }
   }
 
   /* ——— Init ——— */
@@ -739,6 +748,9 @@
       if (onlineMode) {
         try {
           await onlineBackend.saveProfile(name, number);
+          if (typeof onlineBackend.saveAcademicDetails === 'function')
+            await onlineBackend.saveAcademicDetails(String(form.get('university') || ''),
+              String(form.get('faculty') || ''),String(form.get('major') || ''));
           await onlineRefreshPersonal();
           closeSheet();
           notify('اطلاعات دانشجویی در سرور ذخیره شد.');

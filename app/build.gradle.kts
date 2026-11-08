@@ -1,5 +1,16 @@
 plugins { id("com.android.application") }
 
+// AndroidX Biometric 1.1 pulls old Kotlin JDK7/8 compatibility artifacts;
+// resolve all stdlib variants to a single merged Kotlin release to avoid
+// duplicate runtime classes. No Kotlin compiler plugin is used in this app.
+configurations.configureEach {
+    resolutionStrategy.force(
+        "org.jetbrains.kotlin:kotlin-stdlib:1.8.22",
+        "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22",
+        "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22"
+    )
+}
+
 // Release keys are NEVER checked into the repository. If all four environment
 // variables are absent, :app:assembleRelease creates an UNSIGNED artifact for
 // offline signing and validation.
@@ -18,8 +29,8 @@ android {
         applicationId = "ir.kanonha.app"  // Do not change: preserves installed app identity.
         minSdk = 26
         targetSdk = 35
-        versionCode = 17
-        versionName = "0.9.2-fa-calendar-auth-beta"
+        versionCode = 18
+        versionName = "0.9.3-navy-academic-bio-beta"
     }
     signingConfigs {
         if (releaseSigningConfigured) {
@@ -47,4 +58,6 @@ android {
 dependencies {
     implementation("androidx.webkit:webkit:1.12.1")
     implementation("androidx.core:core:1.15.0")
+    implementation("androidx.fragment:fragment:1.7.1")
+    implementation("androidx.biometric:biometric:1.1.0")
 }

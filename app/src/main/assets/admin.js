@@ -132,13 +132,32 @@ function secretaries(){
  '<div class="secretary-actions">'+action('لغو مسئولیت','data-admin-revoke',a.user_id,
  'data-club-id="'+esc(a.club_id)+'" class="negative"')+'</div></div>').join(''):empty('هیچ دبیری تعیین نشده است.'));
 }
+function facultyOptions(university,selected=''){
+ const uni=(data?.universities||[]).find(x=>x.name===university);
+ const items=(data?.faculties||[]).filter(x=>x.university_id===uni?.id);
+ let out='<option value="">انتخاب دانشکده</option>';
+ if(selected&&!items.some(x=>x.name===selected))
+   out+='<option value="'+esc(selected)+'" selected>'+esc(selected)+' (ثبت‌شده قبلی)</option>';
+ return out+items.map(x=>'<option value="'+esc(x.name)+'"'+
+   (x.name===selected?' selected':'')+'>'+esc(x.name)+'</option>').join('');
+}
 function studentForm(){
  const u=data.users.find(x=>x.user_id===editor?.id);
  if(!u)return '';
  return '<form id="admin-student-form" class="secretary-card secretary-form"><h3 class="secretary-card-title">ویرایش اطلاعات دانشجو</h3>'+
  '<p class="secretary-card-p">'+esc(u.student_number)+'</p>'+
  '<label class="field">نام<input name="full_name" required maxlength="80" value="'+esc(u.full_name||'')+'"></label>'+
- ['university','faculty','major','mobile'].map((k,i)=>'<label class="field">'+['دانشگاه','دانشکده','رشته','شماره موبایل'][i]+
+ '<label class="field">دانشگاه<select name="university" data-admin-student-university required>'+
+ '<option value="">انتخاب دانشگاه</option>'+
+ (data.universities||[]).map(x=>'<option value="'+esc(x.name)+'"'+
+ (x.name===u.academic?.university?' selected':'')+'>'+esc(x.name)+'</option>').join('')+
+ (!(data.universities||[]).some(x=>x.name===u.academic?.university)&&u.academic?.university?
+ '<option selected value="'+esc(u.academic.university)+'">'+esc(u.academic.university)+' (ثبت‌شده قبلی)</option>':'')+
+ '</select></label>'+
+ '<label class="field">دانشکده<select name="faculty" data-admin-student-faculty required>'+
+ facultyOptions(u.academic?.university||'',u.academic?.faculty||'')+
+ '</select></label>'+
+ ['major','mobile'].map((k,i)=>'<label class="field">'+['رشته','شماره موبایل'][i]+
  '<input name="'+k+'" required maxlength="120" value="'+esc(u.academic?.[k]||'')+'"></label>').join('')+
  '<div class="secretary-actions"><button type="submit" class="positive">ذخیره</button>'+
  action('انصراف','data-admin-action','cancel')+'</div></form>';
@@ -155,6 +174,34 @@ function students(){
  'data-verify="'+(u.university_verified?'false':'true')+'"')+'</div></article>').join(''):
  empty('دانشجویی ثبت‌نام نکرده است.'));
 }
+function universities(){
+ const universities=data?.universities||[],faculties=data?.faculties||[];
+ const items=universities.map(u=>{
+  const children=faculties.filter(f=>f.university_id===u.id);
+  return '<article class="secretary-card"><h3 class="secretary-card-title">'+esc(u.name)+'</h3>'+
+   '<p class="secretary-card-p">'+children.length.toLocaleString('fa-IR')+' دانشکده تعریف‌شده</p>'+
+   (children.length?'<div class="academy-chip-row">'+children.map(f=>
+    '<span class="academy-chip">'+esc(f.name)+'</span>').join('')+'</div>':
+    '<p class="secretary-card-meta">هنوز دانشکده‌ای برای این دانشگاه ثبت نشده است.</p>')+
+   '</article>';
+ }).join('');
+ return '<div class="academy-management">'+
+  '<header class="academy-management-intro"><h3>دانشگاه‌ها و دانشکده‌ها</h3>'+
+  '<p>دانشجو فقط از فهرستی که شما ایجاد کرده‌اید انتخاب می‌کند. ابتدا دانشگاه و بعد دانشکده را تعریف کنید.</p></header>'+
+  '<form id="admin-university-form" class="secretary-card secretary-form">'+
+  '<h3 class="secretary-card-title">افزودن دانشگاه</h3>'+
+  '<label class="field">نام دانشگاه<input name="name" required minlength="2" maxlength="120" placeholder="نام کامل دانشگاه"></label>'+
+  '<button type="submit" class="positive academy-submit">ثبت دانشگاه</button></form>'+
+  '<form id="admin-faculty-form" class="secretary-card secretary-form">'+
+  '<h3 class="secretary-card-title">افزودن دانشکده</h3>'+
+  '<label class="field">دانشگاه<select name="university_id" required><option value="">انتخاب دانشگاه</option>'+
+  universities.map(u=>'<option value="'+esc(u.id)+'">'+esc(u.name)+'</option>').join('')+
+  '</select></label>'+
+  '<label class="field">نام دانشکده<input name="name" required minlength="2" maxlength="120" placeholder="نام دانشکده"></label>'+
+  '<button type="submit" class="positive academy-submit"'+(universities.length?'':' disabled')+'>ثبت دانشکده</button></form>'+
+  '<div class="academy-directory"><h3>فهرست ثبت‌شده</h3>'+
+  (items||empty('هنوز دانشگاهی تعریف نشده است.'))+'</div></div>';
+}
 function render(){
  if(!signed()||!data)return;
  for(const el of root.querySelectorAll('[data-admin-tab]')) {
@@ -162,7 +209,8 @@ function render(){
   el.setAttribute('aria-pressed',el.dataset.adminTab===tab?'true':'false');
  }
  $('admin-content').innerHTML=tab==='dashboard'?dashboard():tab==='clubs'?clubs():tab==='events'?events():
-  tab==='members'?memberships():tab==='secretaries'?secretaries():students();
+  tab==='members'?memberships():tab==='secretaries'?secretaries():
+  tab==='universities'?universities():students();
  if(window.KanonhaJalali)window.KanonhaJalali.enhance($('admin-content'));
 }
 async function refresh(){
@@ -215,14 +263,28 @@ root.addEventListener('click',ev=>{
  if(d.adminVerify&&['true','false'].includes(d.verify)){void perform('student.verify',{user_id:d.adminVerify,verified:d.verify==='true'});return}
  if(d.adminAttendance&&d.present){void perform('roster.attendance',{id:d.adminAttendance,present:d.present==='true'});return}
 });
+root.addEventListener('change',ev=>{
+ if(!ev.target || !ev.target.dataset || !('adminStudentUniversity' in ev.target.dataset))return;
+ const form=ev.target.closest('form');
+ if(!form)return;
+ const faculty=form.querySelector('select[data-admin-student-faculty]');
+ if(faculty)faculty.innerHTML=facultyOptions(ev.target.value);
+});
 root.addEventListener('submit',ev=>{
  const f=ev.target;
- if(!['admin-club-form','admin-event-form','admin-secretary-form','admin-student-form'].includes(f.id))return;
+ if(!['admin-club-form','admin-event-form','admin-secretary-form','admin-student-form',
+   'admin-university-form','admin-faculty-form'].includes(f.id))return;
  ev.preventDefault();
  if(window.KanonhaJalali&&!window.KanonhaJalali.validateForm(f)){
    msg('لطفاً تاریخ و ساعت را به صورت شمسی کامل انتخاب کنید.',true);return;
  }
  const fd=new FormData(f);
+ if(f.id==='admin-university-form'){
+  void perform('university.create',{name:v(fd,'name')});return;
+ }
+ if(f.id==='admin-faculty-form'){
+  void perform('faculty.create',{university_id:v(fd,'university_id'),name:v(fd,'name')});return;
+ }
  if(f.id==='admin-secretary-form'){
    void perform('secretary.assign',{user_id:v(fd,'user_id'),club_id:v(fd,'club_id')});return;
  }
@@ -243,7 +305,7 @@ root.addEventListener('submit',ev=>{
 });
 function hasAccess(){return signed()&&authorized}
 function showTab(next){
- if(!hasAccess()||!['dashboard','clubs','events','students','secretaries','members'].includes(next))return false;
+ if(!hasAccess()||!['dashboard','clubs','events','students','secretaries','members','universities'].includes(next))return false;
  if(tab!==next){tab=next;editor=null;rosterFor='';confirmDelete='';render()}
  return true;
 }

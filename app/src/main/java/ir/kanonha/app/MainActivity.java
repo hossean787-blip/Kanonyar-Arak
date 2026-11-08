@@ -1,5 +1,5 @@
 package ir.kanonha.app;
-import android.app.Activity;
+import androidx.fragment.app.FragmentActivity;
 import android.os.Bundle;
 import android.graphics.Color;
 import android.os.Build;
@@ -18,8 +18,9 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.webkit.WebViewAssetLoader;
 
-public final class MainActivity extends Activity {
+public final class MainActivity extends FragmentActivity {
  private WebView web;
+ private BiometricVault biometric;
 
  @Override public void onCreate(Bundle b) {
   super.onCreate(b);
@@ -64,6 +65,8 @@ public final class MainActivity extends Activity {
   s.setAllowFileAccessFromFileURLs(false);
   s.setAllowUniversalAccessFromFileURLs(false);
   s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
+  biometric = new BiometricVault(this, web);
+  web.addJavascriptInterface(biometric.new Bridge(), "AndroidBiometric");
   web.setWebViewClient(new WebViewClient() {
    @Override public WebResourceResponse shouldInterceptRequest(WebView v, WebResourceRequest r) {
     return loader.shouldInterceptRequest(r.getUrl());
@@ -83,6 +86,7 @@ public final class MainActivity extends Activity {
   });
  }
  @Override protected void onDestroy() {
+  if (biometric != null) { biometric.destroy(); biometric = null; }
   if (web != null) { web.destroy(); web = null; }
   super.onDestroy();
  }

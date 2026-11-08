@@ -74,6 +74,11 @@ final class BiometricVault {
             && prefs.contains("refresh") && prefs.contains("refresh_iv");
     }
 
+    private boolean ownedBy(String accountId) {
+        return enrolled() && accountId != null && accountId.length() >= 32
+            && accountId.equals(prefs.getString("account_id", ""));
+    }
+
     private static String encode(byte[] bytes) {
         return Base64.encodeToString(bytes, Base64.NO_WRAP);
     }
@@ -156,8 +161,12 @@ final class BiometricVault {
         }
     }
 
-    private void beginEnroll(String token) {
+    private void beginEnroll(String token, String accountId) {
         if (!correctOrigin() || !available()) { status("unavailable"); return; }
+        if (accountId == null || !accountId.matches(
+            "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")) {
+            status("error"); return;
+        }
         try {
             final byte[] randomKey = new byte[32];
             new SecureRandom().nextBytes(randomKey);
@@ -174,7 +183,8 @@ final class BiometricVault {
                     if (!prefs.edit().putString("wrapped", encode(wrapped))
                         .putString("wrapped_iv", encode(authorized.getIV()))
                         .putString("refresh", encode(encryptedToken))
-                        .putString("refresh_iv", encode(tokenCipher.getIV())).commit())
+                        .putString("refresh_iv", encode(tokenCipher.getIV()))
+                        .putString("account_id", accountId).commit())
                         throw new IllegalStateException("Could not save encrypted credential");
                     unlockedKey = secret;
                     java.util.Arrays.fill(randomKey, (byte)0);
@@ -220,8 +230,8 @@ final class BiometricVault {
         }
     }
 
-    private void rotate(String token) {
-        if (!correctOrigin() || !enrolled()) return;
+    private void rotate(String token, String accountId) {
+        if (!correctOrigin() || !ownedBy(accountId)) return;
         SecretKeySpec key = unlockedKey;
         if (key == null || token == null || token.length() < 8 || token.length() > 8192) return;
         try { storeRefresh(key, token); }
@@ -239,20 +249,32 @@ final class BiometricVault {
         status("cleared");
     }
 
-    void destroy() { unlockedKey = null; }
+    private void lockVault() {
+        // Keep encrypted device credential but discard the decrypted data key.
+        // The next login always requires a new strong biometric prompt.
+        unlockedKey = null;
+    }
+
+    void destroy() { lockVault(); }
 
     final class Bridge {
         @JavascriptInterface public boolean available() { return BiometricVault.this.available(); }
         @JavascriptInterface public boolean enrolled() { return BiometricVault.this.enrolled(); }
-        @JavascriptInterface public void enroll(String token) {
+        @JavascriptInterface public boolean ownedBy(String accountId) {
+            return BiometricVault.this.ownedBy(accountId);
+        }
+        @JavascriptInterface public void enroll(String token, String accountId) {
             if (token == null || token.length() < 8 || token.length() > 8192) return;
-            activity.runOnUiThread(() -> beginEnroll(token));
+            activity.runOnUiThread(() -> beginEnroll(token, accountId));
         }
         @JavascriptInterface public void unlock() {
             activity.runOnUiThread(() -> beginUnlock());
         }
-        @JavascriptInterface public void rotateToken(String token) {
-            activity.runOnUiThread(() -> rotate(token));
+        @JavascriptInterface public void rotateToken(String token, String accountId) {
+            activity.runOnUiThread(() -> rotate(token, accountId));
+        }
+        @JavascriptInterface public void lock() {
+            activity.runOnUiThread(() -> lockVault());
         }
         @JavascriptInterface public void clear() {
             activity.runOnUiThread(() -> { if (correctOrigin()) clearVault(); });

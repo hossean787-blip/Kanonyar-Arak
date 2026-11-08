@@ -1561,7 +1561,7 @@ body.native-app .bottom-nav{padding-bottom:5px!important}
 .jalali-control .jalali-select {appearance:none;min-width:0;width:100%;min-height:46px;
   box-sizing:border-box;border:1px solid #cae3d5!important;border-radius:12px!important;
   padding:8px 7px!important;text-align:center;direction:rtl;background-color:#fff!important;
-  color:#164d39!important;font:700 12px/1.5 inherit; }
+  color:#164d39!important;font-family:inherit;font-weight:700;font-size:12px;line-height:1.5; }
 .jalali-control .jalali-select:focus {outline:2px solid #91d3ab;outline-offset:1px;}
 .jalali-time-row {display:flex;align-items:center;gap:9px;direction:rtl;}
 .jalali-time-row span {font-size:11px;color:#5c806d;font-weight:700;}

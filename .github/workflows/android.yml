@@ -34,6 +34,7 @@ jobs:
           node --check app/src/main/assets/secretary.js
           node --check app/src/main/assets/admin.js
           node --check tests/unified-auth-smoke.cjs
+          node --check tests/admin-ui-smoke.cjs
           node --check tests/live-identity-smoke.cjs
           deno check supabase/functions/kanonha-student-auth/index.ts
           deno check supabase/functions/kanonha-admin-console/index.ts
@@ -74,6 +75,7 @@ jobs:
           node tests/secretary-backend-smoke.cjs
           node tests/secretary-ui-smoke.cjs
           node tests/unified-auth-smoke.cjs
+          node tests/admin-ui-smoke.cjs
       - name: Verify real isolated Supabase Data API and anonymous RLS
         run: |
           node tests/live-api-smoke.cjs

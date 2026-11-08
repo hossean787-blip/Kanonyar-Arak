@@ -74,7 +74,7 @@
     // in encrypted native storage. No token is placed in localStorage or logs.
     if(typeof window !== 'undefined' && window.KanonhaNativeBiometric &&
        typeof window.KanonhaNativeBiometric.rotateToken === 'function')
-      window.KanonhaNativeBiometric.rotateToken(session.refresh_token);
+      window.KanonhaNativeBiometric.rotateToken(session.refresh_token,user && user.id ? user.id : '');
   }
   async function resumeFromBiometric(refreshToken) {
     needConfig();
@@ -155,9 +155,15 @@
     user = verified;
     return user;
   }
-  async function signOut() {
+  async function signOut(options={}) {
+    // Device-specific opt-in: leave only the already-encrypted biometric
+    // refresh token valid when the user chooses ordinary "switch to login".
+    // The JS access/refresh tokens are still immediately discarded.
+    // A complete logout revokes the server session as before.
+    const preserveBiometric = Boolean(options && options.preserveBiometric === true);
     try {
-      if (session) await request(authPath + 'logout', { method: 'POST', requireUser: true });
+      if (!preserveBiometric && session)
+        await request(authPath + 'logout', { method: 'POST', requireUser: true });
     } finally { session = null; user = null; }
   }
   async function me() {

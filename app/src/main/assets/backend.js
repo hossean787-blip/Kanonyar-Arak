@@ -362,11 +362,12 @@
   async function studentSignUp(fields) {
     const name=String(fields.name||'').trim(),studentNumber=String(fields.studentNumber||'').trim();
     const nationalId=String(fields.nationalId||'').trim(),birthDate=String(fields.birthDate||'').trim();
+    const mobile=String(fields.mobile||'').trim();
     const university=String(fields.university||'').trim(),faculty=String(fields.faculty||'').trim();
     const major=String(fields.major||'').trim();
     if(name.length<2||!await checkStudentFields(fields))throw new ApiError('اطلاعات ثبت‌نام معتبر نیست.');
     const response=await edgeRequest('kanonha-student-auth',{action:'register',
-      name,studentNumber,nationalId,birthDate,university,faculty,major,
+      name,studentNumber,nationalId,birthDate,mobile,university,faculty,major,
       password:fields.password});
     if(!response||!response.session)throw new ApiError('نشست ثبت‌نام دریافت نشد.');
     setSession(response.session);
@@ -379,6 +380,7 @@
     const birth=String(fields.birthDate||'').trim();
     const password=String(fields.password||'');
     return /^\d{6,20}$/.test(student)&&/^\d{10}$/.test(national)
+      &&/^09\d{9}$/.test(String(fields.mobile||'').trim())
       &&/^\d{4}-\d{2}-\d{2}$/.test(birth)
       &&['university','faculty','major'].every(k=>{
         const n=String(fields[k]||'').trim().length;return n>=2&&n<=120;
@@ -410,14 +412,15 @@
   }
   async function academicDetails() {
     const uid=mustUser();
-    const rows=await request(restPath+'kanonha_academic_details?select=birth_date,university,faculty,major'
+    const rows=await request(restPath+'kanonha_academic_details?select=birth_date,university,faculty,major,mobile'
       +'&user_id=eq.'+encodeURIComponent(uid),{requireUser:true});
     return Array.isArray(rows)?rows[0]||null:null;
   }
-  async function saveAcademicDetails(university,faculty,major) {
+  async function saveAcademicDetails(university,faculty,major,mobile) {
     const uid=mustUser();
-    const fields={university:String(university||'').trim(),faculty:String(faculty||'').trim(),major:String(major||'').trim()};
-    if(Object.values(fields).some(v=>v.length<2||v.length>120))throw new ApiError('مشخصات تحصیلی معتبر نیست.');
+    const fields={university:String(university||'').trim(),faculty:String(faculty||'').trim(),major:String(major||'').trim(),mobile:String(mobile||'').trim()};
+    if(Object.values(fields).some(v=>v.length<2||v.length>120)||!/^09\d{9}$/.test(fields.mobile))
+      throw new ApiError('مشخصات تحصیلی یا شماره موبایل معتبر نیست.');
     const rows=await request(restPath+'kanonha_academic_details?user_id=eq.'+encodeURIComponent(uid),{
       method:'PATCH',requireUser:true,headers:{Prefer:'return=representation'},body:fields
     });

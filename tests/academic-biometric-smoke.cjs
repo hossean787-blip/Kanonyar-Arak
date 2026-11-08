@@ -46,7 +46,7 @@ assert.match(activity,/addJavascriptInterface\(biometric\.new Bridge\(\), "Andro
 assert.match(activity,/extends FragmentActivity/);
 assert.match(manifest,/android.permission.USE_BIOMETRIC/);
 assert.match(manifest,/android:allowBackup="false"/);
-assert.match(gradle,/versionCode = 18/);
+assert.match(gradle,/versionCode = 19/);
 assert.match(gradle,/androidx.biometric:biometric:/);
 
 const events=[],uid='ee0d98d0-089a-4d30-840d-7b58038bd18c';

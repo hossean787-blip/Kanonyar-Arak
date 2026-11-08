@@ -13,6 +13,7 @@
   <script src="backend.js" defer></script>
   <script src="app.js" defer></script>
   <script src="secretary.js" defer></script>
+  <script src="admin.js" defer></script>
 </head>
 <body>
   <div class="app-shell" id="app-shell">
@@ -50,6 +51,14 @@
           <img class="campus-art" src="assets/azad-university-logo.svg" alt="نشان دانشگاه آزاد اسلامی" width="170" height="180">
         </div>
         <div class="home-body">
+          <section id="home-management" class="home-management" hidden aria-label="دسترسی مدیریت">
+            <div class="home-management-copy">
+              <span id="home-management-overline">دسترسی ویژه فعال</span>
+              <strong id="home-management-title">پنل مدیریتی</strong>
+              <small id="home-management-caption">ابزارهای مدیریتی حساب شما</small>
+            </div>
+            <button type="button" id="home-management-btn" class="home-management-btn">ورود به مدیریت</button>
+          </section>
           <div class="section-heading home-register-heading">
             <h2 id="online-events-heading">رویدادهای نمونه</h2>
             <button class="text-link" type="button" data-goto="events">مشاهده همه <span aria-hidden="true">‹</span></button>
@@ -125,24 +134,67 @@
         <h1 id="title-profile" class="screen-title">حساب کاربری</h1>
         <p class="screen-description">اطلاعات و تنظیمات حساب کاربری ✨</p>
         <section id="online-connection" class="online-connection" hidden aria-live="polite"></section>
-        <section id="online-auth-panel" class="online-auth-panel" hidden aria-labelledby="online-auth-title">
-          <h2 id="online-auth-title">ورود دانشجو</h2>
-          <p class="online-caption">ورود امن با ایمیل و رمز عبور؛ شماره دانشجویی هنوز توسط دانشگاه تأیید نمی‌شود.</p>
-          <form id="online-auth-form">
-            <label class="field">ایمیل
-              <input id="online-email" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="name@example.com">
-            </label>
-            <label class="field">رمز عبور
-              <input id="online-password" name="password" type="password" autocomplete="current-password" minlength="8" maxlength="128" required>
-            </label>
-            <div class="online-signup-only" hidden>
-              <label class="field">نام و نام خانوادگی
-                <input id="online-name" name="name" maxlength="80" autocomplete="name">
+        <section id="online-auth-panel" class="online-auth-panel v7-auth" hidden aria-labelledby="online-auth-title">
+          <div class="v7-auth-hero">
+            <span class="v7-auth-spark" aria-hidden="true">✦</span>
+            <div><p class="v7-overline">کانون‌ها | حساب کاربری</p>
+              <h2 id="online-auth-title">ورود دانشجو</h2>
+              <p class="online-caption">پنل مشترک دانشجو، دبیر کانون و مدیرکل</p>
+            </div>
+          </div>
+          <div class="v7-role-switch" role="group" aria-label="نوع حساب">
+            <button type="button" id="auth-role-student" class="active" data-auth-role="student" aria-pressed="true">دانشجو / دبیر</button>
+            <button type="button" id="auth-role-manager" data-auth-role="manager" aria-pressed="false">مدیر کل</button>
+          </div>
+          <form id="online-auth-form" class="v7-auth-form">
+            <div id="student-login-fields">
+              <label class="field">ورود با کدام شناسه؟
+                <select id="student-login-kind" name="kind">
+                  <option value="student">شماره دانشجویی</option>
+                  <option value="national">کد ملی</option>
+                </select>
               </label>
-              <label class="field">شماره دانشجویی (۶ تا ۲۰ رقم انگلیسی)
-                <input id="online-student" name="studentNumber" inputmode="numeric" pattern="[0-9]{6,20}" maxlength="20">
+              <label class="field">شماره دانشجویی یا کد ملی
+                <input id="online-identifier" name="identifier" inputmode="numeric" autocomplete="username" maxlength="20" required placeholder="شناسه ورود را وارد کنید">
               </label>
             </div>
+            <div id="manager-login-fields" hidden>
+              <label class="field">ایمیل مدیرکل
+                <input id="online-email" name="email" type="email" autocomplete="email" maxlength="254" value="hossean787@gmail.com" required>
+              </label>
+              <p class="v7-hint">اختیارات مدیرکل پس از تأیید مالکیت این ایمیل توسط سرور فعال می‌شوند.</p>
+            </div>
+            <div id="student-signup-fields" class="v7-signup" hidden>
+              <div class="v7-signup-heading">اطلاعات فردی</div>
+              <label class="field">نام و نام خانوادگی
+                <input id="online-name" name="name" maxlength="80" autocomplete="name" placeholder="نام و نام خانوادگی کامل">
+              </label>
+              <label class="field">شماره دانشجویی
+                <input id="online-student" name="studentNumber" inputmode="numeric" pattern="[0-9]{6,20}" maxlength="20" placeholder="۶ تا ۲۰ رقم انگلیسی">
+              </label>
+              <label class="field">کد ملی
+                <input id="online-national" name="nationalId" inputmode="numeric" pattern="[0-9]{10}" maxlength="10" placeholder="ده رقم کد ملی">
+              </label>
+              <label class="field">تاریخ تولد
+                <input id="online-birth" name="birthDate" type="date">
+              </label>
+              <p class="v7-hint">تاریخ تولد را در تقویم میلادی انتخاب کنید. هیچ پیامک یا کد تأیید شماره‌ای لازم نیست.</p>
+              <div class="v7-signup-heading">اطلاعات تحصیلی</div>
+              <label class="field">دانشگاه
+                <input id="online-university" name="university" maxlength="120" placeholder="نام دانشگاه">
+              </label>
+              <label class="field">دانشکده
+                <input id="online-faculty" name="faculty" maxlength="120" placeholder="نام دانشکده">
+              </label>
+              <label class="field">رشته تحصیلی
+                <input id="online-major" name="major" maxlength="120" placeholder="نام رشته">
+              </label>
+              <p class="v7-hint">نام دانشگاه، دانشکده و رشته خود را دقیق وارد کنید. اطلاعات فعلاً خوداظهاری است.</p>
+            </div>
+            <label class="field">رمز عبور
+              <input id="online-password" name="password" type="password" autocomplete="current-password" minlength="8" maxlength="128" required placeholder="رمز عبور">
+            </label>
+            <p id="signup-password-hint" class="v7-hint" hidden>رمز حداقل ۱۰ نویسه داشته باشد؛ از رمز تکراری استفاده نکنید. بازیابی حساب بدون ایمیل نیازمند پشتیبانی مدیرکل است.</p>
             <button id="online-auth-submit" class="pill-btn sheet-action" type="submit">ورود به حساب</button>
           </form>
           <button id="online-auth-toggle" class="online-auth-toggle" type="button">حساب ندارم؛ ثبت‌نام</button>
@@ -187,6 +239,23 @@
           </div>
           <p id="secretary-message" class="secretary-message" role="status" aria-live="polite"></p>
           <div id="secretary-content" aria-live="polite"></div>
+        </section>
+        <section id="admin-panel" class="admin-panel" hidden aria-labelledby="admin-title">
+          <header class="admin-hero">
+            <div class="admin-emblem" aria-hidden="true">✦</div>
+            <div><p class="admin-eyebrow">دسترسی حفاظت‌شده</p><h2 id="admin-title">مدیریت کل کانون‌ها</h2>
+              <p>کانون‌ها، کاربران، دبیران و رویدادها</p></div>
+          </header>
+          <div id="admin-tabs" class="admin-tabs" role="group" aria-label="بخش‌های مدیریتی">
+            <button type="button" data-admin-tab="dashboard">نمای کلی</button>
+            <button type="button" data-admin-tab="clubs">کانون‌ها</button>
+            <button type="button" data-admin-tab="events">رویدادها</button>
+            <button type="button" data-admin-tab="members">عضویت‌ها</button>
+            <button type="button" data-admin-tab="secretaries">دبیران</button>
+            <button type="button" data-admin-tab="students">دانشجویان</button>
+          </div>
+          <p id="admin-message" class="admin-message" role="status" aria-live="polite"></p>
+          <div id="admin-content"></div>
         </section>
         <div class="settings-menu" id="profile-menu">
           <button class="menu-item" type="button" data-action="edit">

@@ -501,6 +501,51 @@
     const result=await edgeRequest('kanonha-admin-console',{action,...fields},true);
     return result.result;
   }
+  /* Five-star ratings: identity and one-vote constraint are enforced in Postgres. */
+  async function ratingCatalog() {
+    const rows=await request(restPath+
+      'kanonha_rating_targets?select=id,category,title,subtitle,rating_count,rating_sum'
+      +'&is_active=eq.true&order=title.asc&limit=1000',{auth:false});
+    return readRows(rows);
+  }
+  async function ratingMyVotes() {
+    const uid=mustUser();
+    const rows=await request(restPath+
+      'kanonha_ratings?select=target_id,stars&user_id=eq.'+encodeURIComponent(uid)
+      +'&limit=1000',{requireUser:true});
+    return readRows(rows);
+  }
+  async function ratingSubmit(targetId,stars) {
+    const uid=mustUser();
+    requireUuid(targetId,'مورد نظرسنجی');
+    if(!Number.isInteger(stars)||stars<1||stars>5)
+      throw new ApiError('امتیاز باید بین ۱ تا ۵ ستاره باشد.');
+    try{
+      await request(restPath+'kanonha_ratings',{
+        method:'POST',requireUser:true,headers:{Prefer:'return=minimal'},
+        body:{user_id:uid,target_id:targetId,stars}
+      });
+    }catch(error){
+      if(error && error.status===409)
+        throw new ApiError('برای این مورد قبلاً رأی ثبت شده است.',409);
+      throw error;
+    }
+    return true;
+  }
+  async function ratingAddProfessor(title,subtitle='') {
+    mustUser();
+    const name=String(title||'').trim();
+    const faculty=String(subtitle||'').trim();
+    if(name.length<2||name.length>120||faculty.length>120)
+      throw new ApiError('نام استاد یا دانشکده معتبر نیست.');
+    const rows=await request(restPath+'kanonha_rating_targets',{
+      method:'POST',requireUser:true,headers:{Prefer:'return=representation'},
+      body:{category:'professor',title:name,subtitle:faculty,is_active:true}
+    });
+    if(!Array.isArray(rows)||rows.length!==1)
+      throw new ApiError('ثبت استاد مجاز نیست یا انجام نشد.');
+    return rows[0];
+  }
   window.KanonhaBackend = Object.freeze({
     enabled, signUp, signIn, signOut, me, profile, ensureProfile,
     saveProfile, clubs, events, memberships, registrations,
@@ -509,6 +554,7 @@
     secretaryDecideMembership, secretaryRoster, secretarySetAttendance,
     studentSignUp,studentSignIn,managerSignUp,isManager,academicDetails,saveAcademicDetails,adminAction,
     academicCatalog,resumeFromBiometric,biometricRefreshToken,
+    ratingCatalog,ratingMyVotes,ratingSubmit,ratingAddProfessor,
     get currentUser() { return user; }
   });
 })();

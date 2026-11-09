@@ -1,4 +1,4 @@
-name: Kanonha v0.9.5 minimal sign-in and automatic identity verification
+name: Kanonha v0.9.6 minimal signup and immediate student access
 on:
   push:
     branches: [main]
@@ -29,6 +29,7 @@ jobs:
           node --check tests/academic-biometric-smoke.cjs
           node --check tests/biometric-relogin-smoke.cjs
           node --check tests/login-redesign-smoke.cjs
+          node --check tests/signup-clean-ui-smoke.cjs
           node --check app/src/main/assets/jalali.js
           node --check tests/jalali-auth-ux-smoke.cjs
           node --check tests/ui-smoke.cjs
@@ -90,6 +91,7 @@ jobs:
           node tests/academic-biometric-smoke.cjs
           node tests/biometric-relogin-smoke.cjs
           node tests/login-redesign-smoke.cjs
+          node tests/signup-clean-ui-smoke.cjs
           node tests/role-workspaces-smoke.cjs
           node tests/multi-role-auth-smoke.cjs
       - name: Verify real isolated Supabase Data API and anonymous RLS
@@ -108,16 +110,16 @@ jobs:
           ! find app/src -type f -name '*.keystore' | grep -q .
           ! find app/src -type f -name '*.p12' | grep -q .
           grep -q 'applicationId = "ir.kanonha.app"' app/build.gradle.kts
-          grep -q 'versionCode = 20' app/build.gradle.kts
+          grep -q 'versionCode = 21' app/build.gradle.kts
           grep -q 'android:allowBackup="false"' app/src/main/AndroidManifest.xml
           echo 'Release output validated; unsigned candidate requires secure external signing'
       - uses: actions/upload-artifact@v4
         with:
-          name: kanonha-0.9.5-release-unsigned
+          name: kanonha-0.9.6-release-unsigned
           path: app/build/outputs/apk/release/app-release-unsigned.apk
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
-          name: kanonha-0.9.5-debug-validation
+          name: kanonha-0.9.6-debug-validation
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error

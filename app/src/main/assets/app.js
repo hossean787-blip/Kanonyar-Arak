@@ -167,12 +167,12 @@
     $('student-login-fields').hidden = !student || onlineSignup;
     $('student-signup-fields').hidden = !student || !onlineSignup;
     $('manager-login-fields').hidden = student;
-    $('signup-password-hint').hidden = !onlineSignup || !student;
     $('online-auth-title').textContent = onlineSignup
-      ? student ? 'ثبت‌نام دانشجو' : 'ثبت حساب مدیر کل'
+      ? student ? 'ثبت‌نام' : 'ثبت حساب مدیر کل'
       : student ? 'ورود' : 'ورود مدیرکل';
+    $('online-auth-title').setAttribute('aria-label', $('online-auth-title').textContent);
     $('online-auth-submit').textContent = onlineSignup ? 'ایجاد حساب' : 'ورود به حساب';
-    $('online-auth-toggle').textContent = onlineSignup ? 'حساب دارم؛ ورود'
+    $('online-auth-toggle').textContent = onlineSignup ? 'ورود به حساب'
       : student ? 'ساخت حساب کاربری' : 'راه‌اندازی حساب مدیرکل';
     for (const role of ['student','manager']) {
       const el = $('auth-role-' + role);
@@ -222,9 +222,14 @@
        ? previous : '';
     updateSignupFaculty();
     const status=$('academic-catalog-status');
-    if(status)status.textContent=academicDirectory.universities.length
-       ? 'دانشگاه و دانشکده را از فهرست ثبت‌شده مدیرکل انتخاب کنید.'
-       : 'هنوز دانشگاهی توسط مدیرکل تعریف نشده است؛ ثبت‌نام پس از ثبت دانشگاه و دانشکده امکان‌پذیر می‌شود.';
+    if(status) {
+      // Normal registration needs no administrative-approval explanation;
+      // show a message only when the directory actually blocks signup.
+      const noUniversity=academicDirectory.universities.length===0;
+      status.hidden=!noUniversity;
+      status.textContent=noUniversity
+        ? 'هنوز دانشگاهی ثبت نشده است؛ امکان انتخاب دانشگاه وجود ندارد.' : '';
+    }
   }
   async function refreshAcademicDirectory() {
     if(!onlineMode || academicDirectoryLoading || typeof onlineBackend.academicCatalog !== 'function')return;
@@ -239,7 +244,10 @@
       updateAcademicSignup();
     } catch(error) {
       const status=$('academic-catalog-status');
-      if(status)status.textContent='فهرست دانشگاه‌ها دریافت نشد؛ اتصال را بررسی کنید.';
+      if(status) {
+        status.hidden=false;
+        status.textContent='دریافت دانشگاه‌ها ناموفق بود؛ اتصال اینترنت را بررسی کنید.';
+      }
     } finally {academicDirectoryLoading=false;}
   }
   function updateBiometricUI() {
@@ -274,6 +282,10 @@
     }
   }
   async function finishOnlineSignIn(manager,form=null) {
+    const justRegistered=Boolean(onlineSignup && !manager);
+    // Newly registered students are signed in immediately; no director
+    // approval, second login, or email confirmation step is required.
+    onlineSignup=false;
     state=defaultState();
     state.isManager=Boolean(manager);
     activePersona=manager?'manager':'student';
@@ -287,7 +299,8 @@
     onlineRenderAuth();
     $('online-auth-status').textContent='';
     go(personaHome());
-    notify('ورود به حساب انجام شد.');
+    notify(justRegistered?'حساب ساخته شد؛ می‌توانید از امکانات دانشجویی استفاده کنید.'
+      :'ورود به حساب انجام شد.');
   }
   function setupBiometric() {
     if(!onlineMode || !window.KanonhaBiometric)return;
@@ -503,6 +516,7 @@
     activePersona = 'student'; assignedSecretary = false; studentProfileReady = false;
     adminPanelReady = false; secretaryPanelReady = false;
     roleCapabilitiesChecked = false;
+    onlineSignup=false;
     $('home-management').hidden = true;
     $('role-switcher').hidden = true;
     renderAll();

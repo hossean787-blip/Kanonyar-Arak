@@ -36,6 +36,8 @@ jobs:
           node --check tests/ui-smoke.cjs
           node --check app/src/main/assets/backend.js
           node --check app/src/main/assets/ratings.js
+          node --check app/src/main/assets/ratings-admin.js
+          node --check tests/ratings-manager-smoke.cjs
           node --check tests/ratings-smoke.cjs
           node --check app/src/main/assets/config.js
           node --check tests/backend-smoke.cjs
@@ -86,6 +88,7 @@ jobs:
           node tests/backend-smoke.cjs
           node tests/online-ui-smoke.cjs
           node tests/ratings-smoke.cjs
+          node tests/ratings-manager-smoke.cjs
           node tests/secretary-backend-smoke.cjs
           node tests/secretary-ui-smoke.cjs
           node tests/unified-auth-smoke.cjs

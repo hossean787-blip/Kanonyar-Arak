@@ -14,10 +14,13 @@
   let refreshing = null;
 
   class ApiError extends Error {
-    constructor(message, status = 0) {
+    constructor(message, status = 0, field = '') {
       super(String(message).slice(0, 280));
       this.name = 'KanonhaApiError';
       this.status = status;
+      // Explicit allowlist: never display arbitrary server selectors in DOM.
+      this.field = ['name','studentNumber','nationalId','birthDate','mobile',
+        'university','faculty','major','password'].includes(field) ? field : '';
     }
   }
   const needConfig = () => { if (!enabled) throw new ApiError('اتصال آنلاین برای کانون‌ها پیکربندی نشده است.'); };
@@ -27,7 +30,8 @@
   function parseResponseError(obj, status) {
     const message = obj && typeof obj === 'object' &&
       (obj.msg || obj.error_description || obj.message || obj.error || obj.hint);
-    return new ApiError(typeof message === 'string' ? message : 'پاسخ نامعتبر سرور', status);
+    return new ApiError(typeof message === 'string' ? message : 'پاسخ نامعتبر سرور',
+      status, obj && typeof obj === 'object' ? obj.field : '');
   }
   async function request(path, options = {}) {
     needConfig();
@@ -395,37 +399,67 @@
       throw new ApiError('اتصال به سرویس حساب کاربری برقرار نشد.');
     }finally{clearTimeout(timeout)}
   }
-  async function studentSignUp(fields) {
-    const name=String(fields.name||'').trim(),studentNumber=String(fields.studentNumber||'').trim();
-    const nationalId=String(fields.nationalId||'').trim(),birthDate=String(fields.birthDate||'').trim();
-    const mobile=String(fields.mobile||'').trim();
-    const university=String(fields.university||'').trim(),faculty=String(fields.faculty||'').trim();
+  function normalizeDigits(value) {
+    return String(value || '').replace(/[۰-۹٠-٩]/g, c => {
+      const fa='۰۱۲۳۴۵۶۷۸۹'.indexOf(c);
+      return fa >= 0 ? String(fa) : String('٠١٢٣٤٥٦٧٨٩'.indexOf(c));
+    });
+  }
+  function nationalIdValid(value) {
+    if(!/^\d{10}$/.test(value) || /^(\d)\1{9}$/.test(value))return false;
+    const check=[...value.slice(0,9)].reduce((sum,c,i)=>sum+Number(c)*(10-i),0)%11;
+    return Number(value[9])===(check<2?check:11-check);
+  }
+  function registrationError(field,message) {
+    throw new ApiError(message,422,field);
+  }
+  function validateStudentRegistration(fields) {
+    const name=String(fields.name||'').trim();
+    const studentNumber=normalizeDigits(fields.studentNumber).trim();
+    const nationalId=normalizeDigits(fields.nationalId).trim();
+    const mobile=normalizeDigits(fields.mobile).trim();
+    const birthDate=String(fields.birthDate||'').trim();
+    const university=String(fields.university||'').trim();
+    const faculty=String(fields.faculty||'').trim();
     const major=String(fields.major||'').trim();
-    if(name.length<2||!await checkStudentFields(fields))throw new ApiError('اطلاعات ثبت‌نام معتبر نیست.');
-    const response=await edgeRequest('kanonha-student-auth',{action:'register',
-      name,studentNumber,nationalId,birthDate,mobile,university,faculty,major,
-      password:fields.password});
+    const password=fields.password;
+    if(name.length<2||name.length>80)
+      registrationError('name','نام و نام خانوادگی باید بین ۲ تا ۸۰ نویسه باشد.');
+    if(!/^\d{6,20}$/.test(studentNumber))
+      registrationError('studentNumber','شماره دانشجویی باید بین ۶ تا ۲۰ رقم باشد.');
+    if(!nationalIdValid(nationalId))
+      registrationError('nationalId','کد ملی معتبر نیست؛ ۱۰ رقم و رقم کنترل آن را بررسی کنید.');
+    if(!/^09\d{9}$/.test(mobile))
+      registrationError('mobile','شماره موبایل باید ۱۱ رقم و با ۰۹ شروع شود.');
+    const date=new Date(birthDate+'T00:00:00Z');
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(birthDate)||
+      Number.isNaN(date.getTime()) || date.toISOString().slice(0,10)!==birthDate ||
+      date.getTime()>=Date.now() || date.getUTCFullYear()<1920)
+      registrationError('birthDate','تاریخ تولد را به‌صورت شمسی و معتبر انتخاب کنید.');
+    if(university.length<2||university.length>120)
+      registrationError('university','دانشگاه را از فهرست انتخاب کنید.');
+    if(faculty.length<2||faculty.length>120)
+      registrationError('faculty','دانشکده مربوط به دانشگاه خود را انتخاب کنید.');
+    if(major.length<2||major.length>120)
+      registrationError('major','نام رشته تحصیلی باید بین ۲ تا ۱۲۰ نویسه باشد.');
+    if(typeof password!=='string'||password.length<10||password.length>128)
+      registrationError('password','رمز عبور باید حداقل ۱۰ و حداکثر ۱۲۸ نویسه باشد.');
+    return {name,studentNumber,nationalId,birthDate,mobile,university,faculty,major,password};
+  }
+  async function studentSignUp(fields) {
+    // Single source of field validation. Only normalized identifiers leave the device.
+    const cleaned=validateStudentRegistration(fields);
+    const response=await edgeRequest('kanonha-student-auth',{action:'register',...cleaned});
     if(!response||!response.session)throw new ApiError('نشست ثبت‌نام دریافت نشد.');
     setSession(response.session);
     const verified=await me();
     if(!verified||!uuid(verified.id))throw new ApiError('حساب ایجاد شد؛ دوباره وارد شوید.');
     return verified;
   }
-  async function checkStudentFields(fields) {
-    const student=String(fields.studentNumber||'').trim(),national=String(fields.nationalId||'').trim();
-    const birth=String(fields.birthDate||'').trim();
-    const password=String(fields.password||'');
-    return /^\d{6,20}$/.test(student)&&/^\d{10}$/.test(national)
-      &&/^09\d{9}$/.test(String(fields.mobile||'').trim())
-      &&/^\d{4}-\d{2}-\d{2}$/.test(birth)
-      &&['university','faculty','major'].every(k=>{
-        const n=String(fields[k]||'').trim().length;return n>=2&&n<=120;
-      })&&password.length>=10&&password.length<=128;
-  }
   async function studentSignIn(kind,identifier,password) {
     if(!['student','national','auto'].includes(kind))throw new ApiError('روش ورود نامعتبر است.');
     const response=await edgeRequest('kanonha-student-auth',{action:'login',kind,
-      identifier:String(identifier||'').trim(),password:String(password||'')});
+      identifier:normalizeDigits(identifier).trim(),password:String(password||'')});
     if(!response||!response.session)throw new ApiError('نشست ورود دریافت نشد.');
     setSession(response.session);
     return me();

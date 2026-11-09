@@ -1892,3 +1892,23 @@ button:focus-visible,input:focus-visible,select:focus-visible {outline-color:#39
   #screen-profile[data-auth-view="signup"] #online-auth-panel {padding:23px 15px 22px}
   #screen-profile[data-auth-view="signup"] .v7-auth-hero {gap:12px}
 }
+
+/* v0.9.7 — precise RTL signup field errors, without logging identifiers */
+#screen-profile[data-auth-view="signup"] .signup-invalid-input {
+  border-color:#C54C53!important;
+  box-shadow:0 0 0 3px rgba(197,76,83,.12)!important;
+}
+#screen-profile[data-auth-view="signup"] .signup-inline-error {
+  display:block;
+  margin:3px 3px 1px;
+  color:#AC303A;
+  font-size:11px;
+  font-weight:650;
+  line-height:1.85;
+  text-align:right;
+  letter-spacing:0;
+}
+#screen-profile[data-auth-view="signup"] #online-auth-status {
+  line-height:1.9;
+  overflow-wrap:anywhere;
+}

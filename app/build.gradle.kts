@@ -29,8 +29,8 @@ android {
         applicationId = "ir.kanonha.app"  // Do not change: preserves installed app identity.
         minSdk = 26
         targetSdk = 35
-        versionCode = 21
-        versionName = "0.9.6-clean-signup-beta"
+        versionCode = 22
+        versionName = "0.9.7-signup-validation-beta"
     }
     signingConfigs {
         if (releaseSigningConfigured) {

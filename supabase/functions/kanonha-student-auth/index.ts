@@ -60,18 +60,31 @@ function validRegistration(input:Record<string,unknown>) {
     faculty=text(input.faculty,120),major=text(input.major,120);
   const birth=text(input.birthDate,10),password=input.password;
   const d=new Date(birth+"T00:00:00Z");
-  if(!/^\d{6,20}$/.test(student)||!nationalValid(national)||!/^09\d{9}$/.test(mobile)||
-    fullName.length<2||fullName.length>80||
-    ![university,faculty,major].every(s=>s.length>=2&&s.length<=120)||
-    !/^\d{4}-\d{2}-\d{2}$/.test(birth) || Number.isNaN(d.getTime()) ||
-    d.toISOString().slice(0,10)!==birth ||
-    d.getTime()>=Date.now()||d.getUTCFullYear()<1920 ||
-    typeof password!=="string"||password.length<10||password.length>128) return null;
+  const invalid=(field:string,error:string)=>({field,error});
+  if(fullName.length<2||fullName.length>80)
+    return invalid("name","نام و نام خانوادگی باید بین ۲ تا ۸۰ نویسه باشد.");
+  if(!/^\d{6,20}$/.test(student))
+    return invalid("studentNumber","شماره دانشجویی باید بین ۶ تا ۲۰ رقم باشد.");
+  if(!nationalValid(national))
+    return invalid("nationalId","کد ملی معتبر نیست؛ رقم کنترل کد ملی را بررسی کنید.");
+  if(!/^09\d{9}$/.test(mobile))
+    return invalid("mobile","شماره موبایل باید ۱۱ رقم و با ۰۹ شروع شود.");
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(birth)||Number.isNaN(d.getTime())||
+    d.toISOString().slice(0,10)!==birth||d.getTime()>=Date.now()||d.getUTCFullYear()<1920)
+    return invalid("birthDate","تاریخ تولد معتبر نیست؛ تاریخ شمسی را دوباره انتخاب کنید.");
+  if(university.length<2||university.length>120)
+    return invalid("university","دانشگاه را از فهرست انتخاب کنید.");
+  if(faculty.length<2||faculty.length>120)
+    return invalid("faculty","دانشکده مربوط به دانشگاه را از فهرست انتخاب کنید.");
+  if(major.length<2||major.length>120)
+    return invalid("major","رشته تحصیلی باید بین ۲ تا ۱۲۰ نویسه باشد.");
+  if(typeof password!=="string"||password.length<10||password.length>128)
+    return invalid("password","رمز عبور باید حداقل ۱۰ و حداکثر ۱۲۸ نویسه باشد.");
   return {student,national,mobile,fullName,university,faculty,major,birth,password};
 }
 async function create(input:Record<string,unknown>,req:Request) {
   const r=validRegistration(input);
-  if(!r) return reply(422,{error:"اطلاعات ثبت‌نام معتبر نیست؛ کد ملی، تاریخ تولد و رمز را بررسی کنید."});
+  if("error" in r) return reply(422,{error:r.error,field:r.field});
   if(!await limited(req,"register:"+r.student,true))return reply(429,{error:"تعداد تلاش‌ها بیش از حد مجاز است. بعداً دوباره اقدام کنید."});
   // Read the trusted manager-defined directory; never accept a forged university/faculty pair.
   const university=await http("/rest/v1/kanonha_universities?select=id&name=eq."+

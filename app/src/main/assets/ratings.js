@@ -54,7 +54,7 @@
       el.setAttribute('aria-selected',String(active));
       el.tabIndex=active?0:-1;
     });
-    const published=control.results_published;
+    const published=control.results_published && Boolean(backend&&backend.currentUser);
     const list=published?ordered(targets.filter(t=>t.category===category)):
       targets.filter(t=>t.category===category).sort((a,b)=>a.title.localeCompare(b.title,'fa'));
     const leaders=published?list.filter(t=>count(t)>=5).slice(0,3):[];
@@ -113,7 +113,8 @@
         ?(userId?'نظرسنجی به دستور مدیرکل فعال است. هر دانشجو به هر مورد فقط یک رأی می‌دهد.':
            'نظرسنجی فعال است؛ برای ثبت امتیاز وارد حساب دانشجویی شوید.')
         :control.results_published
-          ?'رأی‌گیری بسته شده و نتایج با تأیید مدیرکل منتشر شده‌اند.'
+          ?(userId?'رأی‌گیری بسته شده و نتایج با تأیید مدیرکل منتشر شده‌اند.':
+             'نتایج منتشر شده‌اند؛ برای مشاهده آن‌ها وارد حساب دانشجویی شوید.')
           :'نظرسنجی بسته است. نتایج فقط پس از تأیید مدیرکل نمایش داده می‌شوند.');
     }catch(error){
       if(current!==seq)return;

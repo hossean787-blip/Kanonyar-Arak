@@ -2017,3 +2017,7 @@ button:focus-visible,input:focus-visible,select:focus-visible {outline-color:#39
 @media(prefers-reduced-motion:reduce){
   .ratings-home-entry,.ratings-tabs button,.ratings-star-buttons button{transition:none}
 }
+
+/* Numeric 1–5 labels make every star value unambiguous on touch screens. */
+.ratings-star-buttons button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;height:41px;font-size:20px;line-height:1}
+.ratings-star-buttons button small{display:block;font-size:10px;font-weight:800;color:#805f26;line-height:1}

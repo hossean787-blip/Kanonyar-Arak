@@ -38,7 +38,7 @@
     for(let value=1;value<=5;value++)
       html+='<button type="button" data-rating-id="'+esc(t.id)+
         '" data-rating-value="'+value+'" aria-label="'+fmt(value)+
-        ' ستاره برای '+esc(t.title)+'" '+(busy?'disabled':'')+'>★</button>';
+        ' ستاره برای '+esc(t.title)+'" '+(busy?'disabled':'')+'>★<small>'+fmt(value)+'</small></button>';
     return html+'</div>';
   }
   function render(){
@@ -118,9 +118,10 @@
       notice('امتیاز شما با موفقیت ثبت شد و قابل تغییر نیست.');
     }catch(error){
       busy=false;
-      notice(error&&error.status===409?'برای این مورد قبلاً رأی ثبت کرده‌اید.':
-        'ثبت رأی انجام نشد: '+String(error&&error.message||'خطای ارتباط').slice(0,100),true);
+      const message=error&&error.status===409?'برای این مورد قبلاً رأی ثبت کرده‌اید.':
+        'ثبت رأی انجام نشد: '+String(error&&error.message||'خطای ارتباط').slice(0,100);
       await refresh();
+      notice(message,true);
     }
   }
   async function addProfessor(form){

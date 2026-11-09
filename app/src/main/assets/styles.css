@@ -2021,3 +2021,63 @@ button:focus-visible,input:focus-visible,select:focus-visible {outline-color:#39
 /* Numeric 1–5 labels make every star value unambiguous on touch screens. */
 .ratings-star-buttons button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;height:41px;font-size:20px;line-height:1}
 .ratings-star-buttons button small{display:block;font-size:10px;font-weight:800;color:#805f26;line-height:1}
+
+
+/* Manager-owned student survey operations v1.1 */
+.ratings-private-tag{display:inline-flex;align-items:center;max-width:92px;min-height:30px;padding:5px 9px;
+  border-radius:11px;background:#f4f8f5;color:#7f9889;font-size:10px;font-weight:800;text-align:center}
+.admin-tabs [data-admin-tab="ratings"]{background:#e8f9ee;border:1px solid #bce5cb;color:#19734c;font-weight:900}
+.admin-tabs [data-admin-tab="ratings"].active{background:#227e53;color:white}
+.admin-ratings-content{display:grid;gap:13px;direction:rtl}
+.ratings-admin-header{display:flex;align-items:center;gap:13px;
+  padding:17px;border-radius:20px;background:linear-gradient(115deg,#176c4a,#2eb582);
+  color:#fff;box-shadow:0 10px 24px rgba(34,137,83,.16)}
+.ratings-admin-header-badge{width:52px;height:52px;flex-shrink:0;display:grid;place-items:center;
+  background:rgba(255,255,255,.17);border:1px solid rgba(255,255,255,.24);
+  border-radius:17px;color:#ffeeb4;font-size:32px}
+.ratings-admin-header h3{margin:0 0 4px;color:white;font-size:17px;font-weight:900}
+.ratings-admin-header p{margin:0;font-size:10px;opacity:.89;line-height:1.8}
+.ratings-admin-status{display:flex;justify-content:space-between;align-items:center;
+  padding:14px;border-radius:15px;background:#f1f8f3;color:#5e7969;font-size:11px}
+.ratings-admin-status strong{color:#576d61;font-size:12px}
+.ratings-admin-status.open{background:#e2f8e9}.ratings-admin-status.open strong{color:#126d3f}
+.ratings-admin-status.published{background:#e7f3ff}.ratings-admin-status.published strong{color:#245e9e}
+.ratings-admin-actions{display:flex;flex-wrap:wrap;gap:8px}
+.ratings-admin-actions button,.ratings-admin-professor button{border:1px solid #d4e6d9;
+  background:#fff;color:#2b5741;padding:11px 13px;min-height:42px;border-radius:12px;
+  font:inherit;font-size:11px;font-weight:900}
+.ratings-admin-actions button.positive,.ratings-admin-professor button.positive{
+  color:#fff;background:linear-gradient(130deg,#2da772,#18744c);border:0}
+.ratings-admin-actions button.negative{color:#a34842;border-color:#f1d0cd;background:#fff7f6}
+.ratings-admin-actions .ratings-publish-btn{background:#e6f8ef;color:#0e7750;border-color:#afd9c3}
+.ratings-admin-actions button:disabled,.ratings-admin-professor button:disabled{
+  opacity:.5;cursor:not-allowed}
+.ratings-publish-warning{margin:0;padding:13px;border-radius:13px;border:1px solid #efc978;
+  background:#fff9e8;color:#7c5b20;font-size:11px;line-height:1.9;font-weight:700}
+.ratings-admin-feedback{margin:0;padding:10px 11px;background:#f3faf5;border-radius:12px;
+  color:#2c7550;font-size:11px;line-height:1.9}
+.ratings-admin-feedback.error{background:#fff0ed;color:#a33d37}
+.ratings-admin-section-title{font-size:14px;font-weight:900;color:#244736;margin:12px 0 -6px}
+.ratings-admin-help{font-size:11px;color:#6c8b79;line-height:1.8;margin:0}
+.ratings-admin-group{border-radius:18px;background:#fff;border:1px solid #dcebe2;
+  padding:13px 14px;box-shadow:0 4px 14px rgba(18,102,60,.045)}
+.ratings-admin-group-title{display:flex;justify-content:space-between;align-items:center;
+  gap:8px;margin-bottom:7px}
+.ratings-admin-group-title h4{margin:0;color:#175f40;font-size:13px;font-weight:900}
+.ratings-admin-group-title span{font-size:10px;color:#7c9485}
+.ratings-admin-item{display:flex;align-items:center;gap:12px;justify-content:space-between;
+  padding:10px 0;border-top:1px solid #edf3ef}
+.ratings-admin-item>div:first-child{min-width:0;display:grid;gap:3px}
+.ratings-admin-item strong{font-size:11px;color:#294635}
+.ratings-admin-item small{font-size:10px;color:#7e9585}
+.ratings-admin-item-score{display:grid;gap:3px;min-width:72px;text-align:left}
+.ratings-admin-item-score strong{color:#aa7a20;font-size:13px}
+.ratings-admin-empty{font-size:11px;color:#759081;line-height:1.7;margin:0}
+.ratings-admin-professor{background:#f5fcf7;border:1px solid #cde5d5;border-radius:18px;padding:15px}
+.ratings-admin-professor h3{font-size:13px;color:#236047;margin:0 0 7px}
+.ratings-admin-professor p,.ratings-admin-professor small{font-size:10px;color:#688777;line-height:1.9}
+.ratings-admin-professor form{display:grid;gap:9px}
+.ratings-admin-professor label{font-size:11px}
+.ratings-admin-professor input{min-height:42px;border-radius:11px;border:1px solid #cfe2d5;background:#fff;padding:10px}
+.ratings-admin-footnote{margin:1px 0;font-size:10px;line-height:2.1;color:#748b7d}
+@media(max-width:370px){.ratings-admin-header{padding:13px}.ratings-admin-actions button{flex:1}}

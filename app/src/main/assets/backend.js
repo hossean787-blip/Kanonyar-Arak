@@ -504,9 +504,35 @@
   /* Five-star ratings: identity and one-vote constraint are enforced in Postgres. */
   async function ratingCatalog() {
     const rows=await request(restPath+
-      'kanonha_rating_targets?select=id,category,title,subtitle,rating_count,rating_sum'
+      'kanonha_rating_targets?select=id,category,title,subtitle,is_active'
       +'&is_active=eq.true&order=title.asc&limit=1000',{auth:false});
     return readRows(rows);
+  }
+  async function ratingControl() {
+    const rows=await request(restPath+'kanonha_rating_control?select=id,voting_open,results_published&id=eq.1&limit=1',{auth:false});
+    if(!Array.isArray(rows)||rows.length!==1) throw new ApiError('تنظیمات نظرسنجی دریافت نشد.');
+    return {voting_open:rows[0].voting_open===true,
+      results_published:rows[0].results_published===true};
+  }
+  async function ratingResults() {
+    mustUser();
+    const rows=await request(restPath+'rpc/kanonha_rating_results',{requireUser:true});
+    return readRows(rows);
+  }
+  async function ratingSetControl(fields) {
+    mustUser();
+    const keys=Object.keys(fields||{});
+    if(!keys.length||keys.some(k=>!['voting_open','results_published'].includes(k))||
+       keys.some(k=>typeof fields[k]!=='boolean'))
+      throw new ApiError('تنظیمات نظرسنجی نامعتبر است.');
+    if(fields.voting_open===true&&fields.results_published===true)
+      throw new ApiError('نتایج هنگام رأی‌گیری قابل انتشار نیست.');
+    const rows=await request(restPath+'kanonha_rating_control?id=eq.1&select=id,voting_open,results_published',{
+      method:'PATCH',requireUser:true,headers:{Prefer:'return=representation'},body:fields
+    });
+    if(!Array.isArray(rows)||rows.length!==1)
+      throw new ApiError('فقط مدیرکل می‌تواند وضعیت نظرسنجی را تغییر دهد.');
+    return rows[0];
   }
   async function ratingMyVotes() {
     const uid=mustUser();
@@ -538,7 +564,7 @@
     const faculty=String(subtitle||'').trim();
     if(name.length<2||name.length>120||faculty.length>120)
       throw new ApiError('نام استاد یا دانشکده معتبر نیست.');
-    const rows=await request(restPath+'kanonha_rating_targets',{
+    const rows=await request(restPath+'kanonha_rating_targets?select=id,category,title,subtitle,is_active',{
       method:'POST',requireUser:true,headers:{Prefer:'return=representation'},
       body:{category:'professor',title:name,subtitle:faculty,is_active:true}
     });
@@ -554,7 +580,7 @@
     secretaryDecideMembership, secretaryRoster, secretarySetAttendance,
     studentSignUp,studentSignIn,managerSignUp,isManager,academicDetails,saveAcademicDetails,adminAction,
     academicCatalog,resumeFromBiometric,biometricRefreshToken,
-    ratingCatalog,ratingMyVotes,ratingSubmit,ratingAddProfessor,
+    ratingCatalog,ratingControl,ratingResults,ratingSetControl,ratingMyVotes,ratingSubmit,ratingAddProfessor,
     get currentUser() { return user; }
   });
 })();

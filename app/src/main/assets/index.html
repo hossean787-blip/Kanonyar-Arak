@@ -17,6 +17,7 @@
   <script src="ratings.js" defer></script>
   <script src="secretary.js" defer></script>
   <script src="admin.js" defer></script>
+  <script src="ratings-admin.js" defer></script>
 </head>
 <body>
   <div class="app-shell" id="app-shell">
@@ -139,16 +140,7 @@
         </section>
         <p id="ratings-notice" class="ratings-notice" role="status" aria-live="polite">در حال دریافت امتیازها…</p>
         <div class="ratings-list" id="ratings-list" aria-live="polite"></div>
-        <section class="ratings-manager" id="ratings-manager" hidden>
-          <h3>افزودن استاد به نظرسنجی</h3>
-          <p>فقط مدیرکل می‌تواند فهرست اساتید را ثبت کند.</p>
-          <form id="ratings-professor-form">
-            <label>نام و نام خانوادگی استاد<input name="title" maxlength="120" minlength="2" required autocomplete="off" placeholder="نام استاد"></label>
-            <label>دانشکده یا گروه آموزشی<input name="subtitle" maxlength="120" autocomplete="off" placeholder="نام دانشکده (اختیاری)"></label>
-            <button type="submit">افزودن استاد</button>
-          </form>
-        </section>
-        <p class="ratings-privacy">هر دانشجو به هر مورد فقط یک‌بار امتیاز می‌دهد. رأی‌ها قابل تغییر نیستند و هویت رأی‌دهندگان نمایش داده نمی‌شود. رتبه‌های رسمی به حداقل ۵ رأی نیاز دارند.</p>
+        <p class="ratings-privacy">هر دانشجو به هر مورد فقط یک‌بار امتیاز می‌دهد. رأی‌ها قابل تغییر نیستند. فقط مدیرکل نظرسنجی را برگزار می‌کند و نتایج پس از تأیید او منتشر می‌شوند.</p>
       </section>
 
       <!-- ==================== صفحه کانون‌ها ==================== -->
@@ -347,6 +339,7 @@
             <button type="button" data-admin-tab="secretaries">دبیران</button>
             <button type="button" data-admin-tab="students">دانشجویان</button>
             <button type="button" data-admin-tab="universities">دانشگاه‌ها</button>
+            <button type="button" data-admin-tab="ratings">نظرسنجی ⭐</button>
           </div>
           <p id="admin-message" class="admin-message" role="status" aria-live="polite"></p>
           <div id="admin-content"></div>

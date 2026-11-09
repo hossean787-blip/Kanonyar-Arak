@@ -7,7 +7,8 @@
     ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
   const fmt=n=>Number(n).toLocaleString('fa-IR');
   const categoryNames={club:'کانون‌ها',professor:'اساتید',faculty:'دانشکده‌ها'};
-  let category='club',targets=[],mine=new Map(),busy=false,seq=0,manager=false;
+  let category='club',targets=[],mine=new Map(),busy=false,seq=0;
+  let control={voting_open:false,results_published:false};
 
   const count=t=>Number(t.rating_count)||0;
   const average=t=>count(t)>0?Number(t.rating_sum)/count(t):0;
@@ -32,6 +33,8 @@
       return '<div class="ratings-voted">'+stars(value)+
         '<span>رأی شما: '+fmt(value)+' از ۵ — ثبت‌شده</span></div>';
     }
+    if(!control.voting_open)
+      return '<p class="ratings-login-hint">رأی‌گیری در حال حاضر بسته است.</p>';
     if(!backend||!backend.currentUser)
       return '<p class="ratings-login-hint">برای ثبت امتیاز وارد حساب دانشجویی شوید.</p>';
     let html='<div class="ratings-star-buttons" role="group" aria-label="ثبت امتیاز برای '+esc(t.title)+'">';
@@ -51,13 +54,17 @@
       el.setAttribute('aria-selected',String(active));
       el.tabIndex=active?0:-1;
     });
-    const list=ordered(targets.filter(t=>t.category===category));
-    const leaders=list.filter(t=>count(t)>=5).slice(0,3);
-    $('ratings-leader-list').innerHTML=leaders.length?leaders.map((t,i)=>
+    const published=control.results_published && Boolean(backend&&backend.currentUser);
+    const list=published?ordered(targets.filter(t=>t.category===category)):
+      targets.filter(t=>t.category===category).sort((a,b)=>a.title.localeCompare(b.title,'fa'));
+    const leaders=published?list.filter(t=>count(t)>=5).slice(0,3):[];
+    $('ratings-leader-list').innerHTML=!published?
+      '<p class="ratings-empty-leaders">نتایج تا تأیید و انتشار توسط مدیرکل محرمانه می‌مانند.</p>':
+      leaders.length?leaders.map((t,i)=>
       '<div class="ratings-leader"><span class="ratings-rank">'+fmt(i+1)+'</span>'+
       '<span class="ratings-leader-name">'+esc(t.title)+'</span>'+
       '<strong>'+average(t).toFixed(2).replace('.', '٫')+' ★</strong></div>'
-    ).join(''):'<p class="ratings-empty-leaders">با رسیدن هر مورد به ۵ رأی، برترین‌ها اینجا نمایش داده می‌شوند.</p>';
+    ).join(''):'<p class="ratings-empty-leaders">برای اعلام رتبه رسمی، هر مورد به حداقل ۵ رأی نیاز دارد.</p>';
     $('ratings-list').innerHTML=list.length?list.map(t=>{
       const n=count(t),avg=average(t);
       return '<article class="ratings-card">'+
@@ -66,48 +73,60 @@
         (category==='club'?'✦':category==='professor'?'◆':'▦')+'</span>'+
         '<div><h3>'+esc(t.title)+'</h3>'+
         (t.subtitle?'<p>'+esc(t.subtitle)+'</p>':'')+'</div></div>'+
-        '<div class="ratings-score"><strong>'+ (n?avg.toFixed(2).replace('.', '٫'):'—')+
-        '</strong><span>از ۵</span></div></div>'+
-        '<div class="ratings-score-meta">'+stars(avg)+
-        '<span>'+fmt(n)+' رأی'+(n>0&&n<5?' • رتبه موقت':'')+'</span></div>'+
+        (published?'<div class="ratings-score"><strong>'+
+          (n?avg.toFixed(2).replace('.', '٫'):'—')+
+          '</strong><span>از ۵</span></div>':'<span class="ratings-private-tag">نتایج محرمانه</span>')+
+        '</div>'+
+        (published?'<div class="ratings-score-meta">'+stars(avg)+
+        '<span>'+fmt(n)+' رأی'+(n>0&&n<5?' • رتبه موقت':'')+'</span></div>':'')+
         '<div class="ratings-vote-area"><span class="ratings-vote-label">'+
         (mine.has(t.id)?'امتیاز ثبت‌شده شما':'امتیاز شما')+'</span>'+
         ratingButtons(t)+'</div></article>';
     }).join(''):'<div class="ratings-empty-state"><span aria-hidden="true">☆</span>'+
       '<strong>هنوز موردی برای امتیازدهی ثبت نشده</strong>'+
-      '<p>به محض ثبت اطلاعات واقعی، فهرست این بخش نمایش داده می‌شود.</p></div>';
-    $('ratings-manager').hidden=!(manager && category==='professor');
+      '<p>مدیرکل باید موارد واقعی نظرسنجی را ثبت کند.</p></div>';
   }
   async function refresh(){
     const current=++seq,userId=backend&&backend.currentUser?backend.currentUser.id:null;
-    busy=true;notice('در حال به‌روزرسانی امتیازها…');
+    busy=true;notice('در حال دریافت وضعیت نظرسنجی…');
     if(!backend||!backend.enabled){
-      targets=[];mine=new Map();manager=false;busy=false;
+      targets=[];mine=new Map();control={voting_open:false,results_published:false};busy=false;
       notice('برای استفاده از نظرسنجی، اتصال امن آنلاین لازم است.',true);render();return;
     }
     try{
       const responses=await Promise.all([
-        backend.ratingCatalog(),
+        backend.ratingCatalog(),backend.ratingControl(),
         userId?backend.ratingMyVotes():Promise.resolve([]),
-        userId?backend.isManager():Promise.resolve(false)
+        userId?backend.ratingResults():Promise.resolve([])
       ]);
-      if(current!==seq || userId!==(backend.currentUser&&backend.currentUser.id||null))return;
+      if(current!==seq||userId!==(backend.currentUser&&backend.currentUser.id||null))return;
+      control=responses[1];
+      const scores=new Map(control.results_published?responses[3].map(row=>[row.target_id,row]):[]);
       targets=responses[0].filter(t=>validId(t.id)&&
-        Object.prototype.hasOwnProperty.call(categoryNames,t.category));
-      mine=new Map(responses[1].map(v=>[v.target_id,Number(v.stars)]));
-      manager=Boolean(responses[2]);
-      notice(userId?'به هر مورد فقط یک‌بار می‌توانید ستاره بدهید.':
-        'برای شرکت در رأی‌گیری ابتدا وارد حساب کاربری شوید.');
+        Object.prototype.hasOwnProperty.call(categoryNames,t.category)).map(t=>{
+          const info=scores.get(t.id);
+          return {...t,rating_count:info?Number(info.rating_count):0,
+            rating_sum:info?Number(info.rating_sum):0};
+        });
+      mine=new Map(responses[2].map(v=>[v.target_id,Number(v.stars)]));
+      notice(control.voting_open
+        ?(userId?'نظرسنجی به دستور مدیرکل فعال است. هر دانشجو به هر مورد فقط یک رأی می‌دهد.':
+           'نظرسنجی فعال است؛ برای ثبت امتیاز وارد حساب دانشجویی شوید.')
+        :control.results_published
+          ?(userId?'رأی‌گیری بسته شده و نتایج با تأیید مدیرکل منتشر شده‌اند.':
+             'نتایج منتشر شده‌اند؛ برای مشاهده آن‌ها وارد حساب دانشجویی شوید.')
+          :'نظرسنجی بسته است. نتایج فقط پس از تأیید مدیرکل نمایش داده می‌شوند.');
     }catch(error){
       if(current!==seq)return;
-      targets=[];mine=new Map();manager=false;
-      notice('دریافت نظرسنجی ناموفق بود؛ اتصال اینترنت و نسخه سرور را بررسی کنید.',true);
+      targets=[];mine=new Map();control={voting_open:false,results_published:false};
+      notice('دریافت نظرسنجی ناموفق بود؛ ارتباط با سرور را بررسی کنید.',true);
     }finally{
       if(current===seq){busy=false;render();}
     }
   }
   async function sendVote(id,value,button){
     if(busy||!validId(id)||!Number.isInteger(value)||value<1||value>5)return;
+    if(!control.voting_open){notice('تنها مدیرکل می‌تواند رأی‌گیری را فعال کند.',true);return;}
     if(!backend.currentUser){notice('ابتدا وارد حساب دانشجویی شوید.',true);return;}
     if(mine.has(id)){notice('برای این مورد قبلاً امتیاز ثبت کرده‌اید.',true);return;}
     if(!targets.some(t=>t.id===id)){notice('این مورد در فهرست معتبر نیست.',true);return;}
@@ -124,25 +143,6 @@
       notice(message,true);
     }
   }
-  async function addProfessor(form){
-    if(busy||!manager)return;
-    const title=String(form.elements.title.value||'').trim();
-    const subtitle=String(form.elements.subtitle.value||'').trim();
-    if(title.length<2||title.length>120||subtitle.length>120){
-      notice('نام استاد باید حداقل ۲ حرف و حداکثر ۱۲۰ حرف باشد.',true);return;
-    }
-    busy=true;const submit=form.querySelector('[type=submit]');
-    if(submit)submit.disabled=true;
-    try{
-      await backend.ratingAddProfessor(title,subtitle);
-      form.reset();
-      await refresh();
-      notice('استاد به فهرست نظرسنجی اضافه شد.');
-    }catch(error){
-      busy=false;
-      notice('افزودن استاد انجام نشد: '+String(error&&error.message||'دسترسی یا ارتباط').slice(0,110),true);
-    }finally{if(submit)submit.disabled=false;}
-  }
   function init(){
     const root=$('screen-ratings');
     if(!root)return;
@@ -152,8 +152,6 @@
       const button=e.target.closest('[data-rating-id][data-rating-value]');
       if(button)void sendVote(button.dataset.ratingId,Number(button.dataset.ratingValue),button);
     });
-    const form=$('ratings-professor-form');
-    if(form)form.addEventListener('submit',e=>{e.preventDefault();void addProfessor(form);});
     render();
   }
   window.KanonhaRatings=Object.freeze({open:refresh});

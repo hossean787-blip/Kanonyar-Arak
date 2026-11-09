@@ -4,23 +4,27 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const root = path.resolve(__dirname, '..');
-const read = file => fs.readFileSync(path.join(root, file), 'utf8');
+const read = f => fs.readFileSync(path.join(root,f),'utf8');
 const html=read('app/src/main/assets/index.html');
 const js=read('app/src/main/assets/ratings.js');
 const backend=read('app/src/main/assets/backend.js');
 const schema=read('supabase/ratings-v100.sql');
+const controlSchema=read('supabase/ratings-manager-control-v110.sql');
 
-for (const id of ['screen-ratings','ratings-list','ratings-leader-list',
-  'ratings-professor-form','ratings-manager'])
-  assert.ok(html.includes('id="'+id+'"'), 'rating element missing: '+id);
-for (const category of ['club','professor','faculty'])
+for(const id of ['screen-ratings','ratings-list','ratings-leader-list','admin-ratings-content'])
+  if(id!=='admin-ratings-content')assert.ok(html.includes('id="'+id+'"'));
+assert.ok(html.includes('data-admin-tab="ratings"'));
+assert.ok(!html.includes('id="ratings-professor-form"'),'manager-only professor form must not be on student page');
+for(const category of ['club','professor','faculty'])
   assert.ok(html.includes('data-ratings-tab="'+category+'"'));
 assert.match(schema,/unique \(user_id,target_id\)/);
-assert.match(schema,/for insert to authenticated/);
-assert.match(schema,/revoke all on public\.kanonha_ratings from anon,authenticated/);
-assert.match(schema,/stars between 1 and 5/);
-assert.match(backend,/ratingCatalog,ratingMyVotes,ratingSubmit,ratingAddProfessor/);
-assert.match(backend,/if\(error && error\.status===409\)/);
+assert.match(controlSchema,/not \(voting_open and results_published\)/);
+assert.match(controlSchema,/revoke select on public\.kanonha_rating_targets from anon,authenticated/);
+assert.match(controlSchema,/grant select \(id,category,title,subtitle,is_active\)/);
+assert.match(controlSchema,/create policy kanonha_rating_control_manager_update/);
+assert.match(controlSchema,/where c\.id=1 and c\.voting_open and not c\.results_published/);
+assert.match(backend,/ratingCatalog,ratingControl,ratingResults,ratingSetControl,ratingMyVotes/);
+assert.ok(!backend.includes("select=id,category,title,subtitle,rating_count,rating_sum"));
 new vm.Script(js,{filename:'ratings.js'});
 
 const elements={};
@@ -38,23 +42,24 @@ const tabs=['club','professor','faculty'].map(name=>{
 const doc={readyState:'complete',getElementById:element,querySelectorAll(){return tabs}};
 const targetId='99999999-9999-4999-8999-999999999999';
 const userId='77777777-7777-4777-8777-777777777777';
-let votes=[],written=[];
+let votes=[],written=[],control={voting_open:false,results_published:false};
 const subjects=[
-  {id:targetId,category:'club',title:'<script>unsafe</script>',
-    subtitle:'',rating_count:6,rating_sum:27},
+  {id:targetId,category:'club',title:'<script>unsafe</script>',subtitle:''},
   {id:'88888888-8888-4888-8888-888888888888',category:'faculty',
-    title:'دانشکده آزمایشی',subtitle:'دانشگاه آزمایشی',rating_count:0,rating_sum:0}
+    title:'دانشکده آزمایشی',subtitle:'دانشگاه آزمایشی'}
 ];
+const scores=[{target_id:targetId,rating_count:6,rating_sum:27}];
 const api={
   enabled:true,currentUser:{id:userId},
   ratingCatalog:async()=>subjects,
+  ratingControl:async()=>({...control}),
+  ratingResults:async()=>control.results_published?scores:[],
   ratingMyVotes:async()=>votes,
-  isManager:async()=>false,
   ratingSubmit:async(id,stars)=>{
+    if(!control.voting_open)throw {status:403};
     if(votes.some(x=>x.target_id===id))throw {status:409};
-    votes.push({target_id:id,stars});
-    written.push({id,stars});
-    subjects[0].rating_count++;subjects[0].rating_sum+=stars;
+    votes.push({target_id:id,stars});written.push({id,stars});
+    scores[0].rating_count++;scores[0].rating_sum+=stars;
   }
 };
 const win={KanonhaBackend:api};
@@ -63,20 +68,36 @@ vm.runInNewContext(js,{window:win,document:doc,console,Promise,Intl});
   await win.KanonhaRatings.open();
   assert.match(element('ratings-list').innerHTML,/&lt;script&gt;unsafe/);
   assert.ok(!element('ratings-list').innerHTML.includes('<script>unsafe</script>'));
-  assert.match(element('ratings-list').innerHTML,/data-rating-value="5"/);
-  assert.match(element('ratings-leader-list').innerHTML,/ratings-leader/);
+  assert.ok(!element('ratings-list').innerHTML.includes('data-rating-value="5"'));
+  assert.ok(!element('ratings-list').innerHTML.includes('4٫50'));
+  assert.match(element('ratings-leader-list').innerHTML,/تا تأیید/);
 
   const button={dataset:{ratingId:targetId,ratingValue:'4'},disabled:false};
   const click=element('screen-ratings').listeners.click;
   click({target:{closest:s=>s==='[data-ratings-tab]'?null:button}});
+  await new Promise(resolve=>setTimeout(resolve,15));
+  assert.equal(written.length,0,'closed survey must reject UI voting');
+
+  control={voting_open:true,results_published:false};
+  await win.KanonhaRatings.open();
+  assert.match(element('ratings-list').innerHTML,/data-rating-value="5"/);
+  assert.ok(!element('ratings-leader-list').innerHTML.includes('ratings-leader"><span'));
+  click({target:{closest:s=>s==='[data-ratings-tab]'?null:button}});
   await new Promise(resolve=>setTimeout(resolve,25));
-  assert.equal(written.length,1);
-  assert.equal(written[0].stars,4);
-  assert.match(element('ratings-list').innerHTML,/ثبت‌شده/);
+  assert.equal(written.length,1);assert.equal(written[0].stars,4);
   click({target:{closest:s=>s==='[data-ratings-tab]'?null:button}});
   await new Promise(resolve=>setTimeout(resolve,15));
-  assert.equal(written.length,1,'second UI vote must never be sent');
+  assert.equal(written.length,1,'one vote per student and target');
 
+  control={voting_open:false,results_published:false};
+  await win.KanonhaRatings.open();
+  assert.ok(!element('ratings-list').innerHTML.includes('4٫'));
+  assert.match(element('ratings-leader-list').innerHTML,/محرمانه/);
+
+  control={voting_open:false,results_published:true};
+  await win.KanonhaRatings.open();
+  assert.match(element('ratings-leader-list').innerHTML,/ratings-rank/);
+  assert.match(element('ratings-list').innerHTML,/ratings-score/);
   click({target:{closest:s=>s==='[data-ratings-tab]'?tabs[1]:null}});
   assert.equal(element('ratings-category-heading').textContent,'امتیاز اساتید');
   assert.match(element('ratings-list').innerHTML,/هنوز موردی/);
@@ -84,6 +105,6 @@ vm.runInNewContext(js,{window:win,document:doc,console,Promise,Intl});
   api.currentUser=null;
   click({target:{closest:s=>s==='[data-ratings-tab]'?tabs[0]:null}});
   await win.KanonhaRatings.open();
-  assert.match(element('ratings-list').innerHTML,/وارد حساب/);
-  console.log('PASS: three tabs, escape, ranking, one vote UI, persistence refetch, guest mode');
+  assert.ok(!element('ratings-list').innerHTML.includes('ratings-score"><strong'));
+  console.log('PASS: private preapproval, no closed voting, single vote, published ranking, guest protection, XSS');
 })().catch(error=>{console.error(error);process.exitCode=1});

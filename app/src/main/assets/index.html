@@ -14,6 +14,7 @@
   <script src="jalali.js" defer></script>
   <script src="biometric.js" defer></script>
   <script src="app.js" defer></script>
+  <script src="ratings.js" defer></script>
   <script src="secretary.js" defer></script>
   <script src="admin.js" defer></script>
 </head>
@@ -99,6 +100,11 @@
               </div>
             </div>
           </div>
+          <button type="button" class="ratings-home-entry" data-goto="ratings" aria-label="ورود به نظرسنجی دانشجویی">
+            <span class="ratings-home-symbol" aria-hidden="true">★</span>
+            <span class="ratings-home-copy"><strong>صدای دانشجو</strong><small>به کانون‌ها، استادها و دانشکده‌ها ستاره بده!</small></span>
+            <span class="ratings-home-arrow" aria-hidden="true">‹</span>
+          </button>
           <label class="search-field home-search-field">
             <span class="search-icon-wrap" data-icon="search" aria-hidden="true"></span>
             <input id="home-search" type="search" placeholder="جستجو در کانون‌ها، رویدادها و ..." aria-label="جستجو در کانون‌ها و رویدادها">
@@ -109,6 +115,40 @@
           </div>
           <div id="home-clubs" class="home-club-grid"></div>
         </div>
+      </section>
+
+      <!-- نظرسنجی: یک رأی پنج‌ستاره‌ای برای هر مورد -->
+      <section class="screen padded-screen ratings-screen" id="screen-ratings" data-screen="ratings" aria-labelledby="title-ratings" hidden>
+        <header class="ratings-hero">
+          <div class="ratings-hero-badge" aria-hidden="true">★</div>
+          <div class="ratings-hero-copy">
+            <span class="ratings-eyebrow">نظرسنجی دانشجویی</span>
+            <h1 id="title-ratings">صدای دانشجو</h1>
+            <p>به تجربه‌ات امتیاز بده، برترین‌ها رو بشناس.</p>
+          </div>
+        </header>
+        <div class="ratings-tabs" role="tablist" aria-label="دسته‌بندی نظرسنجی">
+          <button type="button" class="active" data-ratings-tab="club" role="tab" aria-selected="true">کانون‌ها</button>
+          <button type="button" data-ratings-tab="professor" role="tab" aria-selected="false">اساتید</button>
+          <button type="button" data-ratings-tab="faculty" role="tab" aria-selected="false">دانشکده‌ها</button>
+        </div>
+        <div class="ratings-headline"><h2 id="ratings-category-heading">امتیاز کانون‌ها</h2><span class="ratings-scale">از ۵ ستاره</span></div>
+        <section class="ratings-leaders" aria-labelledby="ratings-leaders-title">
+          <div class="ratings-leader-heading"><span>✦</span><h3 id="ratings-leaders-title">برترین‌ها</h3></div>
+          <div id="ratings-leader-list" aria-live="polite"></div>
+        </section>
+        <p id="ratings-notice" class="ratings-notice" role="status" aria-live="polite">در حال دریافت امتیازها…</p>
+        <div class="ratings-list" id="ratings-list" aria-live="polite"></div>
+        <section class="ratings-manager" id="ratings-manager" hidden>
+          <h3>افزودن استاد به نظرسنجی</h3>
+          <p>فقط مدیرکل می‌تواند فهرست اساتید را ثبت کند.</p>
+          <form id="ratings-professor-form">
+            <label>نام و نام خانوادگی استاد<input name="title" maxlength="120" minlength="2" required autocomplete="off" placeholder="نام استاد"></label>
+            <label>دانشکده یا گروه آموزشی<input name="subtitle" maxlength="120" autocomplete="off" placeholder="نام دانشکده (اختیاری)"></label>
+            <button type="submit">افزودن استاد</button>
+          </form>
+        </section>
+        <p class="ratings-privacy">هر دانشجو به هر مورد فقط یک‌بار امتیاز می‌دهد. رأی‌ها قابل تغییر نیستند و هویت رأی‌دهندگان نمایش داده نمی‌شود. رتبه‌های رسمی به حداقل ۵ رأی نیاز دارند.</p>
       </section>
 
       <!-- ==================== صفحه کانون‌ها ==================== -->

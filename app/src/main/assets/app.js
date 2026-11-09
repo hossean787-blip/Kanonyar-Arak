@@ -753,7 +753,7 @@
 
   /* ——— Navigation ——— */
   function go(screen, { scroll = true } = {}) {
-    if (!routeNavItems().some(x => x.id === screen)) return;
+    if (!routeNavItems().some(x => x.id === screen) && screen !== 'ratings') return;
     activeScreen = screen;
     const container = screen.endsWith('-account') ? 'profile' :
       screen.startsWith('manager-') || screen.startsWith('secretary-') ? 'workspace' : screen;
@@ -762,6 +762,7 @@
     });
     if (container === 'workspace') renderWorkspace();
     if (container === 'profile') updateProfileDisplay();
+    if (screen === 'ratings' && window.KanonhaRatings) void window.KanonhaRatings.open();
     renderNav();
     if (screen === 'activity') renderActivity();
     if (scroll) $('main').scrollTop = 0;
@@ -1337,7 +1338,7 @@
 
     // Handle hash navigation
     const requested = location.hash.replace('#', '');
-    go(routeNavItems().some(x => x.id === requested) ? requested : onlineMode ? 'profile' : 'home');
+    go(routeNavItems().some(x => x.id === requested) || requested === 'ratings' ? requested : onlineMode ? 'profile' : 'home');
     if (onlineMode) {
       void onlineRefreshPublic();
       // Directory is public read-only and cached in memory for signup/profile forms.
@@ -1346,7 +1347,7 @@
 
     window.addEventListener('hashchange', () => {
       const id = location.hash.slice(1);
-      if (routeNavItems().some(x => x.id === id) && id !== activeScreen) go(id);
+      if ((routeNavItems().some(x => x.id === id) || id === 'ratings') && id !== activeScreen) go(id);
     });
   }
 

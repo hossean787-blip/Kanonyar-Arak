@@ -186,6 +186,9 @@
     $('online-email').required = !student;
     $('online-password').minLength = student && onlineSignup ? 10 : 8;
     $('online-password').autocomplete = onlineSignup ? 'new-password' : 'current-password';
+    // Browser's ASCII-only pattern would block Persian digits before our
+    // normalization logic could produce a meaningful message.
+    $('online-auth-form').noValidate = Boolean(student && onlineSignup);
     updateBiometricUI();
   }
   function academyUniversityOptions(selected = '') {
@@ -407,15 +410,62 @@
     onlineRenderAuth();
     if (!profile && !state.isManager) onlineMessage('برای درخواست عضویت، اطلاعات دانشجویی خود را تکمیل کنید.');
   }
+  const signupFieldIds = Object.freeze({
+    name:'online-name',studentNumber:'online-student',nationalId:'online-national',
+    mobile:'online-mobile',birthDate:'online-birth',university:'online-university',
+    faculty:'online-faculty',major:'online-major',password:'online-password'
+  });
+  const normalizeRegistrationDigits = value => String(value||'').replace(/[۰-۹٠-٩]/g, c => {
+    const fa='۰۱۲۳۴۵۶۷۸۹'.indexOf(c);
+    return String(fa>=0?fa:'٠١٢٣٤٥٦٧٨٩'.indexOf(c));
+  });
+  function clearSignupFieldError(fieldName='') {
+    if(typeof document.querySelectorAll==='function') {
+      for(const note of document.querySelectorAll('.signup-inline-error')) {
+        if(!fieldName||note.dataset.signupField===fieldName)note.remove?.();
+      }
+    }
+    for(const [field,id] of Object.entries(signupFieldIds)) {
+      if(fieldName&&field!==fieldName)continue;
+      const input=$(id);
+      if(input&&typeof input.removeAttribute==='function')input.removeAttribute('aria-invalid');
+      if(input?.classList?.remove)input.classList.remove('signup-invalid-input');
+    }
+  }
+  function showSignupFieldError(error) {
+    const input=$(signupFieldIds[error?.field]);
+    if(!input)return;
+    const label=typeof input.closest==='function'?input.closest('label'):null;
+    if(!label)return;
+    input.setAttribute('aria-invalid','true');
+    input.classList.add('signup-invalid-input');
+    if(typeof document.createElement==='function') {
+      const note=document.createElement('small');
+      note.className='signup-inline-error';
+      note.dataset.signupField=error.field;
+      note.setAttribute('role','alert');
+      note.textContent=String(error.message||'اطلاعات این فیلد را بررسی کنید.');
+      label.appendChild(note);
+    }
+    const target=error.field==='birthDate'
+      ? (label.querySelector?.('.jalali-select')||label) : input;
+    if(typeof label.scrollIntoView==='function')
+      label.scrollIntoView({behavior:'smooth',block:'center'});
+    if(typeof target.focus==='function')target.focus();
+  }
   async function onlineAuthenticate(form) {
     if (onlineWorking) return;
     onlineWorking = true;
     $('online-auth-submit').disabled = true;
     const status = $('online-auth-status');
+    clearSignupFieldError();
     status.textContent = 'در حال بررسی حساب کاربری…';
     try {
-      if (window.KanonhaJalali && !window.KanonhaJalali.validateForm(form))
-        throw new Error('لطفاً تاریخ را در تقویم شمسی کامل انتخاب کنید.');
+      if (window.KanonhaJalali && !window.KanonhaJalali.validateForm(form)) {
+        const err=new Error('لطفاً تاریخ را در تقویم شمسی کامل انتخاب کنید.');
+        err.field='birthDate';
+        throw err;
+      }
       const values = new FormData(form);
       const password = String(values.get('password') || '');
       const student = onlineRole === 'student';
@@ -456,6 +506,8 @@
       await finishOnlineSignIn(!student,form);
     } catch (error) {
       status.textContent = onlineError(error);
+      if(onlineSignup && onlineRole==='student' && error?.field)
+        showSignupFieldError(error);
     } finally { onlineWorking = false; $('online-auth-submit').disabled = false; }
   }
   function onlineRequireProfile() {
@@ -1099,7 +1151,25 @@
         onlineRenderAuth();
         if(onlineSignup && onlineRole==='student')void refreshAcademicDirectory();
       });
-      $('online-university').addEventListener('change',updateSignupFaculty);
+      // Accept فارسی/عربی numeric keyboards; normalize before HTML patterns.
+      for(const [id,field] of [['online-student','studentNumber'],
+        ['online-national','nationalId'],['online-mobile','mobile']]) {
+        $(id).addEventListener('input',e=>{
+          const normalized=normalizeRegistrationDigits(e.target.value);
+          if(normalized!==e.target.value)e.target.value=normalized;
+          clearSignupFieldError(field);
+        });
+      }
+      for(const [id,field] of [['online-name','name'],['online-major','major'],
+        ['online-password','password']]) {
+        $(id).addEventListener('input',()=>clearSignupFieldError(field));
+      }
+      $('online-university').addEventListener('change',()=>{
+        updateSignupFaculty();
+        clearSignupFieldError('university');
+        clearSignupFieldError('faculty');
+      });
+      $('online-faculty').addEventListener('change',()=>clearSignupFieldError('faculty'));
       $('biometric-login-btn').addEventListener('click',()=>{
         if(!window.KanonhaBiometric || !window.KanonhaBiometric.unlock())
           $('online-auth-status').textContent='اثر انگشت هنوز فعال نیست؛ با رمز وارد شوید و از حساب کاربری فعال کنید.';

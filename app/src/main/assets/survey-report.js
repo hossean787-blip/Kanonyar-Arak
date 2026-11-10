@@ -31,7 +31,7 @@
   function csvEscape(s){
     let t=String(s??'');
     // Prevent spreadsheet formula execution from imported CSV text fields.
-    if(/^[\\s\\u200e\\u200f]*[=+\\-@]/.test(t))t="'"+t;
+    if(/^[\s\u200e\u200f]*[=+\-@]/.test(t))t="'"+t;
     return '"'+t.replace(/"/g,'""')+'"';
   }
   function buildCsv(survey,options,results,participation){

@@ -135,6 +135,12 @@
           <button type="button" data-ratings-tab="professor" role="tab" aria-selected="false">اساتید</button>
           <button type="button" data-ratings-tab="faculty" role="tab" aria-selected="false">دانشکده‌ها</button>
         </div>
+        <div class="survey-life-filters" role="group" aria-label="وضعیت نظرسنجی">
+          <button type="button" class="active" data-ratings-life="active" aria-pressed="true">در جریان</button>
+          <button type="button" data-ratings-life="history" aria-pressed="false">نتایج و سوابق</button>
+          <button type="button" data-ratings-life="all" aria-pressed="false">همه</button>
+        </div>
+        <div class="survey-alerts" id="ratings-alerts" role="status" aria-live="polite" hidden></div>
         <div class="ratings-headline">
           <div><span class="surveys-eyebrow">فرصت مشارکت</span><h2 id="ratings-category-heading">همه نظرسنجی‌ها</h2></div>
           <button type="button" class="surveys-refresh" id="ratings-refresh" aria-label="به‌روزرسانی نظرسنجی‌ها">↻</button>

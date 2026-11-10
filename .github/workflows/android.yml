@@ -59,6 +59,7 @@ jobs:
           node --check tests/secretary-backend-smoke.cjs
           node --check tests/secretary-ui-smoke.cjs
           node --check tests/club-experience-smoke.cjs
+          node --check tests/club-logo-upload-smoke.cjs
           python3 - <<'PY'
           from pathlib import Path
           import xml.etree.ElementTree as ET
@@ -114,6 +115,7 @@ jobs:
           node tests/secretary-backend-smoke.cjs
           node tests/secretary-ui-smoke.cjs
           node tests/club-experience-smoke.cjs
+          node tests/club-logo-upload-smoke.cjs
           node tests/unified-auth-smoke.cjs
           node tests/admin-ui-smoke.cjs
           node tests/multi-role-ui-smoke.cjs

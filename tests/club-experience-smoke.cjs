@@ -26,6 +26,11 @@ for(const symbol of ['kanonha_membership_student_profile_fk','kanonha_member_can
  'kanonha_member_reapply','kanonha_secretary_logo_insert','kanonha_secretary_logo_update',
  'Invalid membership state transition or unauthorized secretary'])assert.ok(sql.includes(symbol),symbol);
 assert.match(sql,/name\s*~\s*'\^\[0-9a-f-\]/);
+assert.equal((sql.match(/split_part\(storage\.objects\.name,'\/',1\)/g)||[]).length,4,'All storage paths must be fully qualified');
+assert.doesNotMatch(sql,/split_part\(name,'\/',1\)/,'Ambiguous name reference breaks secretary permissions');
+const fix=fs.readFileSync('supabase/club-logo-rls-fix-v098.sql','utf8');
+assert.equal((fix.match(/split_part\(storage\.objects\.name,'\/',1\)/g)||[]).length,3);
+assert.doesNotMatch(fix,/split_part\(name,'\/',1\)/);
 assert.match(api,/status=eq\.rejected/);
 assert.match(api,/status=in\.\(pending,approved\)/);
 console.log('Club experience static, syntax and access-contract checks passed.');

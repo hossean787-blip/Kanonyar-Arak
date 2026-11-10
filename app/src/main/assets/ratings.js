@@ -57,7 +57,7 @@
        ' aria-pressed="'+String(picked)+'" aria-label="انتخاب '+esc(o.title)+'">'+
        '<span class="survey-choice-mark" aria-hidden="true">'+(isMyVote?'✓':picked?'●':'○')+'</span>'+
        '<strong>'+esc(o.title)+'</strong>'+(isMyVote?'<small>رأی شما</small>':'')+'</button>'+
-       (reveal?'<div class="survey-results-meta"><span>میانگین '+(count?avg.toFixed(2).replace('.', '٫'):'—')+' ★</span>'+
+       (reveal?'<div class="survey-results-meta"><span>میانگین '+(count?avg.toLocaleString('fa-IR',{minimumFractionDigits:2,maximumFractionDigits:2}):'—')+' ★</span>'+
        '<span>'+n(count)+' رأی</span></div>'+
        '<div class="survey-result-track"><i style="width:'+ratio+'%"></i></div>':'')+
        '</div>';

@@ -116,6 +116,10 @@
   }
 
   const eventTickets = new Map();
+  let activityHistory = [];
+  let activityMembers = [];
+  let activityCertificates = [];
+  const activityClubBusy = new Set();
   let state = loadState();
   let activeScreen = 'home';
   let activeFilter = 'همه';
@@ -404,10 +408,11 @@
     if (!onlineMode || !onlineBackend.currentUser) return;
     const ownerId = onlineBackend.currentUser.id;
     const refreshId = ++onlinePersonalSequence;
-    const [profile, memberRows, eventRows, academic] = await Promise.all([
+    const [profile, memberRows, eventRows, academic, historyRows, memberDetails, certificates] = await Promise.all([
       state.isManager ? onlineBackend.profile() : onlineBackend.ensureProfile(),
       onlineBackend.memberships(), onlineBackend.registrations(),
-      typeof onlineBackend.academicDetails === 'function' ? onlineBackend.academicDetails() : null
+      typeof onlineBackend.academicDetails === 'function' ? onlineBackend.academicDetails() : null,
+      onlineBackend.myEventHistory(), onlineBackend.myClubMemberships(), onlineBackend.myCertificates()
     ]);
     if (refreshId !== onlinePersonalSequence ||
         !onlineBackend.currentUser || onlineBackend.currentUser.id !== ownerId) return;
@@ -415,7 +420,10 @@
     const eventIds = new Set(eventRows.filter(e => e.status === 'confirmed').map(e => e.event_id));
     const attendedIds = new Set(eventRows.filter(e => e.status === 'confirmed' && e.attended_at).map(e=>e.event_id));
     eventTickets.clear();
-    for(const r of eventRows)if(r.status==='confirmed'&&r.ticket_token)eventTickets.set(r.event_id,r.ticket_token);
+    activityHistory = historyRows;
+    activityMembers = memberDetails;
+    activityCertificates = certificates;
+    for(const r of historyRows)if(r.status==='confirmed'&&r.ticket_token)eventTickets.set(r.event_id,r.ticket_token);
     state.joined = clubs.map((c, i) => memberMap.get(c.id) === 'approved' ? i : -1).filter(i => i >= 0);
     state.requested = clubs.map((c, i) => memberMap.get(c.id) === 'pending' ? i : -1).filter(i => i >= 0);
     state.rejected = clubs.map((c, i) => memberMap.get(c.id) === 'rejected' ? i : -1).filter(i => i >= 0);
@@ -602,41 +610,42 @@
       notify('ثبت‌نام رویداد تأیید شد؛ بلیت در فعالیت‌های من آماده است.');
     } catch (error) { notify(onlineError(error)); }
   }
-  const eventCancelWorking = new Set();
-  async function onlineCancelEvent(i){
-    if(!onlineMode||!events[i]||!state.registered.includes(i))return;
-    const ev=events[i],eventId=ev.id;
-    if(eventCancelWorking.has(eventId))return;
-    if(state.attended?.includes(i)||!(Number.isFinite(ev.startsAtMs)&&ev.startsAtMs>Date.now())){
-      notify('این ثبت‌نام دیگر قابل لغو نیست.');return;
-    }
-    eventCancelWorking.add(eventId);
+  function findActivityClub(id){
+    return activityMembers.find(m=>m.club_id===id);
+  }
+  function activityCancelClubPrompt(id){
+    const row=findActivityClub(id);
+    if(!onlineMode||!row||!['approved','pending'].includes(row.status))return;
+    const member=row.status==='approved';
+    openSheet(member?'لغو عضویت کانون':'لغو درخواست عضویت',
+      '<p>آیا از '+(member?'خروج از این کانون':'لغو درخواست عضویت')+
+      ' اطمینان دارید؟</p><button class="pill-btn sheet-action" type="button" data-activity-confirm-club-cancel="'+
+      escapeHTML(id)+'">تأیید</button>');
+  }
+  async function activityCancelClub(id){
+    const row=findActivityClub(id);
+    if(!onlineMode||!row||!['approved','pending'].includes(row.status)||activityClubBusy.has(id))return;
+    activityClubBusy.add(id);
     try{
-      await onlineBackend.cancelEvent(eventId);
-       try{window.AndroidEventReminders?.sync?.(JSON.stringify(
-         events.filter((e,index)=>e.id!==eventId&&state.registered.includes(index)&&e.startsAtMs>Date.now())
-           .map(e=>({id:e.id,title:e.title,startsAt:e.startsAtMs}))
-       ));}catch(_){}
-       eventTickets.delete(eventId);
-      state.registered=state.registered.filter(index=>index!==i);
-      state.attended=(state.attended||[]).filter(index=>index!==i);
-      renderAll();
+      await onlineBackend.cancelClubMembership(id);
+      await onlineRefreshPersonal();
       closeSheet();
-      const refreshed=await onlineRefreshPublic();
-      notify(refreshed?'ثبت‌نام لغو شد و بلیت از حساب شما حذف شد.':
-        'ثبت‌نام لغو شد؛ برای مشاهده آخرین وضعیت، به‌روزرسانی کنید.');
-    }catch(error){
-      notify(onlineError(error));
-    }finally{eventCancelWorking.delete(eventId);}
+      notify('وضعیت عضویت به‌روزرسانی شد.');
+    }catch(error){notify(onlineError(error));}
+    finally{activityClubBusy.delete(id);}
+  }
+  async function activityReapplyClub(id){
+    const row=findActivityClub(id);
+    if(!onlineMode||!row||row.status!=='rejected'||row.is_active===false||activityClubBusy.has(id))return;
+    activityClubBusy.add(id);
+    try{
+      await onlineBackend.reapplyClub(id);
+      await onlineRefreshPersonal();
+      notify('درخواست مجدد ثبت شد و در انتظار تأیید دبیر است.');
+    }catch(error){notify(onlineError(error));}
+    finally{activityClubBusy.delete(id);}
   }
 
-  function confirmEventCancel(i){
-    if(!events[i]||!state.registered.includes(i)||state.attended?.includes(i)||
-       !(Number.isFinite(events[i].startsAtMs)&&events[i].startsAtMs>Date.now()))return;
-    openSheet('لغو ثبت‌نام رویداد',
-      '<p>آیا از لغو ثبت‌نام «'+escapeHTML(events[i].title)+'» مطمئن هستید؟ بلیت باطل خواهد شد.</p>'+
-      '<button type="button" class="pill-btn sheet-action" data-confirm-event-cancel="'+i+'">تأیید لغو ثبت‌نام</button>');
-  }
   async function onlineLogout({forgetBiometric=false}={}) {
     // Normal logout keeps opt-in biometric refresh token ONLY on this device,
     // encrypted behind a fresh prompt. Full logout revokes server refresh token.
@@ -656,6 +665,8 @@
       else if(biom.lock) biom.lock();
     }
     eventTickets.clear();
+    activityHistory=[];activityMembers=[];activityCertificates=[];
+    window.KanonhaActivity?.clear?.();
     try{window.AndroidEventReminders?.clear?.();}catch(_){}
     state = defaultState();
     activePersona = 'student'; assignedSecretary = false; studentProfileReady = false;
@@ -1035,7 +1046,9 @@
   }
 
   function renderActivity() {
-    if (window.KanonhaActivity) window.KanonhaActivity.render({clubs,events,state,onlineMode,eventTickets});
+    if (window.KanonhaActivity) window.KanonhaActivity.render({clubs,events,state,onlineMode,eventTickets,
+      historyRows:activityHistory,memberDetails:activityMembers,certificates:activityCertificates,
+      studentName:state.name,studentNumber:state.number});
   }
 
   /* ——— Sheet ——— */
@@ -1071,7 +1084,6 @@
       `<p>${svg('calendar', 15)} ${escapeHTML(ev.date)}<br>${svg('map-pin', 15)} ${escapeHTML(ev.location)}<br>
        کانون برگزارکننده: ${clubs[ev.club] ? escapeHTML(clubs[ev.club].title) : 'نامشخص'}</p>
        <p>${onlineMode ? 'ثبت‌نام آنلاین با تأیید سرور انجام می‌شود.' : 'این یک رویداد نمونه رابط کاربری است. ثبت‌نام واقعی انجام نمی‌شود.'}</p>
-       ${onlineMode&&state.registered.includes(i)?'<button class="pill-btn sheet-action ticket-cancel" type="button" data-event-cancel="'+i+'">لغو ثبت‌نام</button>':''}
        <button class="pill-btn sheet-action" type="button" ${onlineMode && (!ev.registrationOpen || state.registered.includes(i)) ? "disabled" : `data-register="${i}"`}>
          ${state.registered.includes(i) ? 'ثبت‌نام‌شده' : onlineMode ? (ev.registrationOpen ? 'ثبت‌نام آنلاین' : 'ثبت‌نام بسته است') : 'ثبت‌نام نمایشی'}
        </button>`
@@ -1394,8 +1406,22 @@
       if (btn.dataset.reapply !== undefined)     { join(Number(btn.dataset.reapply)); return; }
       if (btn.dataset.cancelMembership !== undefined) { confirmMembershipCancel(Number(btn.dataset.cancelMembership)); return; }
       if (btn.dataset.confirmCancel !== undefined) { void onlineCancelMembership(Number(btn.dataset.confirmCancel)); return; }
-      if (btn.dataset.confirmEventCancel !== undefined) { void onlineCancelEvent(Number(btn.dataset.confirmEventCancel)); return; }
-      if (btn.dataset.eventCancel !== undefined) { confirmEventCancel(Number(btn.dataset.eventCancel)); return; }
+      if (btn.dataset.activityCancelClub!==undefined) {activityCancelClubPrompt(btn.dataset.activityCancelClub);return;}
+      if (btn.dataset.activityConfirmClubCancel!==undefined) {void activityCancelClub(btn.dataset.activityConfirmClubCancel);return;}
+      if (btn.dataset.activityReapplyClub!==undefined) {void activityReapplyClub(btn.dataset.activityReapplyClub);return;}
+      if (btn.dataset.activityDownloadTicket!==undefined) {
+        notify(window.KanonhaActivity?.downloadTicket(btn.dataset.activityDownloadTicket)
+          ? 'برای دریافت فایل، در پنجره چاپ «ذخیره به‌صورت PDF» را انتخاب کنید.'
+          : 'بلیت یا کد QR برای دریافت PDF در دسترس نیست.');
+        return;
+      }
+      if (btn.dataset.activityDownloadCertificate!==undefined) {
+        notify(window.KanonhaActivity?.downloadCertificate(btn.dataset.activityDownloadCertificate)
+          ? 'برای دریافت فایل، در پنجره چاپ «ذخیره به‌صورت PDF» را انتخاب کنید.'
+          : 'گواهینامه یا ابزار دریافت PDF در دسترس نیست.');
+        return;
+      }
+
       if (btn.dataset.register !== undefined)    { register(Number(btn.dataset.register)); return; }
       if (btn.dataset.details !== undefined)     { eventDetails(Number(btn.dataset.details)); return; }
       if (btn.dataset.clubDetails !== undefined) { clubDetails(Number(btn.dataset.clubDetails)); return; }

@@ -1,4 +1,4 @@
-name: Kanonha v0.9.8 student calendar
+name: Kanonha v0.9.10 persistent Persian calendar
 on:
   push:
     branches: [main]
@@ -77,6 +77,10 @@ jobs:
           manifest=(app_root/'AndroidManifest.xml').read_text(encoding='utf-8')
           assert 'android:label="کانون‌ها"' in manifest
           assert 'همراه' not in html + manifest
+          for name in ('notification_jalali.xml',):
+              ET.parse(app_root/'res'/'layout'/name)
+          for name in ('calendar_notice_background.xml','calendar_notice_badge.xml'):
+              ET.parse(app_root/'res'/'drawable'/name)
           for name in ('ic_launcher.xml','ic_launcher_round.xml'):
               ET.parse(app_root/'res'/'mipmap-anydpi-v26'/name)
           ET.parse(app_root/'res'/'drawable'/'ic_kanonha_foreground.xml')
@@ -119,16 +123,16 @@ jobs:
           ! find app/src -type f -name '*.keystore' | grep -q .
           ! find app/src -type f -name '*.p12' | grep -q .
           grep -q 'applicationId = "ir.kanonha.app"' app/build.gradle.kts
-          grep -q 'versionCode = 24' app/build.gradle.kts
+          grep -q 'versionCode = 25' app/build.gradle.kts
           grep -q 'android:allowBackup="false"' app/src/main/AndroidManifest.xml
           echo 'Release output validated; unsigned candidate requires secure external signing'
       - uses: actions/upload-artifact@v4
         with:
-          name: kanonha-0.9.9-release-unsigned
+          name: kanonha-0.9.10-release-unsigned
           path: app/build/outputs/apk/release/app-release-unsigned.apk
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
-          name: kanonha-0.9.9-debug-validation
+          name: kanonha-0.9.10-debug-validation
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error

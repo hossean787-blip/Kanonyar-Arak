@@ -232,11 +232,14 @@
     const editing = editor && editor.id && events.find(e => e.id === editor.id);
     const e = editing || {};
     const poster=editing?backend.eventPosterUrl?.(e.club_id,e.id,e.poster_path)||'':'';
+    const eventLocalTime=inputDate(e.starts_at);
+    const eventDate=eventLocalTime.slice(0,10),eventTime=eventLocalTime.slice(11,16);
     return '<form id="secretary-event-form" class="secretary-form secretary-card">' +
       '<h3 class="secretary-card-title">' + (editing ? 'ویرایش رویداد' : 'ثبت رویداد جدید') + '</h3>' +
       '<label class="field">نام رویداد<input name="title" maxlength="160" required value="' + escape(e.title || '') + '"></label>' +
       '<label class="field">محل برگزاری<input name="location" maxlength="250" required value="' + escape(e.location || '') + '"></label>' +
-      '<label class="field">تاریخ و ساعت برگزاری<input name="starts_at" type="datetime-local" required value="' + escape(inputDate(e.starts_at)) + '"></label>' +
+      '<label class="field">تاریخ برگزاری<input name="event_date" type="date" required value="' + escape(eventDate) + '"></label>' +
+      '<label class="field">ساعت برگزاری<input name="event_time" type="time" required value="' + escape(eventTime) + '"></label>' +
       '<label class="field">توضیحات رویداد<textarea name="description" maxlength="4000" rows="4" placeholder="موضوع، برنامه و شرایط حضور را توضیح دهید">' + escape(e.description || '') + '</textarea></label>' +
       '<label class="field">مهلت ثبت‌نام<input name="registration_deadline" type="datetime-local" required value="' + escape(inputDate(e.registration_deadline)) + '"></label>' +
       '<label class="field">ظرفیت<input name="capacity" type="number" min="' + Math.max(1,Number(e.registered_count||0)) + '" max="100000" required value="' + escape(e.capacity || 30) + '"></label>' +
@@ -438,10 +441,13 @@
     if(!poster&&!existing?.poster_path)throw new Error('انتخاب پوستر برای انتشار رویداد الزامی است.');
     if(poster&&(!['image/png','image/jpeg','image/webp'].includes(poster.type)||poster.size<1||poster.size>2097152))
       throw new Error('پوستر باید PNG، JPG یا WebP و حداکثر ۲ مگابایت باشد.');
+    const eventDate=formValue(fd,'event_date'),eventTime=formValue(fd,'event_time');
+    if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(eventDate)||!/^\\d{2}:\\d{2}$/.test(eventTime))
+      throw new Error('تاریخ و ساعت برگزاری را کامل و معتبر وارد کنید.');
     const data = {
       title: formValue(fd,'title'), location: formValue(fd,'location'),
       description: formValue(fd,'description'),
-      starts_at: formValue(fd,'starts_at'), registration_deadline: formValue(fd,'registration_deadline'),
+      starts_at: eventDate+'T'+eventTime, registration_deadline: formValue(fd,'registration_deadline'),
       capacity: Number(fd.get('capacity')), is_published: true
     };
     if(!window.KanonhaBiometric?.confirmAction)

@@ -3,6 +3,8 @@ package ir.kanonha.app;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.net.Uri;
+import android.content.Intent;
+import android.provider.Settings;
 import android.os.Build;
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
@@ -43,6 +45,7 @@ final class BiometricVault {
     private final WebView web;
     private final SharedPreferences prefs;
     private volatile SecretKeySpec unlockedKey;
+    private volatile boolean actionPromptActive;
 
     BiometricVault(FragmentActivity activity, WebView web) {
         this.activity = activity;
@@ -66,6 +69,74 @@ final class BiometricVault {
             ) == BiometricManager.BIOMETRIC_SUCCESS;
         } catch (Exception ex) {
             return false;
+        }
+    }
+
+    private boolean actionAvailable() {
+        try {
+            return BiometricManager.from(activity).canAuthenticate(
+                BiometricManager.Authenticators.BIOMETRIC_WEAK
+            ) == BiometricManager.BIOMETRIC_SUCCESS;
+        } catch (Exception ignored) { return false; }
+    }
+
+    private void sendAction(String id,String result) {
+        if (!correctOrigin()) return;
+        web.evaluateJavascript("window.KanonhaBiometric&&window.KanonhaBiometric.nativeActionResult("
+            +JSONObject.quote(id)+","+JSONObject.quote(result)+");",null);
+    }
+
+    private void showEnrollmentSettings() {
+        if (!correctOrigin()) return;
+        try {
+            Intent intent;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                intent=new Intent(Settings.ACTION_BIOMETRIC_ENROLL);
+                intent.putExtra(Settings.EXTRA_BIOMETRIC_AUTHENTICATORS_ALLOWED,
+                    BiometricManager.Authenticators.BIOMETRIC_WEAK);
+            } else {
+                intent=new Intent(Settings.ACTION_SECURITY_SETTINGS);
+            }
+            activity.startActivity(intent);
+        } catch (Exception ex) { status("unavailable"); }
+    }
+
+    private void beginAction(String actionId) {
+        if (!correctOrigin() || actionPromptActive) {
+            sendAction(actionId,"cancelled"); return;
+        }
+        if (!actionAvailable()) {
+            sendAction(actionId,"enrollment_required");
+            showEnrollmentSettings();
+            return;
+        }
+        actionPromptActive=true;
+        BiometricPrompt prompt=new BiometricPrompt(activity,
+            ContextCompat.getMainExecutor(activity),new BiometricPrompt.AuthenticationCallback() {
+            @Override public void onAuthenticationSucceeded(
+                    @NonNull BiometricPrompt.AuthenticationResult result) {
+                actionPromptActive=false;
+                sendAction(actionId,"verified");
+            }
+            @Override public void onAuthenticationError(int code,
+                    @NonNull CharSequence detail) {
+                actionPromptActive=false;
+                sendAction(actionId,"cancelled");
+            }
+            @Override public void onAuthenticationFailed() {
+                // System prompt retries without granting this action.
+            }
+        });
+        BiometricPrompt.PromptInfo info=new BiometricPrompt.PromptInfo.Builder()
+            .setTitle("تأیید نهایی رویداد")
+            .setSubtitle("اثر انگشت یا تشخیص چهره دستگاه")
+            .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_WEAK)
+            .setNegativeButtonText("انصراف")
+            .build();
+        try { prompt.authenticate(info); }
+        catch(Exception ex) {
+            actionPromptActive=false;
+            sendAction(actionId,"unavailable");
         }
     }
 
@@ -264,10 +335,16 @@ final class BiometricVault {
         unlockedKey = null;
     }
 
-    void destroy() { lockVault(); }
+    void destroy() { lockVault(); actionPromptActive=false; }
 
     final class Bridge {
         @JavascriptInterface public boolean available() { return BiometricVault.this.available(); }
+        @JavascriptInterface public boolean actionAvailable() { return BiometricVault.this.actionAvailable(); }
+        @JavascriptInterface public void openEnrollment() { activity.runOnUiThread(() -> showEnrollmentSettings()); }
+        @JavascriptInterface public void confirmAction(String id) {
+            if(id==null || !id.matches("[0-9]{1,9}"))return;
+            activity.runOnUiThread(() -> beginAction(id));
+        }
         @JavascriptInterface public boolean enrolled() { return BiometricVault.this.enrolled(); }
         @JavascriptInterface public boolean ownedBy(String accountId) {
             return BiometricVault.this.ownedBy(accountId);

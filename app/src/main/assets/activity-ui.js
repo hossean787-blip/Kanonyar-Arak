@@ -1,136 +1,244 @@
-/* Activities screen — only displays data from the current authenticated account.
-   Server records and RLS remain authoritative. Never cache identity-bound entries locally. */
+/* Private student activity: four independently rendered sections.
+ * Memberships, registrations and certificates come only from server-authorized data.
+ * Tickets expire exactly seven days after event start; registrations and certificates do not.
+ */
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
-  const esc = value => String(value ?? '').replace(/[&<>"']/g,
+  const esc = value => String(value == null ? '' : value).replace(/[&<>"']/g,
     ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
   const digits = n => Number(n || 0).toLocaleString('fa-IR');
+  const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+  const tokenPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   let memberFilter = 'all';
   let eventFilter = 'all';
   let snapshot = null;
-  const members = [
-    ['all','همه'],['approved','عضو'],['pending','در انتظار'],['rejected','ردشده']
-  ];
-  const eventFilters = [['all','همه'],['upcoming','پیش‌رو'],['past','گذشته']];
-  const empty = (text,target,label) =>
-    '<div class="activity-empty"><span aria-hidden="true">✦</span><p>'+esc(text)+'</p>'+
-    (target ? '<button type="button" data-goto="'+target+'">'+label+'</button>':'')+'</div>';
-  function rowStatus(status){
-    return status === 'approved' ? 'عضویت تأییدشده' :
-      status === 'pending' ? 'منتظر تأیید دبیر' : 'ردشده؛ درخواست مجدد ممکن است';
+  let expireTimer = null;
+  const memberFilters=[['all','همه'],['approved','عضو'],['pending','در انتظار'],['rejected','ردشده']];
+  const eventFilters=[['all','همه'],['upcoming','پیش‌رو'],['past','گذشته']];
+  const empty=(message,target,label)=>'<div class="activity-empty" role="status"><span aria-hidden="true">✦</span><p>'+
+    esc(message)+'</p>'+(target?'<button type="button" data-goto="'+target+'">'+label+'</button>':'')+'</div>';
+  const dateText = iso => {
+    const d=new Date(iso);
+    return Number.isFinite(d.getTime())
+      ? (window.KanonhaJalali ? window.KanonhaJalali.formatDate(d,true) : d.toLocaleString('fa-IR'))
+      : 'تاریخ نامشخص';
+  };
+  function members(data){
+    if(data.onlineMode) return (data.memberDetails||[]).map(m=>({
+      id:String(m.club_id||''),title:String(m.club_name||'کانون'),category:String(m.category||'کانون'),
+      university:String(m.university||''),status:m.status,active:m.is_active!==false,
+      index:data.clubs.findIndex(c=>c.id===m.club_id)
+    })).filter(m=>['approved','pending','rejected'].includes(m.status));
+    const unique=items=>[...new Set(items||[])].filter(Number.isInteger);
+    const rows=[
+      ...unique(data.state.joined).map(index=>({index,status:'approved'})),
+      ...unique(data.state.requested).map(index=>({index,status:'pending'})),
+      ...unique(data.state.rejected).map(index=>({index,status:'rejected'}))
+    ];
+    return rows.filter(x=>data.clubs[x.index]).map(x=>({
+      ...x,title:data.clubs[x.index].title,category:data.clubs[x.index].category,
+      university:data.clubs[x.index].university,active:true,id:String(x.index)
+    }));
   }
-  function filters(id,options,current,kind,count) {
-    const node=$(id); if(!node)return;
-    node.innerHTML=options.map(([key,label]) =>
-      '<button type="button" class="'+(key===current?'active':'')+'" data-activity-filter-'+kind+'="'+key+
-      '" aria-pressed="'+(key===current)+'">'+label+
-      '<small>'+digits(count[key]||0)+'</small></button>').join('');
+  function events(data){
+    if(data.onlineMode) return (data.historyRows||[]).filter(r=>r.status==='confirmed').map(r=>({
+      registrationId:String(r.registration_id),
+      eventId:String(r.event_id),title:String(r.event_title||''),location:String(r.event_location||''),
+      clubName:String(r.club_name||''),startsAtMs:Date.parse(r.event_starts_at),
+      expiresAtMs:Date.parse(r.ticket_expires_at),date:dateText(r.event_starts_at),
+      attended:Boolean(r.attended_at),ticketToken:r.ticket_token||'',
+      index:data.events.findIndex(e=>e.id===r.event_id)
+    }));
+    return [...new Set(data.state.registered||[])].filter(i=>data.events[i]).map(i=>{
+      const e=data.events[i];const startsAtMs=Number(e.startsAtMs);
+      return {registrationId:'offline-'+i,eventId:'offline-'+i,title:e.title,
+        location:e.location,clubName:'',startsAtMs,expiresAtMs:startsAtMs+SEVEN_DAYS,
+        date:e.date,attended:(data.state.attended||[]).includes(i),ticketToken:'',index:i};
+    });
   }
-  function render({clubs,events,state,onlineMode,eventTickets}) {
-    snapshot={clubs,events,state,onlineMode,eventTickets};
-    const unique = nums => [...new Set(nums)].filter(i=>Number.isInteger(i)&&i>=0);
-    const membership = [
-      ...unique(state.joined).map(i=>({i,status:'approved'})),
-      ...unique(state.requested).map(i=>({i,status:'pending'})),
-      ...unique(state.rejected).map(i=>({i,status:'rejected'}))
-    ].filter(m=>clubs[m.i]);
-    const allEvents=unique(state.registered).filter(i=>events[i]).map(i=>{
-      const ev=events[i];
-      const past=Number.isFinite(ev.startsAtMs)&&ev.startsAtMs<=Date.now();
-      return {i,ev,past,attended:Array.isArray(state.attended)&&state.attended.includes(i)};
-    }).sort((a,b)=>(a.past===b.past?((a.ev.startsAtMs||0)-(b.ev.startsAtMs||0)):a.past?1:-1));
+  function canShowTicket(event,now){
+    return Number.isFinite(event.startsAtMs)&&Number.isFinite(event.expiresAtMs)&&
+      now < event.expiresAtMs;
+  }
+  function hasToken(event){
+    return typeof event.ticketToken==='string'&&tokenPattern.test(event.ticketToken);
+  }
+  function tabs(id,options,active,kind,counts){
+    const node=$(id);if(!node)return;
+    node.innerHTML=options.map(x=>'<button type="button" data-activity-filter-'+kind+'="'+x[0]+
+      '" aria-pressed="'+(active===x[0])+'" class="'+(active===x[0]?'active':'')+'">'+
+      x[1]+' <small>'+digits(counts[x[0]]||0)+'</small></button>').join('');
+  }
+  function scheduleExpiry(rows){
+    if(expireTimer!==null){clearTimeout(expireTimer);expireTimer=null;}
+    const now=Date.now();
+    const next=rows.map(e=>e.expiresAtMs).filter(t=>Number.isFinite(t)&&t>now)
+      .sort((a,b)=>a-b)[0];
+    if(next)expireTimer=setTimeout(()=>{
+      expireTimer=null;if(snapshot)render(snapshot);
+    },Math.max(100,Math.min(next-now+80,24*60*60*1000)));
+  }
+  function render(data){
+    snapshot=data;
+    if(!$('activity-clubs')||!$('activity-tickets')||!$('activity-certificates'))return;
+    const now=Date.now();
+    const memberRows=members(data);
+    const allEvents=events(data).sort((a,b)=>(b.startsAtMs||0)-(a.startsAtMs||0));
+    const certs=data.onlineMode?(data.certificates||[]):[];
+    const validTickets=allEvents.filter(e=>canShowTicket(e,now));
+    scheduleExpiry(validTickets);
     const counts={
-      all:membership.length,
-      approved:membership.filter(m=>m.status==='approved').length,
-      pending:membership.filter(m=>m.status==='pending').length,
-      rejected:membership.filter(m=>m.status==='rejected').length
+      all:memberRows.length,
+      approved:memberRows.filter(x=>x.status==='approved').length,
+      pending:memberRows.filter(x=>x.status==='pending').length,
+      rejected:memberRows.filter(x=>x.status==='rejected').length
     };
     const evCounts={
-      all:allEvents.length,
-      upcoming:allEvents.filter(e=>!e.past).length,
-      past:allEvents.filter(e=>e.past).length
+      all:allEvents.length,upcoming:allEvents.filter(x=>x.startsAtMs>now).length,
+      past:allEvents.filter(x=>x.startsAtMs<=now).length
     };
     const overview=$('activity-overview');
     if(overview)overview.innerHTML=[
-      ['کانون‌های عضو',counts.approved,'users'],['درخواست‌های در انتظار',counts.pending,'clock'],
-      ['رویدادهای من',evCounts.all,'calendar'],['حضور ثبت‌شده',allEvents.filter(e=>e.attended).length,'check']
-    ].map(([label,value,icon])=>'<div class="activity-stat"><span class="activity-stat-icon '+icon+
-      '" aria-hidden="true"></span><strong>'+digits(value)+'</strong><small>'+label+'</small></div>').join('');
-    const sub=$('activity-summary');
-    if(sub)sub.textContent=onlineMode
-      ? 'وضعیت عضویت‌ها، برنامه‌ها و بلیت‌های حساب شما'
-      : 'پیش‌نمایش آفلاین؛ هیچ عضویت یا بلیت واقعی صادر نمی‌شود.';
-    const refresh=$('activity-refresh');
-    if(refresh)refresh.hidden=!onlineMode;
-    filters('activity-member-filters',members,memberFilter,'club',counts);
-    filters('activity-event-filters',eventFilters,eventFilter,'event',evCounts);
-    const visibleMembers=membership.filter(m=>memberFilter==='all'||m.status===memberFilter);
-    $('activity-clubs').innerHTML=visibleMembers.length?visibleMembers.map(({i,status})=>{
-      const club=clubs[i];
-      const icon=club.icon==='leaf'?'🌿':club.icon==='code'?'💻':club.icon==='flask'?'🔬':'🎓';
-      const action=status==='rejected'?'درخواست مجدد':status==='pending'?'لغو درخواست':'مشاهده کانون';
-      const actionAttr=status==='rejected'?'data-reapply="'+i+'"':
-        status==='pending'?'data-cancel-membership="'+i+'"':'data-club-details="'+i+'"';
+      ['عضویت‌های فعال',counts.approved],['رویدادهای من',allEvents.length],
+      ['بلیت‌های موجود',validTickets.length],['گواهینامه‌ها',certs.length]
+    ].map(x=>'<div class="activity-stat"><span class="activity-stat-icon"></span><strong>'+
+      digits(x[1])+'</strong><small>'+x[0]+'</small></div>').join('');
+    const summary=$('activity-summary');
+    if(summary)summary.textContent=data.onlineMode?
+      'سوابق عضویت، رویدادها، بلیت‌ها و گواهینامه‌های شما':
+      'پیش‌نمایش آفلاین؛ بلیت و گواهینامه واقعی صادر نمی‌شود.';
+    const refresh=$('activity-refresh');if(refresh)refresh.hidden=!data.onlineMode;
+    tabs('activity-member-filters',memberFilters,memberFilter,'club',counts);
+    tabs('activity-event-filters',eventFilters,eventFilter,'event',evCounts);
+    const shownMembers=memberRows.filter(r=>memberFilter==='all'||r.status===memberFilter);
+    $('activity-clubs').innerHTML=shownMembers.length?shownMembers.map(m=>{
+      const stateText=m.status==='approved'?'عضویت تأییدشده':m.status==='pending'?
+        'در انتظار تأیید دبیر':'درخواست رد شده';
+      const action=m.status==='approved'?'لغو عضویت':m.status==='pending'?'لغو درخواست':
+        'درخواست مجدد عضویت';
+      const actionKey=m.status==='rejected'?'data-activity-reapply-club':
+        'data-activity-cancel-club';
       return '<article class="activity-member-card"><div class="activity-member-top">'+
-        '<span class="activity-member-avatar" aria-hidden="true">'+icon+'</span>'+
-        '<div class="activity-member-name"><h3>'+esc(club.title)+'</h3><small>'+
-        esc(club.university||club.category||'کانون دانشجویی')+'</small></div>'+
-        '<span class="activity-status '+status+'">'+rowStatus(status)+'</span></div>'+
-        '<div class="activity-member-actions"><button type="button" data-club-details="'+i+'">جزئیات</button>'+
-        '<button type="button" class="activity-member-action" '+actionAttr+'>'+action+'</button></div></article>';
-    }).join(''):empty(memberFilter==='all'?'هنوز درخواستی برای عضویت در کانون‌ها ثبت نکرده‌اید.':
-      'در این وضعیت عضویتی ندارید.','clubs','مشاهده کانون‌ها');
-    const visibleEvents=allEvents.filter(item=>eventFilter==='all'||
-      (eventFilter==='past'?item.past:!item.past));
-    $('activity-events').innerHTML=visibleEvents.length?visibleEvents.map(item=>{
-      const {i,ev,past,attended}=item;
-      const stateLabel=attended?'حضور ثبت شده':past?'برگزار شده':'ثبت‌نام قطعی';
-      return '<article class="activity-event-card">'+
-        '<span class="activity-event-mark" aria-hidden="true">🗓</span>'+
-        '<div class="activity-event-content"><h3>'+esc(ev.title)+'</h3>'+
-        '<p>'+esc(ev.date)+' · '+esc(ev.location)+'</p>'+
-        '<span class="activity-event-state '+(attended?'attended':past?'past':'upcoming')+
-        '">'+stateLabel+'</span></div>'+
-        '<button type="button" data-details="'+i+'" aria-label="جزئیات '+esc(ev.title)+'">جزئیات</button></article>';
-    }).join(''):empty(eventFilter==='all'?'هنوز رویدادی ثبت‌نام نکرده‌اید.':
-      'رویدادی در این دسته وجود ندارد.','events','مشاهده رویدادها');
-    $('activity-tickets').innerHTML=allEvents.length?allEvents.map(({i,ev,past,attended})=>{
-      const token=eventTickets&&eventTickets.get(ev.id);
-      const validToken=typeof token==='string'&&
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(token);
-      const available=onlineMode&&!past&&!attended&&validToken;
-      const badge= !onlineMode?'صرفاً نمایشی':attended?'استفاده شده':
-        past?'رویداد پایان یافته':available?'آماده ورود':'در انتظار بارگذاری کد';
-      const cancel=onlineMode&&!past&&!attended;
-      return '<article class="activity-ticket"><div class="activity-ticket-header">'+
-        '<span>بلیت رویداد</span><span class="'+(available?'valid':'muted')+'">'+badge+'</span></div>'+
-        '<div class="activity-ticket-content"><div class="activity-ticket-copy">'+
-        '<h3>'+esc(ev.title)+'</h3><p>📅 '+esc(ev.date)+'</p>'+
-        '<p>📍 '+esc(ev.location)+'</p>'+
-        (cancel?'<button type="button" class="activity-ticket-cancel" data-event-cancel="'+i+
-        '">لغو ثبت‌نام</button>':'')+'</div>'+
-        (available?'<div class="kanonha-ticket-qr" data-ticket-qr="'+i+
-        '" role="img" aria-label="کد ورود اختصاصی این رویداد"></div>':
-        '<div class="activity-ticket-placeholder" role="note">'+
-        (!onlineMode?'این بلیت آزمایشی است':past?'این رویداد به پایان رسیده است':
-          attended?'حضور شما ثبت شده است':'کد بلیت هنوز قابل دریافت نیست')+'</div>')+
-        '</div></article>';
-    }).join(''):empty('هنوز بلیتی برای نمایش وجود ندارد.','events','رویدادها');
-    if(onlineMode&&$('activity-tickets').querySelectorAll) {
-      for(const el of $('activity-tickets').querySelectorAll('[data-ticket-qr]')){
-        const i=Number(el.dataset.ticketQr);
-        if(!events[i]||!window.KanonhaEventTools?.renderQr(el,eventTickets.get(events[i].id))){
-          el.textContent='نمایش کد ممکن نشد؛ صفحه را به‌روزرسانی کنید.';
-        }
+        '<span class="activity-member-avatar" aria-hidden="true">♧</span><div class="activity-member-name">'+
+        '<h3>'+esc(m.title)+'</h3><small>'+esc(m.university||m.category||'کانون')+'</small></div>'+
+        '<span class="activity-status '+m.status+'">'+stateText+'</span></div>'+
+        (m.active?'<div class="activity-member-actions">'+
+          (m.index>=0?'<button type="button" data-club-details="'+m.index+'">مشاهده کانون</button>':'<span></span>')+
+          '<button type="button" class="activity-member-action" '+actionKey+'="'+esc(m.id)+'">'+
+          action+'</button></div>':
+          '<p class="activity-archived">این کانون در حال حاضر غیرفعال است. سوابق شما محفوظ می‌ماند.</p>'+
+          (m.status==='approved'||m.status==='pending'?
+          '<button type="button" class="activity-member-action" data-activity-cancel-club="'+esc(m.id)+'">لغو عضویت / درخواست</button>':''))+
+        '</article>';
+    }).join(''):empty(memberFilter==='all'?'هنوز عضویت یا درخواستی ندارید.':
+      'در این وضعیت، کانونی وجود ندارد.','clubs','مشاهده کانون‌ها');
+    const shownEvents=allEvents.filter(x=>eventFilter==='all'||
+      (eventFilter==='past'?x.startsAtMs<=now:x.startsAtMs>now));
+    $('activity-events').innerHTML=shownEvents.length?shownEvents.map(e=>{
+      const stateText=e.attended?'حضور ثبت‌شده':e.startsAtMs<=now?'برگزارشده':'ثبت‌نام قطعی';
+      return '<article class="activity-event-card"><span class="activity-event-mark" aria-hidden="true">▣</span>'+
+        '<div class="activity-event-content"><h3>'+esc(e.title)+'</h3><p>'+esc(e.date)+' · '+
+        esc(e.location)+'</p><small>'+esc(e.clubName)+'</small><div class="activity-event-state '+(e.attended?'attended':e.startsAtMs<=now?'past':'upcoming')+
+        '">'+stateText+'</div></div>'+
+        (e.index>=0?'<button type="button" data-details="'+e.index+'">جزئیات</button>':'')+
+        '</article>';
+    }).join(''):empty(eventFilter==='all'?'هنوز در رویدادی ثبت‌نام نکرده‌اید.':
+      'در این دسته رویدادی وجود ندارد.','events','مشاهده رویدادها');
+    $('activity-tickets').innerHTML=validTickets.length?validTickets.map((e,i)=>{
+      const available=data.onlineMode&&hasToken(e);
+      const stateText=!data.onlineMode?'نمایشی':e.attended?'استفاده‌شده':e.startsAtMs>now?
+        'آماده ورود':'رویداد برگزارشده';
+      return '<article class="activity-ticket"><div class="activity-ticket-header"><span>بلیت رویداد</span>'+
+        '<span class="'+(available?'valid':'muted')+'">'+stateText+'</span></div>'+
+        '<div class="activity-ticket-content"><div class="activity-ticket-copy"><h3>'+esc(e.title)+'</h3>'+
+        '<p>◷ '+esc(e.date)+'</p><p>⌖ '+esc(e.location)+'</p>'+
+        '<small class="activity-ticket-expiry">این بلیت ۷ روز پس از برگزاری رویداد از فهرست حذف می‌شود.</small>'+
+        (available?'<button type="button" data-activity-download-ticket="'+esc(e.registrationId)+
+          '" class="activity-pdf-button">دریافت PDF بلیت</button>':'')+
+        '</div>'+(available?'<div class="kanonha-ticket-qr" data-ticket-qr="'+i+
+          '" role="img" aria-label="کد بلیت ثبت‌نام"></div>':
+          '<div class="activity-ticket-placeholder">'+(data.onlineMode?
+          'کد ورود در دسترس نیست':'نمونه فاقد اعتبار')+'</div>')+'</div></article>';
+    }).join(''):empty('بلیت فعالی وجود ندارد؛ بلیت‌ها ۷ روز پس از رویداد خودکار از این بخش کنار می‌روند.',
+      'events','رویدادها');
+    if(data.onlineMode&&$('activity-tickets').querySelectorAll){
+      for(const node of $('activity-tickets').querySelectorAll('[data-ticket-qr]')){
+        const row=validTickets[Number(node.dataset.ticketQr)];
+        if(!row||!window.KanonhaEventTools?.renderQr(node,row.ticketToken))
+          node.textContent='نمایش QR ممکن نشد؛ دوباره وارد شوید.';
       }
     }
+    $('activity-certificates').innerHTML=certs.length?certs.map(c=>{
+      return '<article class="activity-certificate"><div class="activity-certificate-symbol" aria-hidden="true">✦</div>'+
+        '<div class="activity-certificate-body"><span>گواهینامه شرکت در رویداد</span>'+
+        '<h3>'+esc(c.event_title)+'</h3><p>'+esc(c.club_name)+' · '+esc(dateText(c.issued_at))+'</p>'+
+        '<small>کد گواهینامه: <b dir="ltr">'+esc(c.certificate_code)+'</b></small>'+
+        '<button class="activity-pdf-button" type="button" data-activity-download-certificate="'+
+        esc(c.id)+'">دریافت PDF گواهینامه</button></div></article>';
+    }).join(''):empty('هنوز گواهینامه‌ای برای حساب شما صادر نشده است. گواهینامه‌های صادرشده همیشه در این بخش باقی می‌مانند.');
   }
-  function setFilter(kind,value) {
-    if(kind==='club'&&members.some(([k])=>k===value)) memberFilter=value;
-    else if(kind==='event'&&eventFilters.some(([k])=>k===value))eventFilter=value;
+  function setFilter(kind,value){
+    if(kind==='club'&&memberFilters.some(x=>x[0]===value))memberFilter=value;
+    else if(kind==='event'&&eventFilters.some(x=>x[0]===value))eventFilter=value;
     else return;
     if(snapshot)render(snapshot);
   }
-  window.KanonhaActivity=Object.freeze({render,setFilter});
+  const printStyle = '<style>@page{size:A4;margin:18mm}*{box-sizing:border-box}body{direction:rtl;text-align:right;margin:0;font-family:Tahoma,Arial,sans-serif;color:#27346c;background:white}'+
+    '.paper{border:3px solid #505cc8;border-radius:18px;padding:30px;min-height:650px}header{background:#3946a0;color:white;padding:16px 20px;border-radius:12px;font-size:20px;font-weight:bold}'+
+    '.kicker{color:#6875ba;font-size:12px;margin:22px 0 7px}h1{font-size:25px;color:#283378;line-height:1.6}p{line-height:2;font-size:15px}'+
+    '.qr{text-align:center;margin-top:24px}.qr img{width:180px;height:180px}.code{direction:ltr;unicode-bidi:embed;font:13px monospace;word-break:break-all;letter-spacing:.7px}'+
+    '.seal{font-size:19px;text-align:center;margin:25px 0;color:#505cc8}.fine{border-top:1px solid #d9dcf1;margin-top:22px;padding-top:12px;color:#697391;font-size:11px}'+
+    '</style>';
+  function docHtml(body){
+    return '<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>کانون‌ها</title>'+
+      printStyle+'</head><body><main class="paper"><header>کانون‌ها · فعالیت‌های دانشجویی</header>'+
+      body+'</main></body></html>';
+  }
+  function printPdf(html,title){
+    const bridge=window.AndroidSurveyExports;
+    if(!bridge)return false;
+    if(typeof bridge.printHtmlNamed==='function')bridge.printHtmlNamed(title,html);
+    else if(typeof bridge.printHtml==='function')bridge.printHtml(html);
+    else return false;
+    return true;
+  }
+  function downloadTicket(registrationId){
+    if(!snapshot||!snapshot.onlineMode)return false;
+    const e=events(snapshot).find(x=>x.registrationId===registrationId);
+    if(!e||!canShowTicket(e,Date.now())||!hasToken(e))return false;
+    const qr=window.KanonhaEventTools?.qrPng?.(e.ticketToken);
+    if(typeof qr!=='string'||!qr.startsWith('data:image/png;base64,'))return false;
+    const name=esc(snapshot.studentName||'دانشجوی ثبت‌نام‌کننده');
+    const html=docHtml('<div class="kicker">بلیت اختصاصی رویداد</div><h1>'+esc(e.title)+'</h1>'+
+      '<p><strong>نام دانشجو:</strong> '+name+'</p>'+
+      '<p><strong>برگزارکننده:</strong> '+esc(e.clubName)+'</p>'+
+      '<p><strong>تاریخ:</strong> '+esc(e.date)+'</p><p><strong>مکان:</strong> '+esc(e.location)+'</p>'+
+      '<div class="qr"><img src="'+qr+'" alt="QR بلیت"><p class="code">KANONHA1:'+esc(e.ticketToken)+'</p></div>'+
+      '<div class="fine">این بلیت بر اساس ثبت‌نام تأییدشده صادر شده و ۷ روز پس از برگزاری رویداد از اپ حذف می‌شود.</div>');
+    return printPdf(html,'Kanonha-Ticket-'+registrationId);
+  }
+  function downloadCertificate(id){
+    if(!snapshot||!snapshot.onlineMode)return false;
+    const c=(snapshot.certificates||[]).find(x=>x.id===id);
+    if(!c)return false;
+    const html=docHtml('<div class="kicker">گواهینامه حضور در رویداد</div>'+
+      '<div class="seal">✦ گواهینامه شرکت ✦</div>'+
+      '<h1>گواهی می‌شود</h1><p>دانشجو <strong>'+esc(c.student_name)+'</strong> با شماره دانشجویی <strong>'+
+      esc(c.student_number)+'</strong> در رویداد <strong>'+esc(c.event_title)+'</strong> به‌همت <strong>'+
+      esc(c.club_name)+'</strong> شرکت نموده است.</p>'+
+      '<p><strong>تاریخ رویداد:</strong> '+esc(dateText(c.event_starts_at))+'</p>'+
+      '<p><strong>تاریخ صدور:</strong> '+esc(dateText(c.issued_at))+'</p>'+
+      '<p class="code">Certificate ID: '+esc(c.certificate_code)+'</p>'+
+      '<div class="fine">این سند از سوابق گواهینامه صادرشده در اپ کانون‌ها تولید شده است. صدور تنها پس از ثبت حضور توسط مسئول مجاز امکان‌پذیر است.</div>');
+    return printPdf(html,'Kanonha-Certificate-'+id);
+  }
+  function clear(){
+    snapshot=null;memberFilter='all';eventFilter='all';
+    if(expireTimer!==null){clearTimeout(expireTimer);expireTimer=null;}
+  }
+  if(document.addEventListener) document.addEventListener('visibilitychange',()=>{
+    if(!document.hidden&&snapshot)render(snapshot);
+  });
+  window.KanonhaActivity=Object.freeze({render,setFilter,downloadTicket,downloadCertificate,clear});
 })();

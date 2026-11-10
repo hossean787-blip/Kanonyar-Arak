@@ -238,7 +238,7 @@
     return Array.isArray(rows) ? rows : [];
   }
   async function events() {
-    const rows = await request(restPath + 'kanonha_events?select=id,club_id,title,starts_at,registration_deadline,location,capacity,registered_count&is_published=eq.true&order=starts_at.asc', { auth: false });
+    const rows = await request(restPath + 'kanonha_events?select=id,club_id,title,starts_at,registration_deadline,location,capacity,registered_count,poster_path&is_published=eq.true&approval_status=eq.approved&order=starts_at.asc', { auth: false });
     return Array.isArray(rows) ? rows : [];
   }
   async function memberships() {
@@ -248,7 +248,7 @@
   }
   async function registrations() {
     const user_id = mustUser();
-    const rows = await request(restPath + 'kanonha_registrations?select=event_id,status&user_id=eq.' + encodeURIComponent(user_id), { requireUser: true });
+    const rows = await request(restPath + 'kanonha_registrations?select=id,event_id,status,ticket_token&user_id=eq.' + encodeURIComponent(user_id), { requireUser: true });
     return Array.isArray(rows) ? rows : [];
   }
   async function joinClub(clubId) {
@@ -348,6 +348,88 @@
       body: { user_id: mustUser(), event_id: eventId }
     });
   }
+  const posterRevision=new Map();
+  function eventPosterUrl(clubId,eventId,path){
+    if(!uuid(clubId)||!uuid(eventId)||path!==clubId+'/'+eventId+'.webp'||!enabled)return '';
+    return url+'/storage/v1/object/public/kanonha-event-posters/'+path+'?v='+(posterRevision.get(eventId)||1);
+  }
+  async function uploadEventPoster(clubId,eventId,file){
+    requireUuid(clubId,'کانون');requireUuid(eventId,'رویداد');mustUser();
+    if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size<1||file.size>2097152)
+      throw new ApiError('پوستر باید PNG، JPG یا WebP و حداکثر ۲ مگابایت باشد.');
+    const source=URL.createObjectURL(file);
+    try{
+      const img=await new Promise((resolve,reject)=>{
+        const el=new Image();el.onload=()=>resolve(el);
+        el.onerror=()=>reject(new ApiError('فایل پوستر قابل خواندن نیست.'));el.src=source;
+      });
+      const ratio=Math.min(1,900/Math.max(img.naturalWidth,img.naturalHeight));
+      const canvas=document.createElement('canvas');
+      canvas.width=Math.max(1,Math.round(img.naturalWidth*ratio));
+      canvas.height=Math.max(1,Math.round(img.naturalHeight*ratio));
+      canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+      const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/webp',0.85));
+      if(!blob||blob.type!=='image/webp'||blob.size>2097152)
+        throw new ApiError('تبدیل تصویر پوستر ممکن نبود.');
+      await refreshIfNeeded();
+      const path=clubId+'/'+eventId+'.webp';
+      const response=await fetch(url+'/storage/v1/object/kanonha-event-posters/'+path,{
+        method:'POST',body:blob,
+        headers:{apikey:key,Authorization:'Bearer '+session.access_token,
+         'Content-Type':'image/webp','x-upsert':'true'}
+      });
+      if(!response.ok)throw new ApiError('آپلود پوستر مجاز نبود یا ناموفق بود.',response.status);
+      const rows=await request(restPath+'kanonha_events?id=eq.'+encodeURIComponent(eventId)+
+        '&club_id=eq.'+encodeURIComponent(clubId)+'&select=id,poster_path',{
+        method:'PATCH',requireUser:true,headers:{Prefer:'return=representation'},body:{poster_path:path}
+      });
+      if(!Array.isArray(rows)||rows.length!==1)
+        throw new ApiError('پوستر بارگذاری شد اما به رویداد متصل نشد.');
+      posterRevision.set(eventId,Date.now());return path;
+    }finally{URL.revokeObjectURL(source);}
+  }
+  async function cancelEvent(eventId){
+    requireUuid(eventId,'رویداد');const userId=mustUser();
+    const rows=await request(restPath+'kanonha_registrations?event_id=eq.'+encodeURIComponent(eventId)+
+      '&user_id=eq.'+encodeURIComponent(userId)+'&select=id',{
+      method:'DELETE',requireUser:true,headers:{Prefer:'return=representation'}
+    });
+    if(!Array.isArray(rows)||rows.length!==1)
+      throw new ApiError('لغو ثبت‌نام مجاز نیست یا رویداد آغاز شده است.',409);
+    return true;
+  }
+  async function checkInTicket(value){
+    mustUser();
+    const code=String(value||'').trim().replace(/^KANONHA1:/i,'');
+    requireUuid(code,'کد بلیت');
+    const rows=await request(restPath+'rpc/kanonha_checkin_ticket',{
+      method:'POST',requireUser:true,body:{p_token:code}
+    });
+    return readRows(rows)[0]||{result:'invalid'};
+  }
+  async function eventSummary(eventId){
+    requireUuid(eventId,'رویداد');mustUser();
+    const rows=await request(restPath+'rpc/kanonha_event_summary',{
+      method:'POST',requireUser:true,body:{p_event_id:eventId}
+    });
+    return readRows(rows)[0]||null;
+  }
+  async function secretaryEventExport(eventId){
+    requireUuid(eventId,'رویداد');mustUser();
+    const rows=[];
+    for(let offset=0;offset<10000;offset+=500){
+      const part=readRows(await request(restPath+
+        'kanonha_registrations?select=id,user_id,event_id,status,attended_at,registered_at'+
+        '&event_id=eq.'+encodeURIComponent(eventId)+'&order=registered_at.asc&limit=500&offset='+offset,
+        {requireUser:true}));
+      rows.push(...part);
+      if(part.length<500)break;
+    }
+    const names=await secretaryProfiles(rows.map(r=>r.user_id));
+    const people=new Map(names.map(p=>[p.user_id,p]));
+    return {rows:rows.map(r=>({...r,student:people.get(r.user_id)||null})),
+     summary:await eventSummary(eventId),truncated:rows.length>=10000};
+  }
   /* ——— Secretary APIs: every request is additionally limited by Postgres RLS. ——— */
   function requireUuid(value, what = 'شناسه') {
     if (!uuid(value)) throw new ApiError(what + ' معتبر نیست.');
@@ -389,7 +471,7 @@
   }
   async function secretaryEvents(clubId) {
     requireUuid(clubId, 'کانون');
-    return readRows(await request(restPath + 'kanonha_events?select=id,club_id,title,location,starts_at,registration_deadline,capacity,registered_count,is_published'
+    return readRows(await request(restPath + 'kanonha_events?select=id,club_id,title,location,starts_at,registration_deadline,capacity,registered_count,is_published,approval_status,poster_path'
       + '&club_id=eq.' + encodeURIComponent(clubId) + '&order=starts_at.desc&limit=150', { requireUser: true }));
   }
   async function secretaryMemberships(clubId) {
@@ -883,7 +965,8 @@
     enabled, signUp, signIn, signOut, me, profile, ensureProfile,
     saveProfile, clubs, events, memberships, registrations,
     joinClub, reapplyClub, cancelClubMembership, clubLogoUrl, secretaryUploadClubLogo,
-    registerEvent, secretaryClubs, secretaryEvents, secretaryMemberships,
+    registerEvent, cancelEvent, eventPosterUrl, uploadEventPoster, checkInTicket,
+    eventSummary, secretaryEventExport, secretaryClubs, secretaryEvents, secretaryMemberships,
     secretaryProfiles, secretaryUpdateClub, secretaryCreateEvent, secretaryUpdateEvent,
     secretaryDecideMembership, secretaryRoster, secretarySetAttendance,
     studentSignUp,studentSignIn,managerSignUp,isManager,academicDetails,saveAcademicDetails,adminAction,

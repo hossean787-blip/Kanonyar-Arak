@@ -294,17 +294,21 @@
     rosterEvent = eventId;
     status('در حال بارگذاری ثبت‌نام‌کنندگان…');
     try {
-      const [rows, issued] = await Promise.all([
-        backend.secretaryRoster(eventId), backend.secretaryCertificates(eventId)
+      // A temporary certificate-list failure must never disable attendance scanning.
+      const [rows, certificatesResult] = await Promise.all([
+        backend.secretaryRoster(eventId),
+        Promise.resolve().then(() => backend.secretaryCertificates(eventId))
+          .then(value => ({ok:true,rows:value}), () => ({ok:false,rows:[]}))
       ]);
       if (requestId !== seq || !hasSession() || rosterEvent !== eventId) return;
       const normalized = rows.filter(x => validId(x.id) && validId(x.user_id) && x.event_id === eventId);
       const names = await backend.secretaryProfiles(normalized.map(r => r.user_id));
       if (requestId !== seq || !hasSession() || rosterEvent !== eventId) return;
       roster = normalized;
-      rosterCertificates = new Set(issued.map(c=>c.registration_id));
+      rosterCertificates = new Set(certificatesResult.rows.map(c=>c.registration_id));
       names.forEach(x => { if (validId(x.user_id)) profiles.set(x.user_id, x); });
-      status('');
+      status(certificatesResult.ok ? '' :
+        'فهرست حضور بارگذاری شد؛ وضعیت گواهینامه‌ها موقتاً در دسترس نیست.', !certificatesResult.ok);
       render();
     } catch (error) { if (requestId === seq) status(errorText(error), true); }
   }

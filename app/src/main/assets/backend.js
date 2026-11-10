@@ -238,7 +238,7 @@
     return Array.isArray(rows) ? rows : [];
   }
   async function events() {
-    const rows = await request(restPath + 'kanonha_events?select=id,club_id,title,starts_at,registration_deadline,location,capacity,registered_count,poster_path&is_published=eq.true&approval_status=eq.approved&order=starts_at.asc', { auth: false });
+    const rows = await request(restPath + 'kanonha_events?select=id,club_id,title,starts_at,registration_deadline,location,capacity,registered_count,poster_path,description&is_published=eq.true&order=starts_at.asc', { auth: false });
     return Array.isArray(rows) ? rows : [];
   }
   async function memberships() {
@@ -479,19 +479,21 @@
     if (!category || category.length > 80) throw new ApiError('دسته‌بندی کانون معتبر نیست.');
     return { name, description, category };
   }
-  function checkEventFields(input) {
+  function checkEventFields(input, editing = false) {
     const title = String(input && input.title || '').trim();
     const location = String(input && input.location || '').trim();
     const start = new Date(input && input.starts_at);
     const deadline = new Date(input && input.registration_deadline);
     const capacity = Number(input && input.capacity);
-    if (title.length < 2 || title.length > 160 || location.length > 250) throw new ApiError('عنوان یا مکان رویداد معتبر نیست.');
+    const description = String(input && input.description || '').trim();
+    if (title.length < 2 || title.length > 160 || location.length < 2 || location.length > 250 || description.length > 4000)
+      throw new ApiError('نام، محل یا توضیحات رویداد معتبر نیست.');
     if (!Number.isInteger(capacity) || capacity < 1 || capacity > 100000) throw new ApiError('ظرفیت باید عدد مثبت باشد.');
     if (!Number.isFinite(start.getTime()) || !Number.isFinite(deadline.getTime())
-        || start.getTime() <= Date.now() || deadline.getTime() <= Date.now() || deadline > start)
+        || (!editing && (start.getTime() <= Date.now() || deadline.getTime() <= Date.now())) || deadline > start)
       throw new ApiError('شروع و مهلت ثبت‌نام باید در آینده باشند و مهلت قبل از شروع باشد.');
     return {
-      title, location, starts_at: start.toISOString(),
+      title, location, description, starts_at: start.toISOString(),
       registration_deadline: deadline.toISOString(), capacity,
       is_published: Boolean(input && input.is_published)
     };
@@ -504,7 +506,7 @@
   }
   async function secretaryEvents(clubId) {
     requireUuid(clubId, 'کانون');
-    return readRows(await request(restPath + 'kanonha_events?select=id,club_id,title,location,starts_at,registration_deadline,capacity,registered_count,is_published,approval_status,poster_path'
+    return readRows(await request(restPath + 'kanonha_events?select=id,club_id,title,location,description,starts_at,registration_deadline,capacity,registered_count,is_published,approval_status,poster_path'
       + '&club_id=eq.' + encodeURIComponent(clubId) + '&order=starts_at.desc&limit=150', { requireUser: true }));
   }
   async function secretaryMemberships(clubId) {
@@ -547,9 +549,9 @@
     requireUuid(eventId, 'رویداد');
     const rows = await request(restPath + 'kanonha_events?id=eq.' + encodeURIComponent(eventId), {
       method: 'PATCH', requireUser: true, headers: { Prefer: 'return=representation' },
-      body: checkEventFields(fields)
+      body: checkEventFields(fields, true)
     });
-    if (!Array.isArray(rows) || rows.length !== 1) throw new ApiError('ویرایش رویداد مجاز نبود یا ثبت‌نام شروع شده است.');
+    if (!Array.isArray(rows) || rows.length !== 1) throw new ApiError('ویرایش رویداد مجاز نبود.');
     return rows[0];
   }
   async function secretaryDecideMembership(memberId, status) {

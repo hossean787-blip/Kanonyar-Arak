@@ -398,12 +398,13 @@
       throw new ApiError('لغو ثبت‌نام مجاز نیست یا رویداد آغاز شده است.',409);
     return true;
   }
-  async function checkInTicket(value){
+  async function checkInTicket(value,eventId){
     mustUser();
+    requireUuid(eventId,'رویداد');
     const code=String(value||'').trim().replace(/^KANONHA1:/i,'');
     requireUuid(code,'کد بلیت');
     const rows=await request(restPath+'rpc/kanonha_checkin_ticket',{
-      method:'POST',requireUser:true,body:{p_token:code}
+      method:'POST',requireUser:true,body:{p_token:code,p_event_id:eventId}
     });
     return readRows(rows)[0]||{result:'invalid'};
   }

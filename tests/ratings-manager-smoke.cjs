@@ -2,123 +2,197 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
-const js=read('app/src/main/assets/ratings-admin.js');
 const html=read('app/src/main/assets/index.html');
+const manager=read('app/src/main/assets/ratings-admin.js');
+const reports=read('app/src/main/assets/survey-report.js');
+const backend=read('app/src/main/assets/backend.js');
+const schema=read('supabase/surveys-v210-finalization.sql');
+const pausing=read('supabase/surveys-v211-pausing.sql');
 const admin=read('app/src/main/assets/admin.js');
-const schema=read('supabase/surveys-v200.sql');
-new vm.Script(js,{filename:'ratings-admin.js'});
+new vm.Script(manager,{filename:'ratings-admin.js'});
+new vm.Script(reports,{filename:'survey-report.js'});
 assert.match(html,/data-admin-tab="ratings"/);
 assert.match(admin,/KanonhaRatingManagement\.mount/);
-assert.match(admin,/KanonhaRatingManagement\.clear/);
-assert.match(schema,/kanonha_surveys_manager_insert/);
-assert.match(schema,/kanonha_surveys_manager_update/);
-assert.match(schema,/kanonha_survey_options_manager_insert/);
-assert.match(schema,/survey_requires_at_least_two_options/);
-assert.match(schema,/published_survey_is_locked/);
-assert.match(schema,/results_approval_not_allowed_before_competition_end/);
-
-const els={};
-const element=id=>els[id]??=(id=>({id,innerHTML:'',listeners:{},
-  addEventListener(type,callback){this.listeners[type]=callback}}))(id);
-const doc={readyState:'complete',getElementById:element};
-const draftId='11111111-1111-4111-8111-111111111111';
-const competitionId='22222222-2222-4222-8222-222222222222';
-const datePlus=days=>new Date(Date.now()+days*86400000).toISOString();
-let allowed=true;
-let polls=[{id:competitionId,title:'<script>bad</script>',description:'',
- category:'club',kind:'competition',status:'published',results_approved:false,ends_at:datePlus(-1)}];
-let options=[{id:'88888888-8888-4888-8888-888888888888',survey_id:competitionId,title:'کانون یک',sort_order:0},
- {id:'99999999-9999-4999-8999-999999999999',survey_id:competitionId,title:'کانون دو',sort_order:1}];
-const operations=[];
+assert.match(schema,/kanonha_survey_save\(/,'atomic SQL function exists');
+assert.match(schema,/kanonha_survey_catalog\(/);
+assert.match(schema,/kanonha_survey_audit/);
+assert.match(schema,/kanonha_survey_participation/);
+assert.match(schema,/survey_option_source_not_in_catalog/);
+assert.match(pausing,/when 'paused' then 'paused'/,'pause events audited');
+assert.match(backend,/surveySaveV21/);
+const ids={
+ competition:'22222222-2222-4222-8222-222222222222',
+ created:'33333333-3333-4333-8333-333333333333',
+ faculty1:'44444444-4444-4444-8444-444444444444',
+ faculty2:'55555555-5555-4555-8555-555555555555',
+ faculty3:'66666666-6666-4666-8666-666666666666'
+};
+const idOpt=i=>'99999999-9999-4999-8999-'+String(i).padStart(12,'0');
+let allowed=true,operations=[],csv=[],prints=[];
+const future=new Date(Date.now()+7*86400000).toISOString();
+const past=new Date(Date.now()-86400000).toISOString();
+let polls=[{
+ id:ids.competition,title:'<script>bad</script>',description:'',kind:'competition',
+ category:'faculty',starts_at:past,ends_at:past,min_rank_votes:5,
+ status:'published',results_approved:false
+}];
+let options=[
+ {id:idOpt(1),survey_id:ids.competition,title:'دانشکده اول',source_id:ids.faculty1,sort_order:0},
+ {id:idOpt(2),survey_id:ids.competition,title:'دانشکده دوم',source_id:ids.faculty2,sort_order:1}
+];
+const catalog=[
+ {source_id:ids.faculty1,title:'دانشکده اول',category:'faculty',subtitle:'دانشگاه آزاد'},
+ {source_id:ids.faculty2,title:'دانشکده دوم',category:'faculty',subtitle:'دانشگاه آزاد'},
+ {source_id:ids.faculty3,title:'دانشکده سوم',category:'faculty',subtitle:'دانشگاه آزاد'}
+];
 const api={
- surveyList:async includeDrafts=>{assert.equal(includeDrafts,true);return polls.map(p=>({...p}))},
- surveyOptions:async()=>options.map(o=>({...o})),
- surveyResults:async()=>[],
- surveyCreate:async(fields,items)=>{
+ surveyList:async all=>{assert.equal(all,true);return polls.map(x=>({...x}))},
+ surveyOptions:async()=>options.map(x=>({...x})),
+ academicCatalog:async()=>({universities:[{id:ids.faculty3,name:'دانشگاه آزاد'}],
+  faculties:catalog.map(x=>({id:x.source_id,university_id:ids.faculty3,name:x.title}))}),
+ surveyAudit:async()=>[{survey_id:ids.competition,action:'published',occurred_at:past,actor_id:ids.faculty1}],
+ surveyCatalog:async type=>type==='faculty'?catalog:[],
+ surveySaveV21:async (id,fields,sources)=>{
   if(!allowed)throw Error('forbidden');
-  operations.push({action:'create',fields,items});
-  polls.push({...fields,id:draftId,status:'draft',results_approved:false});
-  options.push(...items.map((title,i)=>({id:'77777777-7777-4777-8777-'+String(i+1).padStart(12,'0'),
-   survey_id:draftId,title,sort_order:i})));
-  return polls.at(-1);
- },
- surveyUpdateDraft:async(id,fields,items)=>{
-  if(!allowed)throw Error('forbidden');
-  operations.push({action:'edit',id,fields,items});
-  polls=polls.map(p=>p.id===id?{...p,...fields}:p);
-  return polls.find(p=>p.id===id);
+  operations.push({action:'save',id,fields,sources});
+  if(sources.length!==2)throw Error('bad sources');
+  polls.push({id:ids.created,status:'draft',results_approved:false,...fields,
+   audience_university_id:fields.audience_university_id,
+   audience_faculty_id:fields.audience_faculty_id});
+  options.push(...sources.map((sourceId,i)=>({
+   survey_id:ids.created,id:idOpt(i+3),source_id:sourceId,
+   title:catalog.find(x=>x.source_id===sourceId).title,sort_order:i
+  })));
+  return ids.created;
  },
  surveyPublish:async id=>{
   if(!allowed)throw Error('forbidden');
-  const p=polls.find(p=>p.id===id);
-  if(!p||p.status!=='draft'||p.ends_at<=datePlus(0))throw Error('cannot publish');
   operations.push({action:'publish',id});
-  p.status='published';return p;
+  polls.find(p=>p.id===id).status='published';
+  return true;
  },
  surveyApproveResults:async id=>{
   if(!allowed)throw Error('forbidden');
   const p=polls.find(p=>p.id===id);
-  if(!p||p.kind!=='competition'||p.status!=='published'||new Date(p.ends_at)>new Date())throw Error('blocked');
-  operations.push({action:'approve',id});p.results_approved=true;return p;
+  if(p.kind!=='competition'||p.ends_at>future)throw Error('wrong type');
+  operations.push({action:'approve',id});p.results_approved=true;return true;
+ },
+ surveyChangeStatus:async (id,status)=>{
+  if(!allowed)throw Error('forbidden');
+  operations.push({action:'status',id,status});
+  polls.find(p=>p.id===id).status=status;return true;
  },
  surveyDeleteDraft:async id=>{
   if(!allowed)throw Error('forbidden');
-  operations.push({action:'delete',id});
-  polls=polls.filter(p=>p.id!==id);return true;
- }
+  operations.push({action:'delete',id});polls=polls.filter(p=>p.id!==id);return true;
+ },
+ surveyDuplicate:async id=>{
+  if(!allowed)throw Error('forbidden');
+  operations.push({action:'duplicate',id});return ids.created;
+ },
+ surveyResults:async id=>id===ids.created?
+   [{option_id:idOpt(3),rating_count:6,rating_sum:27},
+    {option_id:idOpt(4),rating_count:6,rating_sum:27}]:[],
+ surveyParticipation:async()=>({eligible_students:40,voters:12}),
+ ratingAddProfessor:async()=>{operations.push({action:'professor'});return true}
 };
-const win={KanonhaBackend:api,KanonhaAdminPanel:{hasAccess:()=>allowed}};
+const els={};
+function el(id){
+ return els[id]??=(id=>({id,innerHTML:'',textContent:'',listeners:{},
+  addEventListener(type,fn){this.listeners[type]=fn},querySelector(){return null}}))(id);
+}
+const document={
+ readyState:'complete',getElementById:el,body:{appendChild(){}},
+ createElement:()=>({click(){},remove(){}})
+};
+const mockJalali={
+ enhance:()=>{},validateForm:()=>true,
+ formatDate:s=>new Date(s).toLocaleDateString('fa-IR')
+};
 class FakeFormData{
  constructor(form){this.fields=form.fields}
- get(name){return this.fields[name]??null}
+ get(k){return this.fields[k]??null}
+ getAll(k){return k==='sources'?this.fields.sources:[]}
 }
-vm.runInNewContext(js,{document:doc,window:win,FormData:FakeFormData,
- Date,Intl,Promise,console},{timeout:4500});
-const wait=()=>new Promise(res=>setTimeout(res,30));
-const click=(action,id)=>element('admin-content').listeners.click({
- target:{closest:s=>s==='[data-surveys-action]'?{dataset:{surveysAction:action,surveyId:id}}:null}
+const window={KanonhaBackend:api,KanonhaAdminPanel:{hasAccess:()=>allowed},
+  KanonhaJalali:mockJalali,
+  AndroidSurveyExports:{
+   saveCsv:(name,b64)=>csv.push({name,b64}),
+   printHtml:html=>prints.push(html)
+  }
+};
+const context={window,document,console,Date,Intl,Promise,FormData:FakeFormData,
+ TextEncoder,btoa,Blob,URL,setTimeout};
+vm.runInNewContext(reports,context,{timeout:3000});
+vm.runInNewContext(manager,context,{timeout:3000});
+const delay=()=>new Promise(r=>setTimeout(r,40));
+const click=(action,id)=>el('admin-content').listeners.click({
+ target:{closest:q=>q==='[data-surveys-action]'?
+  {dataset:{surveysAction:action,surveyId:id}}:null}
 });
-const submit=fields=>element('admin-content').listeners.submit({
- target:{id:'survey-manager-form',fields},preventDefault(){}
-});
+function submit(fields){
+ el('admin-content').listeners.submit({
+  target:{id:'survey-manager-form',fields},preventDefault(){}
+ });
+}
 (async()=>{
- win.KanonhaRatingManagement.mount();
- await wait();
- let page=element('admin-ratings-content').innerHTML;
- assert.match(page,/ساخت نظرسنجی جدید/);
- assert.match(page,/نوع انتشار نتایج/);
- assert.match(page,/name="kind"/);
- assert.match(page,/type="datetime-local"/);
- assert.match(page,/name="options"/);
- assert.match(page,/&lt;script&gt;bad&lt;\/script&gt;/,'escape data from database');
- assert.match(page,/تأیید و اعلام نتایج مسابقه/,'manager can approve ended competition');
- assert.equal(operations.length,0,'loading must not mutate backend');
-
- submit({title:'بهترین کانون‌ها',category:'club',kind:'regular',
-   description:'نظرسنجی معمولی',ends_at:datePlus(7).slice(0,16),options:'کانون الف\nکانون ب'});
- await wait();
- assert.equal(operations[0].action,'create');
+ window.KanonhaRatingManagement.mount();
+ await delay();
+ let v=el('admin-ratings-content').innerHTML;
+ assert.match(v,/استودیوی مدیریت/);
+ assert.match(v,/name="starts_at"/);
+ assert.match(v,/name="ends_at"/);
+ assert.match(v,/name="university_id"/);
+ assert.match(v,/name="faculty_id"/);
+ assert.match(v,/name="min_rank_votes"/);
+ assert.match(v,/type="checkbox" name="sources"/);
+ assert.match(v,/&lt;script&gt;bad&lt;\/script&gt;/);
+ assert.match(v,/تأیید/);
+ assert.equal(operations.length,0,'mount must not mutate backend');
+ submit({title:'نظرسنجی برترین دانشکده',description:'فرایند رأی دانشجویان',
+  category:'faculty',kind:'regular',starts_at:new Date(Date.now()-60000).toISOString().slice(0,16),
+  ends_at:future.slice(0,16),min_rank_votes:'5',university_id:'',faculty_id:'',
+  sources:[ids.faculty1,ids.faculty2]});
+ await delay();
+ assert.equal(operations[0].action,'save');
+ assert.deepEqual(operations[0].sources,[ids.faculty1,ids.faculty2]);
  assert.equal(operations[0].fields.kind,'regular');
- assert.equal(operations[0].items.length,2);
- page=element('admin-ratings-content').innerHTML;
- assert.match(page,/بهترین کانون‌ها/);
+ assert.match(el('admin-ratings-content').innerHTML,/نظرسنجی برترین دانشکده/);
 
- click('publish-ask',draftId);
- assert.equal(operations.length,1,'first publish click only requests explicit approval');
- assert.match(element('admin-ratings-content').innerHTML,/تأیید نهایی انتشار/);
- click('publish-confirm',draftId);await wait();
- assert.equal(operations[1].action,'publish','published only after second approval');
- assert.equal(polls.find(x=>x.id===draftId).status,'published');
+ click('publish-ask',ids.created);
+ assert.equal(operations.length,1,'first confirmation click must not publish');
+ assert.match(el('admin-ratings-content').innerHTML,/تأیید نهایی/);
+ click('publish-confirm',ids.created);await delay();
+ assert.equal(operations[1].action,'publish');
+ assert.equal(polls.find(p=>p.id===ids.created).status,'published');
 
- click('approve-ask',competitionId);
- assert.equal(operations.length,2,'first contest approval click must be non-mutating');
- click('approve-confirm',competitionId);await wait();
+ click('report',ids.created);await delay();
+ v=el('admin-ratings-content').innerHTML;
+ assert.match(v,/گزارش و رتبه‌بندی واقعی/);
+ assert.match(v,/رتبه اول مشترک/,'equal averages and counts share first place');
+ assert.match(v,/۴۰/,'eligible students counted in private report');
+ click('csv',ids.created);
+ assert.equal(csv.length,1);
+ assert.match(csv[0].name,/\.csv$/);
+ click('pdf',ids.created);
+ assert.equal(prints.length,1);
+ assert.match(prints[0],/<!doctype html>/);
+ assert.match(prints[0],/اطلاعات هویتی/);
+
+ click('approve-ask',ids.competition);
+ assert.equal(operations.length,2,'contest approval must require confirmation');
+ click('approve-confirm',ids.competition);await delay();
  assert.equal(operations[2].action,'approve');
- assert.equal(polls[0].results_approved,true);
+
+ click('pause-ask',ids.created);
+ assert.equal(operations.length,3);
+ click('pause-confirm',ids.created);await delay();
+ assert.equal(operations[3].status,'paused');
+ click('resume-ask',ids.created);click('resume-confirm',ids.created);await delay();
+ assert.equal(operations[4].status,'published');
 
  allowed=false;
- click('publish-ask',draftId);
- assert.equal(operations.length,3,'unauthorized users must not control polls');
- win.KanonhaRatingManagement.clear();
- console.log('PASS: manager draft form, category and mode selection, XSS, two-click publish, after-deadline competition release and role guard');
+ click('cancel-ask',ids.created);
+ assert.equal(operations.length,5,'nonmanager cannot mutate published survey');
+ console.log('PASS: manager Jalali/form controls, 2-click publish/approval/pause, ranking, Excel/PDF bridges and role guard');
 })().catch(e=>{console.error(e);process.exitCode=1});

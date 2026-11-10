@@ -113,13 +113,16 @@ function submit(id,fields){
   click({secretaryTab:'events'});
   click({secretaryAction:'new-event'});
   assert.ok(el.get('secretary-content').innerHTML.includes('secretary-event-form'));
+  assert.match(el.get('secretary-content').innerHTML,/name="event_date" type="date"/);
+  assert.match(el.get('secretary-content').innerHTML,/name="event_time" type="time"/);
   submit('secretary-event-form',{
-    title:'رویداد آینده',location:'سالن',starts_at:'2035-03-10T15:00',
+    title:'رویداد آینده',location:'سالن',event_date:'2035-03-10',event_time:'15:00',
     registration_deadline:'2035-03-09T15:00',capacity:'25',is_published:'1'
   });
   await flush();await flush();
   assert.equal(ops.creates,1);
-  assert.ok(events.some(e=>e.title==='رویداد آینده'));
+  assert.ok(events.some(e=>e.title==='رویداد آینده' && e.starts_at==='2035-03-10T15:00'),
+    'separate date/time must persist as one event start timestamp');
   click({secretaryRoster:eventId});
   await flush();await flush();
   assert.ok(el.get('secretary-content').innerHTML.includes('ثبت حضور'));

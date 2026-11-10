@@ -10,7 +10,7 @@ const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map(m => m[1]);
 const clubId = '3b45d692-201b-4111-b25e-029c0bc82e62';
 const eventId = '6afeed89-2d61-4216-b103-c28e80c85e7e';
 const studentId = 'af2c8d5d-ab17-4c54-aa22-11b572ad918a';
-const pages = ['home','clubs','events','activity','profile'];
+const pages = ['home','clubs','club-detail','events','activity','profile'];
 // Deliberately adversarial catalog strings supplied by a mocked backend.
 const untrustedClub = '<img src=x onerror=alert(1)> کانون';
 const untrustedEvent = '<svg onload=alert(2)> نشست';
@@ -46,7 +46,7 @@ const doc = {
   addEventListener: (name, cb) => { eventHandlers[name] = cb; }
 };
 let currentUser = null, memberRows = [], eventRows = [], seats = 0;
-const actions = { joins:0, registrations:0 };
+const actions = { joins:0, cancellations:0, reapplies:0, registrations:0 };
 const backend = {
   enabled:true,
   get currentUser() { return currentUser; },
@@ -66,6 +66,8 @@ const backend = {
   async memberships() { return memberRows; },
   async registrations() { return eventRows; },
   async joinClub(id) { assert.equal(id,clubId); actions.joins++; memberRows=[{club_id:id,status:'pending'}]; },
+  async reapplyClub(id) { assert.equal(id,clubId); actions.reapplies++; memberRows=[{club_id:id,status:'pending'}]; },
+  async cancelClubMembership(id) { assert.equal(id,clubId); actions.cancellations++; memberRows=[]; },
   async registerEvent(id) { assert.equal(id,eventId); actions.registrations++; eventRows=[{event_id:id,status:'confirmed'}]; seats++; },
   async saveProfile(name,number) { return {full_name:name,student_number:number}; }
 };
@@ -106,8 +108,11 @@ const click = dataset => eventHandlers.click({target:{closest(){return {dataset}
   app.handleBack();
   app.go('clubs');
   click({clubDetails:'0'});
-  assert.ok(get('sheet-content').innerHTML.includes('&lt;img'),'club descriptions must be escaped in details');
+  assert.equal(app.screen,'club-detail','club must open its own page');
+  assert.ok(get('club-detail-content').innerHTML.includes('&lt;img'),'club descriptions must be escaped in details');
+  assert.ok(!get('club-detail-content').innerHTML.includes('<img src=x onerror'),'club details must prevent injected HTML');
   app.handleBack();
+  assert.equal(app.screen,'clubs','back must return to club cards');
   app.go('profile');
   await eventHandlers.submit({
     target:{id:'online-auth-form',fields:{kind:'student',identifier:'123456',password:'securepassword'},reset(){}},
@@ -119,8 +124,9 @@ const click = dataset => eventHandlers.click({target:{closest(){return {dataset}
   assert.equal(get('online-auth-panel').hidden,true,'login form should close after student auth');
   app.go('clubs');
   click({join:'0'});
+  click({join:'0'});
   await delay(); await delay();
-  assert.equal(actions.joins,1);
+  assert.equal(actions.joins,1,'double tap must send only one membership request');
   assert.equal(app.state.requested.length,1,'pending membership not reflected');
   assert.ok(get('activity-clubs').innerHTML.includes('&lt;img'),'club activity names must be escaped');
   app.go('events');
@@ -134,6 +140,48 @@ const click = dataset => eventHandlers.click({target:{closest(){return {dataset}
   await delay();
   assert.equal(actions.registrations,1,'duplicate online registration must be disabled');
   assert.ok(!get('activity-tickets').innerHTML.includes('sample-qr'),'online should never show fake QR');
+  app.go('clubs');
+  click({clubDetails:'0'});
+  assert.equal(app.screen,'club-detail');
+  assert.ok(get('club-detail-content').innerHTML.includes('لغو درخواست عضویت'));
+  click({cancelMembership:'0'});
+  assert.equal(get('sheet-overlay').hidden,false,'cancellation requires confirmation');
+  click({confirmCancel:'0'});
+  await delay();await delay();
+  assert.equal(actions.cancellations,1);
+  assert.equal(app.state.requested.length,0,'pending membership must be removed after cancellation');
+  memberRows=[{club_id:clubId,status:'rejected'}];
+  click({action:'confirm-exit'});
+  await delay();await delay();
+  await eventHandlers.submit({
+    target:{id:'online-auth-form',fields:{kind:'student',identifier:'123456',password:'securepassword'},reset(){}},
+    preventDefault(){}
+  });
+  await delay();await delay();
+  assert.equal(app.state.rejected.length,1,'rejected membership must be distinguishable');
+  app.go('clubs');
+  assert.ok(get('clubs-list').innerHTML.includes('درخواست مجدد'));
+  click({reapply:'0'});
+  await delay();await delay();
+  assert.equal(actions.reapplies,1);
+  assert.equal(app.state.requested.length,1,'reapplication must become pending');
+  memberRows=[{club_id:clubId,status:'approved'}];
+  click({action:'confirm-exit'});
+  await delay();await delay();
+  await eventHandlers.submit({
+    target:{id:'online-auth-form',fields:{kind:'student',identifier:'123456',password:'securepassword'},reset(){}},
+    preventDefault(){}
+  });
+  await delay();await delay();
+  assert.equal(app.state.joined.length,1,'secretary-approved membership must appear');
+  app.go('clubs');
+  click({clubDetails:'0'});
+  assert.ok(get('club-detail-content').innerHTML.includes('خروج از کانون'));
+  click({cancelMembership:'0'});
+  click({confirmCancel:'0'});
+  await delay();await delay();
+  assert.equal(actions.cancellations,2);
+  assert.equal(app.state.joined.length,0,'club leave must clear approved membership');
   click({action:'confirm-exit'});
   await delay(); await delay();
   assert.equal(backend.currentUser,null);

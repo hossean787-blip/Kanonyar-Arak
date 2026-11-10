@@ -533,9 +533,13 @@
     }
     return true;
   }
+  const clubMembershipWorking = new Set();
   async function onlineJoin(i) {
     if (!clubs[i] || !onlineRequireProfile()) return;
     if (state.joined.includes(i) || state.requested.includes(i)) { notify('این درخواست قبلاً ثبت شده است.'); return; }
+    const clubId = clubs[i].id;
+    if (clubMembershipWorking.has(clubId)) return;
+    clubMembershipWorking.add(clubId);
     try {
       if (state.rejected.includes(i)) await onlineBackend.reapplyClub(clubs[i].id);
       else await onlineBackend.joinClub(clubs[i].id);
@@ -547,18 +551,22 @@
         try { await onlineRefreshPersonal(); } catch (_) {}
         notify('وضعیت عضویت تغییر کرده است؛ لطفاً دوباره بررسی کنید.');
       } else notify(onlineError(error));
-    }
+    } finally { clubMembershipWorking.delete(clubId); }
   }
   async function onlineCancelMembership(i) {
     if (!onlineMode || !clubs[i] || !onlineRequireProfile()) return;
     if (!state.joined.includes(i) && !state.requested.includes(i)) return;
     const wasMember = state.joined.includes(i);
+    const clubId = clubs[i].id;
+    if (clubMembershipWorking.has(clubId)) return;
+    clubMembershipWorking.add(clubId);
     try {
-      await onlineBackend.cancelClubMembership(clubs[i].id);
+      await onlineBackend.cancelClubMembership(clubId);
       await onlineRefreshPersonal();
       closeSheet();
       notify(wasMember ? 'عضویت شما در کانون پایان یافت.' : 'درخواست عضویت لغو شد.');
     } catch (error) { notify(onlineError(error)); }
+    finally { clubMembershipWorking.delete(clubId); }
   }
   function confirmMembershipCancel(i) {
     if (!clubs[i]) return;
@@ -905,7 +913,7 @@
     const foundClubs=(onlineMode ? clubs.map((_, i) => i) : [0,2,3]).filter(i=>!query||clubs[i].title.includes(query)||clubs[i].desc.includes(query));
     $('home-clubs').innerHTML=foundClubs.length?foundClubs.map(i=>
       `<button type="button" class="home-mini-club" data-club-details="${i}">
-      <span class="mini-club-icon ${clubs[i].tone==='green'?'green':clubs[i].tone==='mint'?'mint':clubs[i].tone==='orange'?'orange':''}"><img class="mini-art" src="assets/club-${clubs[i].icon==='book'?'book':clubs[i].icon==='code'?'tech':clubs[i].icon==='leaf'?'leaf':clubs[i].icon==='flask'?'science':'sport'}.svg" alt="" width="57" height="57"></span>
+      <span class="mini-club-icon ${clubs[i].tone==='green'?'green':clubs[i].tone==='mint'?'mint':clubs[i].tone==='orange'?'orange':''}"><img class="mini-art" src="${escapeHTML(clubImageSrc(clubs[i]))}" alt="" width="57" height="57"></span>
       ${escapeHTML(clubs[i].short)}</button>`).join(''):'<div class="empty">کانونی یافت نشد.</div>';
   }
 
@@ -968,7 +976,7 @@
     $('activity-clubs').innerHTML = activityMembers.length
       ? activityMembers.filter(i => clubs[i]).map(i =>
           `<button class="activity-row" type="button" data-club-details="${i}">
-            <span class="club-icon ${clubs[i].tone}"><img class="row-club-art" src="assets/club-${clubs[i].icon === "book" ? "book" : clubs[i].icon === "code" ? "tech" : clubs[i].icon === "leaf" ? "leaf" : clubs[i].icon === "flask" ? "science" : "sport"}.svg" alt="" width="31" height="31"></span>
+            <span class="club-icon ${clubs[i].tone}"><img class="row-club-art" src="${escapeHTML(clubImageSrc(clubs[i]))}" alt="" width="31" height="31"></span>
             <span class="activity-copy">${escapeHTML(clubs[i].title)}${state.requested.includes(i) ? '<small>در انتظار تأیید عضویت</small>' : state.rejected.includes(i) ? '<small>درخواست رد شده؛ امکان درخواست مجدد</small>' : ''}</span>
             <span class="arrow">${svg('chevron-left', 15)}</span>
           </button>`

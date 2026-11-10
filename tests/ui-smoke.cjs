@@ -13,7 +13,7 @@ const css = read('assets/styles.css');
 const manifest = read('AndroidManifest.xml');
 const nativeActivity = read('java/ir/kanonha/app/MainActivity.java');
 const nativeCalendar = read('java/ir/kanonha/app/DailyCalendarReceiver.java');
-const pages = ['home', 'clubs', 'events', 'activity', 'profile'];
+const pages = ['home', 'clubs', 'events', 'ratings', 'activity', 'profile'];
 
 for (const page of pages) {
   assert.ok(html.includes('id="screen-' + page + '"'), 'missing page: ' + page);
@@ -29,6 +29,10 @@ assert.doesNotMatch(html, /student-calendar\.(?:js|css)/, 'Jalali calendar must 
 assert.match(nativeCalendar, /setOngoing\(true\)/, 'persistent notification must remain enabled');
 assert.match(nativeCalendar, /setCustomContentView\(view\)/, 'custom Jalali notification must remain enabled');
 assert.match(html, /رویدادهای نمونه/);
+assert.doesNotMatch(html, /صدای دانشجو/, 'the former survey label must be removed');
+assert.doesNotMatch(html, /ratings-home-entry/, 'survey must not have a home promo card');
+assert.match(html, /<h1 id="title-ratings">نظرسنجی<\/h1>/, 'survey route title');
+assert.match(js, /id: 'ratings',\s+label: 'نظرسنجی'/, 'surveys must be in the student bottom navigation');
 for (const content of [html, css, manifest]) {
   assert.doesNotMatch(content, /همراه|hamrah/i, 'companion branding leaked into new app');
 }
@@ -107,6 +111,9 @@ vm.runInNewContext(js, context, { filename: 'app.js', timeout: 2500 });
 const app = window.KanonhaPreview;
 assert.ok(app, 'app did not initialize');
 assert.equal(app.screen, 'home');
+assert.match(get('bottom-nav').innerHTML, /data-screen-btn="ratings"/, 'surveys must appear in bottom navigation');
+assert.match(get('bottom-nav').innerHTML, /nav-ratings.svg/, 'surveys must have a dedicated icon');
+assert.equal((get('bottom-nav').innerHTML.match(/data-screen-btn=/g)||[]).length, 6, 'student navigation must have six routes');
 assert.equal(app.state.registered.length, 0, 'demo should not pre-register a user');
 assert.equal(app.state.joined.length, 0, 'demo should not pre-join a club');
 for (const page of pages) {

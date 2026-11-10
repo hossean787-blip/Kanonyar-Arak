@@ -28,6 +28,7 @@ public final class MainActivity extends FragmentActivity {
  private WebView web;
  private static final int CLUB_LOGO_PICK_REQUEST=61420;
  private ValueCallback<Uri[]> pendingLogoFiles;
+ private boolean pendingPngOnly;
  private android.webkit.PermissionRequest pendingCameraPermission;
  private BiometricVault biometric;
  private SurveyExportBridge surveyExports;
@@ -125,8 +126,11 @@ public final class MainActivity extends FragmentActivity {
     }
     Intent pick=new Intent(Intent.ACTION_OPEN_DOCUMENT);
     pick.addCategory(Intent.CATEGORY_OPENABLE);
-    pick.setType("image/*");
-    pick.putExtra(Intent.EXTRA_MIME_TYPES,new String[]{"image/png","image/jpeg","image/webp"});
+    String[] accepted=params==null?null:params.getAcceptTypes();
+    pendingPngOnly=accepted!=null&&accepted.length==1&&"image/png".equalsIgnoreCase(accepted[0].trim());
+    pick.setType(pendingPngOnly?"image/png":"image/*");
+    if(!pendingPngOnly)
+     pick.putExtra(Intent.EXTRA_MIME_TYPES,new String[]{"image/png","image/jpeg","image/webp"});
     pick.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
     try{startActivityForResult(pick,CLUB_LOGO_PICK_REQUEST);}
     catch(RuntimeException e){
@@ -159,7 +163,7 @@ public final class MainActivity extends FragmentActivity {
   super.onActivityResult(requestCode,resultCode,data);
   if(requestCode==CLUB_LOGO_PICK_REQUEST){
    Uri uri=resultCode==android.app.Activity.RESULT_OK&&data!=null?data.getData():null;
-   finishLogoPicker(validLogoUri(uri)?uri:null);
+   finishLogoPicker(validLogoUri(uri,pendingPngOnly)?uri:null);
    return;
   }
   if(surveyExports!=null)surveyExports.handleResult(requestCode,resultCode,data);
@@ -167,13 +171,15 @@ public final class MainActivity extends FragmentActivity {
  private void finishLogoPicker(Uri uri){
   ValueCallback<Uri[]> callback=pendingLogoFiles;
   pendingLogoFiles=null;
+  pendingPngOnly=false;
   if(callback!=null)callback.onReceiveValue(uri==null?null:new Uri[]{uri});
  }
- private boolean validLogoUri(Uri uri){
+ private boolean validLogoUri(Uri uri,boolean pngOnly){
   if(uri==null||!"content".equals(uri.getScheme()))return false;
   try{
    String mime=getContentResolver().getType(uri);
-   if(!"image/png".equals(mime)&&!"image/jpeg".equals(mime)&&!"image/webp".equals(mime))
+   if(pngOnly&&!"image/png".equals(mime))return false;
+   if(!pngOnly&&!"image/png".equals(mime)&&!"image/jpeg".equals(mime)&&!"image/webp".equals(mime))
     return false;
    try(Cursor cursor=getContentResolver().query(uri,new String[]{OpenableColumns.SIZE},null,null,null)){
     if(cursor!=null&&cursor.moveToFirst()){

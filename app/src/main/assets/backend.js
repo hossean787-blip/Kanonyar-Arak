@@ -248,7 +248,7 @@
   }
   async function registrations() {
     const user_id = mustUser();
-    const rows = await request(restPath + 'kanonha_registrations?select=id,event_id,status,ticket_token&user_id=eq.' + encodeURIComponent(user_id), { requireUser: true });
+    const rows = await request(restPath + 'kanonha_registrations?select=id,event_id,status,ticket_token,attended_at&user_id=eq.' + encodeURIComponent(user_id), { requireUser: true });
     return Array.isArray(rows) ? rows : [];
   }
   async function joinClub(clubId) {

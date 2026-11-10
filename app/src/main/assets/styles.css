@@ -2509,3 +2509,117 @@ button:focus-visible,input:focus-visible,select:focus-visible {outline-color:#39
 .ticket-cancel{background:#fff4f2!important;color:#a14440!important;border:1px solid #f6d4ce!important;margin-top:8px}
 #secretary-ticket-form{margin:12px 0}
 #secretary-scan-camera:not(:empty){padding-top:12px}
+
+/* Activities v0.9.21: premium emerald workspace, scoped to one screen. */
+#screen-activity{--ac:#16865b;--ac-soft:#e8f8ef;--ac-dark:#145b43;--ac-ink:#19342c;
+ padding-bottom:125px;direction:rtl}
+#screen-activity .activity-hero{position:relative;isolation:isolate;overflow:hidden;
+ border-radius:26px;padding:20px 15px 14px;margin:9px 0 19px;
+ background:linear-gradient(125deg,#0e654b,#168960 68%,#29ac74);
+ box-shadow:0 15px 31px #0b785129;color:white}
+#screen-activity .activity-hero:before{content:"";position:absolute;width:190px;height:190px;
+ border-radius:50%;background:#ffffff12;left:-70px;top:-92px;z-index:-1}
+#screen-activity .activity-hero:after{content:"";position:absolute;width:120px;height:120px;
+ border:1px solid #ffffff26;border-radius:50%;left:20px;top:18px;z-index:-1}
+#screen-activity .activity-hero-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+#screen-activity .activity-eyebrow{font-size:10px;letter-spacing:.12px;color:#c3fbe0;font-weight:800}
+#screen-activity .activity-hero h1{margin:6px 0 8px;font-size:24px;font-weight:900;color:#fff}
+#screen-activity .activity-hero p{margin:0 0 17px;color:#e3fff1;font-size:11px;line-height:1.8}
+#screen-activity .activity-refresh{flex:none;border:1px solid #ffffff69;background:#ffffff22;
+ color:#fff;border-radius:12px;font:inherit;font-size:10px;font-weight:800;
+ padding:10px 9px;min-height:39px}
+#screen-activity .activity-refresh:disabled{opacity:.55}
+#screen-activity .activity-overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+#screen-activity .activity-stat{background:#ffffffee;border-radius:15px;min-height:91px;
+ display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 2px;
+ gap:5px;text-align:center;box-shadow:0 4px 13px #003d2015}
+#screen-activity .activity-stat-icon{display:block;height:5px;width:26px;border-radius:9px;
+ background:linear-gradient(90deg,#86e3ac,#198660)}
+#screen-activity .activity-stat strong{font-size:19px;color:#136849;font-weight:950;line-height:1.2}
+#screen-activity .activity-stat small{font-size:9px;line-height:1.6;color:#657c70;font-weight:800}
+#screen-activity .activity-panel{margin-top:18px}
+#screen-activity .activity-panel-heading{display:flex;align-items:center;justify-content:space-between;
+ gap:8px;margin:0 0 11px}
+#screen-activity .activity-panel-heading>div{display:flex;align-items:center;gap:8px}
+#screen-activity .activity-panel-heading h2{margin:0;color:#173c30;font-size:15px;font-weight:900}
+#screen-activity .activity-panel-icon{width:32px;height:32px;background:#e8f8ef;
+ color:#14875d;border-radius:11px;display:grid;place-items:center;font-size:17px}
+#screen-activity .activity-panel-heading>button{font:inherit;font-weight:800;font-size:10px;
+ background:none;border:0;color:#167b57;padding:7px 2px}
+#screen-activity .activity-filters{display:flex;overflow:auto;gap:6px;margin:0 0 12px;
+ padding:0 0 3px;scrollbar-width:none}
+#screen-activity .activity-filters button{flex:none;background:#f2f8f5;border:1px solid #e0efe7;
+ border-radius:12px;padding:9px 10px;color:#496e5d;font:inherit;font-size:10px;font-weight:800;
+ display:flex;align-items:center;gap:7px}
+#screen-activity .activity-filters button.active{color:#fff;background:#167e58;border-color:#167e58;
+ box-shadow:0 5px 11px #16865b28}
+#screen-activity .activity-filters small{font-size:10px;color:inherit;opacity:.8}
+#screen-activity .activity-member-card,#screen-activity .activity-event-card,
+#screen-activity .activity-ticket{background:#fff;border:1px solid #e5eee8;
+ border-radius:18px;margin-bottom:9px;box-shadow:0 5px 18px #17452b0c}
+#screen-activity .activity-member-card{padding:12px 12px 9px}
+#screen-activity .activity-member-top{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+#screen-activity .activity-member-avatar{width:42px;height:42px;display:grid;place-items:center;
+ border-radius:14px;background:#e8f8ef;font-size:21px}
+#screen-activity .activity-member-name{flex:1;min-width:105px}
+#screen-activity .activity-member-name h3,#screen-activity .activity-event-content h3,
+#screen-activity .activity-ticket-copy h3{margin:0;color:#193d30;font-size:12px;
+ line-height:1.8;overflow-wrap:anywhere}
+#screen-activity .activity-member-name small{color:#778e7c;font-size:10px}
+#screen-activity .activity-status{font-size:9px;line-height:1.8;border-radius:9px;padding:3px 7px;font-weight:900}
+#screen-activity .activity-status.approved{background:#e4f8ea;color:#13744b}
+#screen-activity .activity-status.pending{background:#fff4d8;color:#a77413}
+#screen-activity .activity-status.rejected{background:#fdebe7;color:#b45144}
+#screen-activity .activity-member-actions{border-top:1px solid #eef4ef;margin-top:11px;
+ padding-top:8px;display:flex;justify-content:space-between;gap:8px}
+#screen-activity .activity-member-actions button{font:inherit;font-size:10px;font-weight:900;
+ border:0;background:none;color:#587666;padding:8px 10px;border-radius:10px}
+#screen-activity .activity-member-actions button.activity-member-action{background:#ecf9f0;color:#137a51}
+#screen-activity .activity-event-card{padding:12px;display:flex;gap:10px;align-items:center}
+#screen-activity .activity-event-mark{width:42px;height:46px;display:grid;place-items:center;
+ flex:none;background:#f0f8f3;border-radius:13px;color:#238d68;font-size:19px}
+#screen-activity .activity-event-content{flex:1;min-width:0}
+#screen-activity .activity-event-content p{font-size:10px;line-height:1.8;color:#778b80;margin:3px 0 5px}
+#screen-activity .activity-event-state{font-size:9px;font-weight:900;display:inline-block;
+ padding:4px 8px;border-radius:8px;background:#e3f7eb;color:#187c56}
+#screen-activity .activity-event-state.past{color:#64746d;background:#edf1ee}
+#screen-activity .activity-event-state.attended{color:#116f53;background:#e0f8ed}
+#screen-activity .activity-event-card>button{flex:none;border:1px solid #daf0e1;
+ background:#f2fbf5;color:#167e58;border-radius:11px;font:inherit;font-size:10px;
+ font-weight:900;padding:9px 10px}
+#screen-activity .activity-tickets-hint{font-size:10px;line-height:1.8;color:#718777;
+ margin:-3px 0 12px}
+#screen-activity .activity-ticket{overflow:hidden}
+#screen-activity .activity-ticket-header{display:flex;justify-content:space-between;gap:8px;
+ padding:10px 13px;border-bottom:1px dashed #dcebe1;font-size:10px;color:#50725d;font-weight:900}
+#screen-activity .activity-ticket-header .valid{color:#12774f}
+#screen-activity .activity-ticket-header .muted{color:#9a7750}
+#screen-activity .activity-ticket-content{display:flex;align-items:center;justify-content:space-between;
+ gap:12px;padding:13px}
+#screen-activity .activity-ticket-copy{flex:1;min-width:0}
+#screen-activity .activity-ticket-copy p{font-size:10px;color:#6a8172;line-height:1.9;margin:6px 0}
+#screen-activity .activity-ticket .kanonha-ticket-qr{min-width:132px;min-height:132px;
+ max-width:142px;padding:5px;border-color:#e0ede5}
+#screen-activity .activity-ticket .kanonha-ticket-qr canvas,
+#screen-activity .activity-ticket .kanonha-ticket-qr img{width:120px!important;height:120px!important}
+#screen-activity .activity-ticket-placeholder{width:117px;min-height:96px;flex:none;
+ border:1px dashed #b7d7c3;border-radius:13px;background:#f4faf6;
+ display:grid;place-items:center;text-align:center;padding:8px;color:#6b8779;
+ font-size:10px;line-height:1.9}
+#screen-activity .activity-ticket-cancel{border:1px solid #f1d8d0;color:#b65d4c;
+ background:#fff7f5;padding:8px 10px;border-radius:10px;font:inherit;font-size:10px;font-weight:850}
+#screen-activity .activity-empty{padding:23px 12px;text-align:center;border-radius:17px;
+ background:linear-gradient(145deg,#f6fbf8,#fff);border:1px dashed #cfe8d7;
+ color:#758d7e;font-size:11px;line-height:1.9}
+#screen-activity .activity-empty span{display:block;font-size:26px;color:#5cba87}
+#screen-activity .activity-empty p{margin:4px 0 10px}
+#screen-activity .activity-empty button{background:#e2f7e9;color:#147b52;
+ border:0;border-radius:11px;padding:10px 15px;font:inherit;font-size:10px;font-weight:900}
+#screen-activity button:focus-visible{outline:3px solid #39af78;outline-offset:2px}
+@media(max-width:380px){
+ #screen-activity .activity-stat{min-height:82px}
+ #screen-activity .activity-stat small{font-size:8px}
+ #screen-activity .activity-ticket-content{flex-wrap:wrap}
+ #screen-activity .activity-ticket-placeholder{width:100%;min-height:54px}
+}
+@media(prefers-reduced-motion:reduce){#screen-activity *{scroll-behavior:auto!important;transition:none!important}}

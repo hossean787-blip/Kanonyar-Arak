@@ -24,6 +24,8 @@ jobs:
           gradle-version: "8.9"
       - name: Validate offline UI and SVG assets
         run: |
+          node --check app/src/main/assets/activity-ui.js
+          node --check tests/activity-smoke.cjs
           node --check app/src/main/assets/app.js
           node --check app/src/main/assets/student-calendar.js
           node --check app/src/main/assets/biometric.js
@@ -109,6 +111,7 @@ jobs:
         run: |
           node tests/backend-smoke.cjs
           node tests/online-ui-smoke.cjs
+          node tests/activity-smoke.cjs
           node tests/survey-export-smoke.cjs
           node tests/ratings-smoke.cjs
           node tests/ratings-manager-smoke.cjs

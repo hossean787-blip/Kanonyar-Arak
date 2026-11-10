@@ -15,6 +15,7 @@
   <script src="biometric.js" defer></script>
   <script src="vendor/qrcode.js" defer></script>
   <script src="event-tools.js" defer></script>
+  <script src="activity-ui.js" defer></script>
   <script src="app.js" defer></script>
   <script src="survey-report.js" defer></script>
   <script src="ratings.js" defer></script>
@@ -182,26 +183,40 @@
         <div id="events-list" class="events-list"></div>
       </section>
 
-      <!-- ==================== صفحه فعالیت‌های من ==================== -->
+      <!-- صفحه فعالیت‌های من: سوابق همان حساب، همگام با سرور -->
       <section class="screen padded-screen" id="screen-activity" data-screen="activity" aria-labelledby="title-activity" hidden>
-        <div class="screen-kicker"><span class="brand-mark">کانون‌ها</span><span class="kicker-spark">✦ فضای دانشجویی</span></div>
-        <h1 id="title-activity" class="screen-title">فعالیت‌های من</h1>
-        <p class="screen-description">همه تجربه‌ها و فعالیت‌های دانشجویی تو در یک نگاه ✨</p>
-        <div class="activity-section-title">
-          <span class="title-icon" data-icon="users" aria-hidden="true"></span>
-          <h2>کانون‌های من</h2>
+        <div class="activity-hero">
+          <div class="activity-hero-heading">
+            <div><span class="activity-eyebrow">پرونده فعالیت دانشجویی</span>
+              <h1 id="title-activity">فعالیت‌های من</h1>
+              <p id="activity-summary">عضویت‌ها، برنامه‌ها و بلیت‌ها در یک نگاه</p>
+            </div>
+            <button id="activity-refresh" type="button" class="activity-refresh" hidden>به‌روزرسانی</button>
+          </div>
+          <div id="activity-overview" class="activity-overview" aria-label="خلاصه فعالیت‌ها"></div>
         </div>
-        <div id="activity-clubs"></div>
-        <div class="activity-section-title">
-          <span class="title-icon" data-icon="calendar" aria-hidden="true"></span>
-          <h2>رویدادهای ثبت‌نام‌شده</h2>
-        </div>
-        <div id="activity-events"></div>
-        <div class="activity-section-title">
-          <span class="title-icon" data-icon="ticket" aria-hidden="true"></span>
-          <h2>بلیت‌های من</h2>
-        </div>
-        <div id="activity-tickets"></div>
+        <section class="activity-panel" aria-labelledby="activity-clubs-title">
+          <div class="activity-panel-heading"><div><span class="activity-panel-icon">♧</span>
+            <h2 id="activity-clubs-title">کانون‌های من</h2></div>
+            <button type="button" data-goto="clubs">کشف کانون‌ها ‹</button>
+          </div>
+          <div id="activity-member-filters" class="activity-filters" role="group" aria-label="وضعیت عضویت"></div>
+          <div id="activity-clubs" aria-live="polite"></div>
+        </section>
+        <section class="activity-panel" aria-labelledby="activity-events-title">
+          <div class="activity-panel-heading"><div><span class="activity-panel-icon">◷</span>
+            <h2 id="activity-events-title">رویدادهای ثبت‌نام‌شده</h2></div>
+            <button type="button" data-goto="events">رویدادهای بیشتر ‹</button>
+          </div>
+          <div id="activity-event-filters" class="activity-filters" role="group" aria-label="زمان رویداد"></div>
+          <div id="activity-events" aria-live="polite"></div>
+        </section>
+        <section class="activity-panel" aria-labelledby="activity-tickets-title">
+          <div class="activity-panel-heading"><div><span class="activity-panel-icon">▤</span>
+            <h2 id="activity-tickets-title">بلیت‌های من</h2></div></div>
+          <p class="activity-tickets-hint">کد ورود تنها برای ثبت‌نام‌های تأییدشده و قابل‌استفاده نمایش داده می‌شود.</p>
+          <div id="activity-tickets" aria-live="polite"></div>
+        </section>
       </section>
 
       <!-- ==================== صفحه حساب کاربری ==================== -->

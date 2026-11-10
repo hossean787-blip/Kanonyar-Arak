@@ -96,7 +96,7 @@
 
   /* ——— State ——— */
   const STORAGE_KEY = 'kanonha-ui-v3';
-  const defaultState = () => ({ joined: [], requested: [], rejected: [], registered: [], name: onlineMode ? 'مهمان' : 'کاربر آزمایشی', number: 'ثبت نشده', isManager: false, academic: null });
+  const defaultState = () => ({ joined: [], requested: [], rejected: [], registered: [], attended: [], name: onlineMode ? 'مهمان' : 'کاربر آزمایشی', number: 'ثبت نشده', isManager: false, academic: null });
 
   function loadState() {
     // Never read a previous offline demo account while online mode is active.
@@ -108,6 +108,7 @@
         s.registered = [...new Set(s.registered.filter(n => Number.isInteger(n) && n >= 0 && n < events.length))];
         s.requested = [];
         s.rejected = [];
+        s.attended = [];
         return s;
       }
     } catch (_) {}
@@ -391,10 +392,12 @@
       onlineMessage('نمایش اطلاعات آنلاین؛ عضویت و ثبت‌نام در پایگاه داده مستقل ثبت می‌شوند.');
       if (onlineBackend.currentUser) await onlineRefreshPersonal();
       else renderAll();
+      return true;
     } catch (error) {
       if (refreshId !== onlinePublicSequence) return;
       onlineMessage('بارگذاری اطلاعات آنلاین ناموفق بود: ' + onlineError(error), true);
       renderAll();
+      return false;
     }
   }
   async function onlineRefreshPersonal() {
@@ -410,12 +413,14 @@
         !onlineBackend.currentUser || onlineBackend.currentUser.id !== ownerId) return;
     const memberMap = new Map(memberRows.map(m => [m.club_id, m.status]));
     const eventIds = new Set(eventRows.filter(e => e.status === 'confirmed').map(e => e.event_id));
+    const attendedIds = new Set(eventRows.filter(e => e.status === 'confirmed' && e.attended_at).map(e=>e.event_id));
     eventTickets.clear();
     for(const r of eventRows)if(r.status==='confirmed'&&r.ticket_token)eventTickets.set(r.event_id,r.ticket_token);
     state.joined = clubs.map((c, i) => memberMap.get(c.id) === 'approved' ? i : -1).filter(i => i >= 0);
     state.requested = clubs.map((c, i) => memberMap.get(c.id) === 'pending' ? i : -1).filter(i => i >= 0);
     state.rejected = clubs.map((c, i) => memberMap.get(c.id) === 'rejected' ? i : -1).filter(i => i >= 0);
     state.registered = events.map((e, i) => eventIds.has(e.id) ? i : -1).filter(i => i >= 0);
+    state.attended = events.map((e,i)=>attendedIds.has(e.id)?i:-1).filter(i=>i>=0);
     studentProfileReady = Boolean(profile);
     state.name = profile ? profile.full_name : state.isManager ? 'مدیرکل کانون‌ها' : 'اطلاعات تکمیل نشده';
     state.number = profile ? profile.student_number : 'ثبت نشده';
@@ -597,18 +602,33 @@
       notify('ثبت‌نام رویداد تأیید شد؛ بلیت در فعالیت‌های من آماده است.');
     } catch (error) { notify(onlineError(error)); }
   }
+  const eventCancelWorking = new Set();
   async function onlineCancelEvent(i){
     if(!onlineMode||!events[i]||!state.registered.includes(i))return;
+    const ev=events[i],eventId=ev.id;
+    if(eventCancelWorking.has(eventId))return;
+    if(state.attended?.includes(i)||!(Number.isFinite(ev.startsAtMs)&&ev.startsAtMs>Date.now())){
+      notify('این ثبت‌نام دیگر قابل لغو نیست.');return;
+    }
+    eventCancelWorking.add(eventId);
     try{
-      await onlineBackend.cancelEvent(events[i].id);
-      eventTickets.delete(events[i].id);
-      await onlineRefreshPublic();
+      await onlineBackend.cancelEvent(eventId);
+      eventTickets.delete(eventId);
+      state.registered=state.registered.filter(index=>index!==i);
+      state.attended=(state.attended||[]).filter(index=>index!==i);
+      renderAll();
       closeSheet();
-      notify('ثبت‌نام لغو و ظرفیت آزاد شد.');
-    }catch(error){notify(onlineError(error));}
+      const refreshed=await onlineRefreshPublic();
+      notify(refreshed?'ثبت‌نام لغو شد و بلیت از حساب شما حذف شد.':
+        'ثبت‌نام لغو شد؛ برای مشاهده آخرین وضعیت، به‌روزرسانی کنید.');
+    }catch(error){
+      notify(onlineError(error));
+    }finally{eventCancelWorking.delete(eventId);}
   }
+
   function confirmEventCancel(i){
-    if(!events[i]||!state.registered.includes(i))return;
+    if(!events[i]||!state.registered.includes(i)||state.attended?.includes(i)||
+       !(Number.isFinite(events[i].startsAtMs)&&events[i].startsAtMs>Date.now()))return;
     openSheet('لغو ثبت‌نام رویداد',
       '<p>آیا از لغو ثبت‌نام «'+escapeHTML(events[i].title)+'» مطمئن هستید؟ بلیت باطل خواهد شد.</p>'+
       '<button type="button" class="pill-btn sheet-action" data-confirm-event-cancel="'+i+'">تأیید لغو ثبت‌نام</button>');
@@ -1011,45 +1031,7 @@
   }
 
   function renderActivity() {
-    const activityMembers = [...new Set([...state.joined, ...state.requested, ...state.rejected])];
-    $('activity-clubs').innerHTML = activityMembers.length
-      ? activityMembers.filter(i => clubs[i]).map(i =>
-          `<button class="activity-row" type="button" data-club-details="${i}">
-            <span class="club-icon ${clubs[i].tone}"><img class="row-club-art" src="${escapeHTML(clubImageSrc(clubs[i]))}" alt="" width="31" height="31"></span>
-            <span class="activity-copy">${escapeHTML(clubs[i].title)}${state.requested.includes(i) ? '<small>در انتظار تأیید عضویت</small>' : state.rejected.includes(i) ? '<small>درخواست رد شده؛ امکان درخواست مجدد</small>' : ''}</span>
-            <span class="arrow">${svg('chevron-left', 15)}</span>
-          </button>`
-        ).join('')
-      : '<div class="empty">هنوز عضو کانونی نشده‌اید.</div>';
-
-    $('activity-events').innerHTML = state.registered.length
-      ? state.registered.filter(i => events[i]).map(i =>
-          `<button class="activity-row" type="button" data-details="${i}">
-            <span class="activity-copy">${escapeHTML(events[i].title)}<small>${escapeHTML(events[i].date)}</small></span>
-            <span class="arrow">${svg('chevron-left', 15)}</span>
-          </button>`
-        ).join('')
-      : '<div class="empty">رویدادی ثبت‌نام نشده است.</div>';
-
-    $('activity-tickets').innerHTML = state.registered.length
-      ? state.registered.filter(i => events[i]).map(i =>
-          `<article class="ticket-card">
-            <div class="ticket-details">
-              <h3>${escapeHTML(events[i].title)}</h3>
-              <p>${svg('calendar', 12)} ${escapeHTML(events[i].date)}</p>
-              <p>${svg('map-pin', 12)} ${escapeHTML(events[i].location)}</p>
-              <div class="ticket-label">${onlineMode ? 'بلیت الکترونیکی معتبر — یک‌بار مصرف' : 'بلیت نمونه — فاقد اعتبار ورود'}</div>
-              ${onlineMode&&events[i].startsAtMs>Date.now()?'<button type="button" class="pill-btn ticket-cancel" data-event-cancel="'+i+'">لغو ثبت‌نام</button>':''}
-            </div>
-            ${onlineMode ? '<div class="kanonha-ticket-qr" data-ticket-qr="'+i+'" role="img" aria-label="کد QR معتبر بلیت"></div>' : qrMarkup(i)}
-          </article>`
-        ).join('')
-      : '<div class="empty">هنوز بلیتی ندارید.</div>';
-    if(onlineMode)for(const el of $('activity-tickets').querySelectorAll('[data-ticket-qr]')){
-      const i=Number(el.dataset.ticketQr),ev=events[i];
-      if(!ev||!window.KanonhaEventTools?.renderQr(el,eventTickets.get(ev.id)))
-        el.textContent='کد بلیت دریافت نشده؛ صفحه را تازه‌سازی کنید.';
-    }
+    if (window.KanonhaActivity) window.KanonhaActivity.render({clubs,events,state,onlineMode,eventTickets});
   }
 
   /* ——— Sheet ——— */
@@ -1387,6 +1369,20 @@
         return;
       }
       if (btn.dataset.carousel) { moveHomeCarousel(btn.dataset.carousel==='next'?1:-1); return; }
+      if (btn.id === 'activity-refresh' && onlineMode) {
+        if(btn.disabled)return;
+        btn.disabled=true;btn.textContent='در حال دریافت…';
+        void onlineRefreshPublic().then(ok=>notify(ok?'فعالیت‌های شما به‌روزرسانی شد.':'دریافت اطلاعات ناموفق بود.'))
+          .catch(error=>notify(onlineError(error)))
+          .finally(()=>{btn.disabled=false;btn.textContent='به‌روزرسانی';});
+        return;
+      }
+      if (btn.dataset.activityFilterClub && window.KanonhaActivity) {
+        window.KanonhaActivity.setFilter('club',btn.dataset.activityFilterClub);return;
+      }
+      if (btn.dataset.activityFilterEvent && window.KanonhaActivity) {
+        window.KanonhaActivity.setFilter('event',btn.dataset.activityFilterEvent);return;
+      }
       if (btn.dataset.screenBtn)      { go(btn.dataset.screenBtn); return; }
       if (btn.dataset.goto)           { closeSheet(); go(btn.dataset.goto); return; }
       if (btn.dataset.filter)         { activeFilter = btn.dataset.filter; renderEvents(); return; }

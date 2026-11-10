@@ -60,7 +60,7 @@ const backend = {
   async studentSignIn() { currentUser = {id:studentId}; return currentUser; },
   async studentSignUp() { currentUser = {id:studentId}; return currentUser; },
   async isManager() { return false; },
-  async academicDetails() { return {university:'دانشگاه نمونه',faculty:'دانشکده نمونه',major:'رشته نمونه'}; },
+  async academicDetails() { return {birth_date:'2002-04-17',university:'دانشگاه نمونه',faculty:'دانشکده نمونه',major:'رشته نمونه',mobile:'09123456789'}; },
   async signOut() { currentUser = null; },
   async ensureProfile() { return {full_name:'دانشجوی نمونه',student_number:'123456'}; },
   async memberships() { return memberRows; },
@@ -83,7 +83,7 @@ const backend = {
   async cancelEvent(id) { assert.equal(id,eventId); actions.eventCancellations++; eventRows=[]; seats--; },
   async saveProfile(name,number) { return {full_name:name,student_number:number}; }
 };
-const window = { KanonhaBackend:backend, addEventListener() {}, location };
+const window = { KanonhaBackend:backend, KanonhaBiometric:{confirmAction:async()=>true}, addEventListener() {}, location };
 const previousDemo = JSON.stringify({joined:[0],registered:[0],name:'حساب نمایشی قدیمی',number:'111111'});
 const storage = new Map([['kanonha-ui-v3', previousDemo]]);
 const ctx = {

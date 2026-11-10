@@ -1,4 +1,4 @@
-name: Kanonha v0.9.10 persistent Persian calendar
+name: Kanonha v0.9.11 parallel debug install
 on:
   push:
     branches: [main]
@@ -75,7 +75,7 @@ jobs:
           assert (root/'assets'/'azad-university-logo.svg').is_file()
           app_root=Path('app/src/main')
           manifest=(app_root/'AndroidManifest.xml').read_text(encoding='utf-8')
-          assert 'android:label="کانون‌ها"' in manifest
+          assert 'android:label="${appLabel}"' in manifest
           assert 'همراه' not in html + manifest
           for name in ('notification_jalali.xml',):
               ET.parse(app_root/'res'/'layout'/name)
@@ -133,20 +133,23 @@ jobs:
           test -f app/build/outputs/apk/release/app-release-unsigned.apk
           test -f app/build/outputs/apk/debug/app-debug.apk
           unzip -t app/build/outputs/apk/release/app-release-unsigned.apk >/dev/null
+          unzip -t app/build/outputs/apk/debug/app-debug.apk >/dev/null
+          $ANDROID_HOME/build-tools/35.0.0/aapt dump badging app/build/outputs/apk/debug/app-debug.apk | grep -q "package: name=\u0027ir.kanonha.app.test\u0027"
+          $ANDROID_HOME/build-tools/35.0.0/aapt dump badging app/build/outputs/apk/release/app-release-unsigned.apk | grep -q "package: name=\u0027ir.kanonha.app\u0027"
           ! find app/src -type f -name '*.jks' | grep -q .
           ! find app/src -type f -name '*.keystore' | grep -q .
           ! find app/src -type f -name '*.p12' | grep -q .
           grep -q 'applicationId = "ir.kanonha.app"' app/build.gradle.kts
-          grep -q 'versionCode = 25' app/build.gradle.kts
+          grep -q 'versionCode = 26' app/build.gradle.kts
           grep -q 'android:allowBackup="false"' app/src/main/AndroidManifest.xml
           echo 'Release output validated; unsigned candidate requires secure external signing'
       - uses: actions/upload-artifact@v4
         with:
-          name: kanonha-0.9.10-release-unsigned
+          name: kanonha-0.9.11-release-unsigned
           path: app/build/outputs/apk/release/app-release-unsigned.apk
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
-          name: kanonha-0.9.10-debug-validation
+          name: kanonha-0.9.11-debug-validation
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error

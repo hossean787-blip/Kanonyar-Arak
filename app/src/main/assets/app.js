@@ -306,6 +306,9 @@
     onlineRenderAuth();
     $('online-auth-status').textContent='';
     go(personaHome());
+    // Sync eligible survey start/end/result reminders at each verified sign-in.
+    if(window.KanonhaRatings?.backgroundSync)
+      void window.KanonhaRatings.backgroundSync();
     notify(justRegistered?'حساب ساخته شد؛ می‌توانید از امکانات دانشجویی استفاده کنید.'
       :'ورود به حساب انجام شد.');
   }

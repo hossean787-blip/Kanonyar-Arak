@@ -25,6 +25,7 @@ public final class MainActivity extends FragmentActivity {
  @Override public void onCreate(Bundle b) {
   super.onCreate(b);
   DailyCalendarReceiver.schedule(this);
+  DailyCalendarReceiver.show(this);
   if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
    requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 103);
   }
@@ -83,6 +84,13 @@ public final class MainActivity extends FragmentActivity {
   web.loadUrl("https://appassets.androidplatform.net/assets/index.html?native=1");
  }
 
+ @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+  super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+  if (requestCode==103 && grantResults.length>0 &&
+      grantResults[0]==android.content.pm.PackageManager.PERMISSION_GRANTED) {
+   DailyCalendarReceiver.show(this);
+  }
+ }
  @Override public void onBackPressed() {
   if (web == null) { super.onBackPressed(); return; }
   web.evaluateJavascript("window.KanonhaPreview ? window.KanonhaPreview.handleBack() : false", value -> {

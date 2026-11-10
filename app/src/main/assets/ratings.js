@@ -1,160 +1,186 @@
-/* Kanonha ratings v1.0 — real server-backed votes, no demo ratings. */
+/* Kanonha surveys v2: each poll has its own deadline, voting type and publication rules.
+   Unpublished results are never requested by students, and the server enforces RLS. */
 (() => {
-  'use strict';
-  const backend=window.KanonhaBackend;
-  const $=id=>document.getElementById(id);
-  const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,ch=>
-    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
-  const fmt=n=>Number(n).toLocaleString('fa-IR');
-  const categoryNames={club:'کانون‌ها',professor:'اساتید',faculty:'دانشکده‌ها'};
-  let category='club',targets=[],mine=new Map(),busy=false,seq=0;
-  let control={voting_open:false,results_published:false};
-
-  const count=t=>Number(t.rating_count)||0;
-  const average=t=>count(t)>0?Number(t.rating_sum)/count(t):0;
-  const ordered=list=>list.slice().sort((a,b)=>
-    average(b)-average(a)||count(b)-count(a)||
-    a.title.localeCompare(b.title,'fa'));
-  const validId=id=>/^[a-f0-9]{8}-[a-f0-9-]{27,}$/.test(String(id||''));
-
-  function notice(text,error=false){
-    const el=$('ratings-notice');
-    if(!el)return;
-    el.textContent=text;el.classList.toggle('error',error);el.hidden=!text;
-  }
-  function stars(value){
-    const n=Math.max(0,Math.min(5,Math.round(value)));
-    return '<span class="ratings-static-stars" aria-hidden="true">'+
-      '<span>'+ '★'.repeat(n) + '</span>'+'☆'.repeat(5-n)+'</span>';
-  }
-  function ratingButtons(t){
-    if(mine.has(t.id)){
-      const value=mine.get(t.id);
-      return '<div class="ratings-voted">'+stars(value)+
-        '<span>رأی شما: '+fmt(value)+' از ۵ — ثبت‌شده</span></div>';
-    }
-    if(!control.voting_open)
-      return '<p class="ratings-login-hint">رأی‌گیری در حال حاضر بسته است.</p>';
-    if(!backend||!backend.currentUser)
-      return '<p class="ratings-login-hint">برای ثبت امتیاز وارد حساب دانشجویی شوید.</p>';
-    let html='<div class="ratings-star-buttons" role="group" aria-label="ثبت امتیاز برای '+esc(t.title)+'">';
-    for(let value=1;value<=5;value++)
-      html+='<button type="button" data-rating-id="'+esc(t.id)+
-        '" data-rating-value="'+value+'" aria-label="'+fmt(value)+
-        ' ستاره برای '+esc(t.title)+'" '+(busy?'disabled':'')+'>★<small>'+fmt(value)+'</small></button>';
-    return html+'</div>';
-  }
-  function render(){
-    const heading=$('ratings-category-heading');
-    if(!heading)return;
-    heading.textContent='امتیاز '+categoryNames[category];
-    document.querySelectorAll('[data-ratings-tab]').forEach(el=>{
-      const active=el.dataset.ratingsTab===category;
-      el.classList.toggle('active',active);
-      el.setAttribute('aria-selected',String(active));
-      el.tabIndex=active?0:-1;
-    });
-    const published=control.results_published && Boolean(backend&&backend.currentUser);
-    const list=published?ordered(targets.filter(t=>t.category===category)):
-      targets.filter(t=>t.category===category).sort((a,b)=>a.title.localeCompare(b.title,'fa'));
-    const leaders=published?list.filter(t=>count(t)>=5).slice(0,3):[];
-    $('ratings-leader-list').innerHTML=!published?
-      '<p class="ratings-empty-leaders">نتایج تا تأیید و انتشار توسط مدیرکل محرمانه می‌مانند.</p>':
-      leaders.length?leaders.map((t,i)=>
-      '<div class="ratings-leader"><span class="ratings-rank">'+fmt(i+1)+'</span>'+
-      '<span class="ratings-leader-name">'+esc(t.title)+'</span>'+
-      '<strong>'+average(t).toFixed(2).replace('.', '٫')+' ★</strong></div>'
-    ).join(''):'<p class="ratings-empty-leaders">برای اعلام رتبه رسمی، هر مورد به حداقل ۵ رأی نیاز دارد.</p>';
-    $('ratings-list').innerHTML=list.length?list.map(t=>{
-      const n=count(t),avg=average(t);
-      return '<article class="ratings-card">'+
-        '<div class="ratings-card-top"><div class="ratings-item-identity">'+
-        '<span class="ratings-category-mark" aria-hidden="true">'+
-        (category==='club'?'✦':category==='professor'?'◆':'▦')+'</span>'+
-        '<div><h3>'+esc(t.title)+'</h3>'+
-        (t.subtitle?'<p>'+esc(t.subtitle)+'</p>':'')+'</div></div>'+
-        (published?'<div class="ratings-score"><strong>'+
-          (n?avg.toFixed(2).replace('.', '٫'):'—')+
-          '</strong><span>از ۵</span></div>':'<span class="ratings-private-tag">نتایج محرمانه</span>')+
-        '</div>'+
-        (published?'<div class="ratings-score-meta">'+stars(avg)+
-        '<span>'+fmt(n)+' رأی'+(n>0&&n<5?' • رتبه موقت':'')+'</span></div>':'')+
-        '<div class="ratings-vote-area"><span class="ratings-vote-label">'+
-        (mine.has(t.id)?'امتیاز ثبت‌شده شما':'امتیاز شما')+'</span>'+
-        ratingButtons(t)+'</div></article>';
-    }).join(''):'<div class="ratings-empty-state"><span aria-hidden="true">☆</span>'+
-      '<strong>هنوز موردی برای امتیازدهی ثبت نشده</strong>'+
-      '<p>مدیرکل باید موارد واقعی نظرسنجی را ثبت کند.</p></div>';
-  }
-  async function refresh(){
-    const current=++seq,userId=backend&&backend.currentUser?backend.currentUser.id:null;
-    busy=true;notice('در حال دریافت وضعیت نظرسنجی…');
-    if(!backend||!backend.enabled){
-      targets=[];mine=new Map();control={voting_open:false,results_published:false};busy=false;
-      notice('برای استفاده از نظرسنجی، اتصال امن آنلاین لازم است.',true);render();return;
-    }
-    try{
-      const responses=await Promise.all([
-        backend.ratingCatalog(),backend.ratingControl(),
-        userId?backend.ratingMyVotes():Promise.resolve([]),
-        userId?backend.ratingResults():Promise.resolve([])
-      ]);
-      if(current!==seq||userId!==(backend.currentUser&&backend.currentUser.id||null))return;
-      control=responses[1];
-      const scores=new Map(control.results_published?responses[3].map(row=>[row.target_id,row]):[]);
-      targets=responses[0].filter(t=>validId(t.id)&&
-        Object.prototype.hasOwnProperty.call(categoryNames,t.category)).map(t=>{
-          const info=scores.get(t.id);
-          return {...t,rating_count:info?Number(info.rating_count):0,
-            rating_sum:info?Number(info.rating_sum):0};
-        });
-      mine=new Map(responses[2].map(v=>[v.target_id,Number(v.stars)]));
-      notice(control.voting_open
-        ?(userId?'نظرسنجی به دستور مدیرکل فعال است. هر دانشجو به هر مورد فقط یک رأی می‌دهد.':
-           'نظرسنجی فعال است؛ برای ثبت امتیاز وارد حساب دانشجویی شوید.')
-        :control.results_published
-          ?(userId?'رأی‌گیری بسته شده و نتایج با تأیید مدیرکل منتشر شده‌اند.':
-             'نتایج منتشر شده‌اند؛ برای مشاهده آن‌ها وارد حساب دانشجویی شوید.')
-          :'نظرسنجی بسته است. نتایج فقط پس از تأیید مدیرکل نمایش داده می‌شوند.');
-    }catch(error){
-      if(current!==seq)return;
-      targets=[];mine=new Map();control={voting_open:false,results_published:false};
-      notice('دریافت نظرسنجی ناموفق بود؛ ارتباط با سرور را بررسی کنید.',true);
-    }finally{
-      if(current===seq){busy=false;render();}
-    }
-  }
-  async function sendVote(id,value,button){
-    if(busy||!validId(id)||!Number.isInteger(value)||value<1||value>5)return;
-    if(!control.voting_open){notice('تنها مدیرکل می‌تواند رأی‌گیری را فعال کند.',true);return;}
-    if(!backend.currentUser){notice('ابتدا وارد حساب دانشجویی شوید.',true);return;}
-    if(mine.has(id)){notice('برای این مورد قبلاً امتیاز ثبت کرده‌اید.',true);return;}
-    if(!targets.some(t=>t.id===id)){notice('این مورد در فهرست معتبر نیست.',true);return;}
-    busy=true;button.disabled=true;notice('در حال ثبت رأی شما…');
-    try{
-      await backend.ratingSubmit(id,value);
-      await refresh();
-      notice('امتیاز شما با موفقیت ثبت شد و قابل تغییر نیست.');
-    }catch(error){
-      busy=false;
-      const message=error&&error.status===409?'برای این مورد قبلاً رأی ثبت کرده‌اید.':
-        'ثبت رأی انجام نشد: '+String(error&&error.message||'خطای ارتباط').slice(0,100);
-      await refresh();
-      notice(message,true);
-    }
-  }
-  function init(){
-    const root=$('screen-ratings');
-    if(!root)return;
-    root.addEventListener('click',e=>{
-      const tab=e.target.closest('[data-ratings-tab]');
-      if(tab){category=tab.dataset.ratingsTab;render();return;}
-      const button=e.target.closest('[data-rating-id][data-rating-value]');
-      if(button)void sendVote(button.dataset.ratingId,Number(button.dataset.ratingValue),button);
-    });
-    render();
-  }
-  window.KanonhaRatings=Object.freeze({open:refresh});
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);
-  else init();
+ 'use strict';
+ const api=window.KanonhaBackend;
+ const $=id=>document.getElementById(id);
+ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>
+   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const n=v=>Number(v||0).toLocaleString('fa-IR');
+ const categories={all:'همه نظرسنجی‌ها',club:'کانون‌ها',professor:'اساتید',faculty:'دانشکده‌ها'};
+ const icons={club:'✦',professor:'◆',faculty:'▦'};
+ const valid=id=>/^[a-f0-9]{8}-[a-f0-9-]{27,}$/i.test(String(id||''));
+ const date=s=>{
+   const d=new Date(s);
+   if(!Number.isFinite(d.getTime()))return 'زمان نامشخص';
+   try{return new Intl.DateTimeFormat('fa-IR-u-ca-persian',
+      {year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'}).format(d);}
+   catch(_){return d.toLocaleString('fa-IR');}
+ };
+ let currentCategory='all',polls=[],options=[],votes=new Map(),results=new Map();
+ let chosen=new Map(),stars=new Map(),loading=false,sending=false,seq=0,message='',error=false;
+ const uid=()=>api?.currentUser?.id||null;
+ const isEnded=s=>Date.now()>=new Date(s.ends_at).getTime();
+ const canShow=s=>s.kind==='regular' || (isEnded(s)&&s.results_approved===true);
+ const isLive=s=>s.status==='published'&&!isEnded(s);
+ const optionName=id=>options.find(o=>o.id===id)?.title||'گزینه ثبت‌شده';
+ function announce(text,isError=false){message=text;error=isError;}
+ function resultMap(id){return new Map((results.get(id)||[]).map(x=>[x.option_id,x]));}
+ function categoryTabs(){
+   document.querySelectorAll('[data-ratings-tab]').forEach(el=>{
+     const active=el.dataset.ratingsTab===currentCategory;
+     el.classList.toggle('active',active);
+     el.setAttribute('aria-selected',String(active));
+     el.tabIndex=active?0:-1;
+   });
+   $('ratings-category-heading').textContent=categories[currentCategory];
+ }
+ function renderCard(s){
+   const ended=isEnded(s),active=isLive(s),already=votes.get(s.id);
+   const reveal=canShow(s)&&Boolean(uid()),visible=resultMap(s.id);
+   const choices=options.filter(o=>o.survey_id===s.id).sort((a,b)=>a.sort_order-b.sort_order);
+   const contest=s.kind==='competition';
+   const type=contest?'مسابقه‌ای':'معمولی';
+   const state=active?'در حال رأی‌گیری':ended?'پایان‌یافته':'در انتظار انتشار';
+   const selected=chosen.get(s.id)||'';
+   const score=stars.get(s.id)||0;
+   const votesTotal=reveal?Array.from(visible.values()).reduce((v,x)=>v+Number(x.rating_count||0),0):0;
+   const choiceHtml=choices.map(o=>{
+     const r=visible.get(o.id),count=Number(r?.rating_count||0);
+     const avg=count?Number(r.rating_sum||0)/count:0;
+     const ratio=votesTotal?Math.round(count/votesTotal*100):0;
+     const picked=selected===o.id;
+     const isMyVote=already?.option_id===o.id;
+     return '<div class="survey-choice'+(picked?' selected':'')+(isMyVote?' my-vote':'')+'">'+
+       '<button type="button" data-survey-select="'+esc(o.id)+'" data-survey-id="'+esc(s.id)+'"'+
+       ((!active||already||!uid()||sending)?' disabled':'')+
+       ' aria-pressed="'+String(picked)+'" aria-label="انتخاب '+esc(o.title)+'">'+
+       '<span class="survey-choice-mark" aria-hidden="true">'+(isMyVote?'✓':picked?'●':'○')+'</span>'+
+       '<strong>'+esc(o.title)+'</strong>'+(isMyVote?'<small>رأی شما</small>':'')+'</button>'+
+       (reveal?'<div class="survey-results-meta"><span>میانگین '+(count?avg.toFixed(2).replace('.', '٫'):'—')+' ★</span>'+
+       '<span>'+n(count)+' رأی</span></div>'+
+       '<div class="survey-result-track"><i style="width:'+ratio+'%"></i></div>':'')+
+       '</div>';
+   }).join('');
+   let action='';
+   if(already) action='<p class="survey-voted-message">✓ رأی قطعی شما: '+esc(optionName(already.option_id))+
+     ' • '+n(already.stars)+' از ۵ ستاره</p>';
+   else if(active&&uid()){
+     action='<div class="survey-vote-form"><span class="survey-vote-title">امتیاز شما به گزینه انتخاب‌شده</span>'+
+       '<div class="survey-stars" role="group" aria-label="انتخاب امتیاز از یک تا پنج">'+
+       [1,2,3,4,5].map(v=>'<button type="button" data-survey-star="'+v+
+       '" data-survey-id="'+esc(s.id)+'" aria-pressed="'+String(score===v)+
+       '" aria-label="'+n(v)+' ستاره" '+(sending?'disabled':'')+'>'+
+       (v<=score?'★':'☆')+'</button>').join('')+'</div>'+
+       '<button type="button" class="survey-submit" data-survey-submit="'+esc(s.id)+'"'+
+       (!selected||!score||sending?' disabled':'')+'>ثبت رأی قطعی</button></div>';
+   } else if(active)action='<p class="survey-login">برای شرکت در رأی‌گیری، ابتدا وارد حساب دانشجویی شوید.</p>';
+   else action='<p class="survey-closed">زمان رأی‌گیری این نظرسنجی به پایان رسیده است.</p>';
+   const secrecy=contest&&!reveal
+    ?'<div class="survey-privacy-lock">🔒 '+(ended?'در انتظار تأیید و انتشار نتایج توسط مدیرکل':'آمار مسابقه تا روز پایان مخفی است')+'</div>'
+    :!contest&&!uid()?'<div class="survey-privacy-lock">برای مشاهده آمار وارد حساب شوید.</div>'
+    :reveal?'<div class="survey-privacy-open">✦ '+n(votesTotal)+' رأی ثبت شده • نتایج قابل مشاهده</div>':'';
+   return '<article class="survey-card" data-survey-card="'+esc(s.id)+'">'+
+     '<div class="survey-card-top"><span class="survey-kind '+(contest?'contest':'regular')+'">'+
+       (contest?'♛':'✧')+' '+type+'</span>'+
+       '<span class="survey-state'+(active?' active':'')+'">'+state+'</span></div>'+
+     '<div class="survey-card-title"><span class="survey-card-icon">'+(icons[s.category]||'★')+'</span>'+
+     '<div><span class="survey-card-category">'+esc(categories[s.category])+'</span>'+
+     '<h3>'+esc(s.title)+'</h3></div></div>'+
+     (s.description?'<p class="survey-description">'+esc(s.description)+'</p>':'')+
+     '<div class="survey-deadline"><span>◷ پایان رأی‌گیری</span><strong>'+esc(date(s.ends_at))+'</strong></div>'+
+     '<div class="survey-options" role="group" aria-label="گزینه‌های '+esc(s.title)+'">'+choiceHtml+'</div>'+
+     action+secrecy+'</article>';
+ }
+ function render(){
+   if(!$('ratings-list'))return;
+   categoryTabs();
+   const relevant=polls.filter(s=>currentCategory==='all'||s.category===currentCategory);
+   $('ratings-active-count').textContent=n(polls.filter(isLive).length);
+   $('ratings-finished-count').textContent=n(polls.filter(isEnded).length);
+   $('ratings-contest-count').textContent=n(polls.filter(s=>s.kind==='competition').length);
+   $('ratings-notice').textContent=message;
+   $('ratings-notice').classList.toggle('error',error);
+   $('ratings-notice').hidden=!message;
+   const shortcut=$('ratings-admin-open');
+   if(shortcut)shortcut.hidden=!(window.KanonhaAdminPanel?.hasAccess?.());
+   $('ratings-list').innerHTML=loading?'<div class="surveys-empty">در حال بارگذاری نظرسنجی‌ها…</div>':
+     relevant.length?relevant.map(renderCard).join(''):
+     '<div class="surveys-empty"><span>☆</span><strong>فعلاً نظرسنجی منتشرشده‌ای وجود ندارد</strong>'+
+     '<p>پس از ایجاد و انتشار نظرسنجی توسط مدیرکل، اینجا نمایش داده می‌شود.</p></div>';
+ }
+ async function refresh(){
+   const token=++seq,userId=uid();
+   loading=true;announce('در حال دریافت نظرسنجی‌ها…');render();
+   if(!api||!api.enabled){
+     polls=[];options=[];votes=new Map();results=new Map();loading=false;
+     announce('نظرسنجی به اتصال امن اینترنت نیاز دارد.',true);render();return;
+   }
+   try{
+     const surveyRows=await api.surveyList(false);
+     if(token!==seq)return;
+     const list=surveyRows.filter(s=>valid(s.id)&&Object.hasOwn(categories,s.category)&&s.category!=='all');
+     const [items,myVotes]=await Promise.all([
+       api.surveyOptions(list.map(s=>s.id)),
+       userId?api.surveyMyVotes():Promise.resolve([])
+     ]);
+     if(token!==seq||uid()!==userId)return;
+     const allowed=list.filter(s=>canShow(s)&&Boolean(userId));
+     const reports=await Promise.all(allowed.map(async s=>[s.id,await api.surveyResults(s.id)]));
+     if(token!==seq||uid()!==userId)return;
+     polls=list;options=items;votes=new Map(myVotes.map(v=>[v.survey_id,v]));
+     results=new Map(reports);
+     announce('');
+   }catch(e){
+     if(token!==seq)return;
+     polls=[];options=[];votes=new Map();results=new Map();
+     announce('دریافت نظرسنجی‌ها ناموفق بود؛ اتصال به سرور را بررسی کنید.',true);
+   }finally{if(token===seq){loading=false;sending=false;render();}}
+ }
+ async function vote(surveyId){
+   if(sending||!valid(surveyId)||!uid())return;
+   const poll=polls.find(s=>s.id===surveyId),choice=chosen.get(surveyId),score=stars.get(surveyId);
+   if(!poll||!isLive(poll)||votes.has(surveyId)||!valid(choice)||
+      !options.some(o=>o.id===choice&&o.survey_id===surveyId)||!Number.isInteger(score)||score<1||score>5)return;
+   sending=true;announce('در حال ثبت رأی قطعی شما…');render();
+   try{
+     await api.surveyVote(surveyId,choice,score);
+     chosen.delete(surveyId);stars.delete(surveyId);
+     await refresh();announce('رأی شما ثبت شد و دیگر قابل تغییر نیست.');
+   }catch(e){
+     sending=false;
+     const duplicate=e?.status===409;
+     await refresh();
+     announce(duplicate?'در این نظرسنجی قبلاً رأی داده‌اید.':
+       'ثبت رأی ناموفق بود: '+String(e?.message||'خطای ارتباط').slice(0,90),true);
+   }finally{sending=false;render();}
+ }
+ function init(){
+   const root=$('screen-ratings');if(!root)return;
+   root.addEventListener('click',e=>{
+     const tab=e.target.closest('[data-ratings-tab]');
+     if(tab){currentCategory=tab.dataset.ratingsTab;render();return;}
+     if(e.target.closest('#ratings-refresh')){void refresh();return;}
+     if(e.target.closest('#ratings-admin-open')){
+       if(window.KanonhaAdminPanel?.hasAccess?.()){
+         window.KanonhaPreview?.go('manager-home');
+         window.KanonhaAdminPanel.showTab('ratings');
+       }
+       return;
+     }
+     const option=e.target.closest('[data-survey-select]');
+     if(option&&!option.disabled){
+       chosen.set(option.dataset.surveyId,option.dataset.surveySelect);render();return;
+     }
+     const star=e.target.closest('[data-survey-star]');
+     if(star&&!star.disabled){
+       stars.set(star.dataset.surveyId,Number(star.dataset.surveyStar));render();return;
+     }
+     const submit=e.target.closest('[data-survey-submit]');
+     if(submit&&!submit.disabled)void vote(submit.dataset.surveySubmit);
+   });
+   render();
+ }
+ window.KanonhaRatings=Object.freeze({open:refresh});
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();

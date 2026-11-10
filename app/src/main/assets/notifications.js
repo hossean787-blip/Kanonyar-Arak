@@ -62,10 +62,16 @@ function draw(){
   const c=n.campaign||{};
   const label=kindLabel[c.kind]||'اطلاعیه';
   const linked=['event','club','update'].includes(c.kind);
+  const image=window.KanonhaPreview?.notificationImageFor?.(c.kind,c.related_id)||'';
+  const safeImage=(typeof image==='string'&&
+    (/^assets\/[a-zA-Z0-9_./-]+$/.test(image)||
+     /^https:\/\/cnqcysnjinghzzrzanpj\.supabase\.co\/storage\/v1\/object\/[^\s"'<>]+$/.test(image)))?image:'';
+
   return '<button class="notice-inbox-item'+(!n.read_at?' unread':'')+'" type="button" data-notice-id="'+escape(n.id)+'">'+
   '<span class="notice-item-top"><span class="notice-item-kind">'+escape(label)+'</span>'+
   (!n.read_at?'<span class="notice-item-unread">جدید</span>':'')+'</span>'+
-  '<strong>'+escape(c.title)+'</strong><span class="notice-item-body">'+escape(c.body)+'</span>'+
+  '<strong>'+escape(c.title)+'</strong>'+ (safeImage?'<img class="notice-item-image" loading="lazy" alt="" src="'+escape(safeImage)+'">':'')+
+  '<span class="notice-item-body">'+escape(c.body)+'</span>'+
   '<span class="notice-item-footer"><time>'+escape(new Date(n.created_at).toLocaleString('fa-IR'))+
   '</time>'+(linked?'<span>مشاهده جزئیات ←</span>':'')+'</span></button>';
  }).join('');

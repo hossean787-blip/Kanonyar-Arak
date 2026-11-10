@@ -442,7 +442,7 @@
     if(poster&&(!['image/png','image/jpeg','image/webp'].includes(poster.type)||poster.size<1||poster.size>2097152))
       throw new Error('پوستر باید PNG، JPG یا WebP و حداکثر ۲ مگابایت باشد.');
     const eventDate=formValue(fd,'event_date'),eventTime=formValue(fd,'event_time');
-    if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(eventDate)||!/^\\d{2}:\\d{2}$/.test(eventTime))
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(eventDate)||!/^\d{2}:\d{2}$/.test(eventTime))
       throw new Error('تاریخ و ساعت برگزاری را کامل و معتبر وارد کنید.');
     const data = {
       title: formValue(fd,'title'), location: formValue(fd,'location'),

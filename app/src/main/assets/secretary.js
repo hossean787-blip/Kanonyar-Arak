@@ -244,7 +244,7 @@
       '<h3 class="secretary-card-title">' + (editing ? 'ویرایش رویداد' : 'ثبت رویداد جدید') + '</h3>' +
       '<label class="field">نام رویداد<input name="title" maxlength="160" required value="' + escape(e.title || '') + '"></label>' +
       '<label class="field">محل برگزاری<input name="location" maxlength="250" required value="' + escape(e.location || '') + '"></label>' +
-      '<label class="field">تاریخ برگزاری<input name="event_date" type="date" required value="' + escape(eventDate) + '"></label>' +
+      '<label class="field">تاریخ برگزاری<input name="event_date" type="date" data-jalali-future="true" required value="' + escape(eventDate) + '"></label>' +
       '<label class="field">ساعت برگزاری<input name="event_time" type="time" required value="' + escape(eventTime) + '"></label>' +
       '<label class="field">توضیحات رویداد<textarea name="description" maxlength="4000" rows="4" placeholder="موضوع، برنامه و شرایط حضور را توضیح دهید">' + escape(e.description || '') + '</textarea></label>' +
       '<label class="field">مهلت ثبت‌نام<input name="registration_deadline" type="datetime-local" required value="' + escape(inputDate(e.registration_deadline)) + '"></label>' +

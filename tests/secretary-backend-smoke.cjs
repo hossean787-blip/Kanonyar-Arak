@@ -52,6 +52,7 @@ const api=window.KanonhaBackend;
   const clubPatch=calls.findLast(x=>x.method==='PATCH'&&x.url.includes('kanonha_clubs'));
   assert.deepEqual(Object.keys(clubPatch.body).sort(),['category','description','name']);
   assert.equal(clubPatch.headers.Authorization,'Bearer sample-token');
+  await assert.rejects(()=>api.secretaryUpdateClub(clubId,{name:'کانون تست',description:'   ',category:'علمی'}),/درباره کانون/);
   const future={title:'کارگاه پژوهشی',location:'سالن اصلی',starts_at:'2035-05-12T10:00:00Z',registration_deadline:'2035-05-11T10:00:00Z',capacity:30,is_published:false};
   await api.secretaryCreateEvent(clubId,future);
   const inserted=calls.findLast(x=>x.url.endsWith('kanonha_events'));

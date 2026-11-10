@@ -24,6 +24,7 @@ function home(show){
 function clear(){
  seq++; owner='';data=null;editor=null;busy=false;confirmDelete='';rosterFor='';authorized=false;
  if(window.KanonhaRatingManagement)window.KanonhaRatingManagement.clear();
+ if(window.KanonhaNoticeAdmin)window.KanonhaNoticeAdmin.clear();
  root.hidden=true;$('admin-content').innerHTML='';$('admin-message').textContent='';home(false);
 }
 function signed(){return Boolean(owner&&api.currentUser&&api.currentUser.id===owner)}
@@ -228,10 +229,11 @@ function render(){
  }
  $('admin-content').innerHTML=tab==='dashboard'?dashboard():tab==='clubs'?clubs():tab==='events'?events():
   tab==='members'?memberships():tab==='secretaries'?secretaries():
-  tab==='universities'?universities():tab==='ratings'?
+  tab==='universities'?universities():tab==='notifications'?'<div id="admin-notices-content"></div>':tab==='ratings'?
   '<div id="admin-ratings-content" class="admin-ratings-content"></div>':students();
  if(window.KanonhaJalali)window.KanonhaJalali.enhance($('admin-content'));
  if(tab==='ratings'&&window.KanonhaRatingManagement)window.KanonhaRatingManagement.mount();
+ if(tab==='notifications'&&window.KanonhaNoticeAdmin)window.KanonhaNoticeAdmin.mount(data);
 }
 async function refresh(){
  clear();const current=api.currentUser;
@@ -349,7 +351,7 @@ root.addEventListener('submit',ev=>{
 });
 function hasAccess(){return signed()&&authorized}
 function showTab(next){
- if(!hasAccess()||!['dashboard','clubs','events','students','secretaries','members','universities','ratings'].includes(next))return false;
+ if(!hasAccess()||!['dashboard','clubs','events','students','secretaries','members','universities','ratings','notifications'].includes(next))return false;
  if(tab!==next){tab=next;editor=null;rosterFor='';confirmDelete='';render()}
  return true;
 }

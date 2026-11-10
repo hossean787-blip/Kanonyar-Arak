@@ -29,8 +29,9 @@ android {
         applicationId = "ir.kanonha.app"  // Do not change: preserves installed app identity.
         minSdk = 26
         targetSdk = 35
-        versionCode = 25
-        versionName = "0.9.10-persistent-calendar-beta"
+        versionCode = 26
+        versionName = "0.9.11-side-by-side-beta"
+        manifestPlaceholders["appLabel"] = "کانون‌ها"
     }
     signingConfigs {
         if (releaseSigningConfigured) {
@@ -43,6 +44,11 @@ android {
         }
     }
     buildTypes {
+        getByName("debug") {
+            // Keep the existing installed production app and its local data untouched.
+            applicationIdSuffix = ".test"
+            manifestPlaceholders["appLabel"] = "کانون‌ها آزمایشی"
+        }
         getByName("release") {
             isDebuggable = false
             if (releaseSigningConfigured) {

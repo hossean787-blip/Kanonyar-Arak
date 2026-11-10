@@ -350,7 +350,7 @@
       requestAnimationFrame(step);
     }catch(e){stopTicketCamera();status('دوربین در دسترس نیست؛ کد را دستی وارد کنید.',true);}
   }
-  document.addEventListener('visibilitychange',()=>{if(document.hidden)stopTicketCamera();});
+  if(typeof document.addEventListener==='function')document.addEventListener('visibilitychange',()=>{if(document.hidden)stopTicketCamera();});
   async function submitClub(form) {
     const fd = new FormData(form);
     const result = await backend.secretaryUpdateClub(activeClub, {

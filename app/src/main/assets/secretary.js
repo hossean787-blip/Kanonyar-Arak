@@ -310,32 +310,59 @@
   }
   async function startTicketCamera(){
     stopTicketCamera();
-    if(!window.BarcodeDetector||!navigator.mediaDevices?.getUserMedia){
-      status('اسکن QR در این نسخه WebView پشتیبانی نمی‌شود؛ کد بلیت را دستی وارد کنید.',true);
+    if(!navigator.mediaDevices?.getUserMedia ||
+       (!window.BarcodeDetector&&typeof window.jsQR!=='function')){
+      status('این دستگاه از اسکن مستقیم پشتیبانی نمی‌کند؛ کد بلیت را دستی وارد کنید.',true);
       return;
     }
     const host=$('secretary-scan-camera');
     if(!host)return;
     try{
-      const detector=new window.BarcodeDetector({formats:['qr_code']});
-      cameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});
+      let detector=null;
+      if(window.BarcodeDetector){
+        try{detector=new window.BarcodeDetector({formats:['qr_code']});}
+        catch(_){if(typeof window.jsQR!=='function')throw new Error('QR decoder unavailable');}
+      }
+      cameraStream=await navigator.mediaDevices.getUserMedia({
+        video:{facingMode:{ideal:'environment'}},audio:false
+      });
       cameraActive=true;
       const video=document.createElement('video');
       video.autoplay=true;video.muted=true;video.playsInline=true;
-      video.className='kanonha-ticket-camera';
-      video.srcObject=cameraStream;host.appendChild(video);
+      video.className='kanonha-ticket-camera';video.srcObject=cameraStream;
+      host.appendChild(video);
       await video.play();
-      status('QR را مقابل دوربین نگه دارید.');
+      status('QR بلیت را مقابل دوربین قرار دهید.');
       const ticketEvent=rosterEvent;
+      let lastFrame=0;
+      const canvas=document.createElement('canvas');
+      const ctx=canvas.getContext('2d',{willReadFrequently:true});
       const step=async()=>{
         if(!cameraActive||rosterEvent!==ticketEvent||!hasSession()){stopTicketCamera();return;}
+        const now=Date.now();
+        if(now-lastFrame<180){requestAnimationFrame(step);return;}
+        lastFrame=now;
         try{
-          const found=await detector.detect(video);
-          const raw=found.find(x=>/^KANONHA1:[0-9a-f-]{36}$/i.test(x.rawValue||''))?.rawValue;
+          let raw='';
+          if(detector){
+            try{
+              const found=await detector.detect(video);
+              raw=found.find(x=>/^KANONHA1:[0-9a-f-]{36}$/i.test(x.rawValue||''))?.rawValue||'';
+            }catch(_){detector=null;}
+          }
+          if(!raw&&typeof window.jsQR==='function'&&ctx&&video.videoWidth>0&&video.videoHeight>0){
+            const scale=Math.min(1,640/Math.max(video.videoWidth,video.videoHeight));
+            canvas.width=Math.max(1,Math.round(video.videoWidth*scale));
+            canvas.height=Math.max(1,Math.round(video.videoHeight*scale));
+            ctx.drawImage(video,0,0,canvas.width,canvas.height);
+            const pixels=ctx.getImageData(0,0,canvas.width,canvas.height);
+            const decoded=window.jsQR(pixels.data,pixels.width,pixels.height,{inversionAttempts:'dontInvert'});
+            if(decoded&&/^KANONHA1:[0-9a-f-]{36}$/i.test(decoded.data||''))raw=decoded.data;
+          }
           if(raw){
             stopTicketCamera();
             await perform(async()=>{
-              const result=await backend.checkInTicket(raw);
+              const result=await backend.checkInTicket(raw,ticketEvent);
               if(result.result==='checked_in'){
                 await loadRoster(ticketEvent);
                 status('ورود '+(result.attendee||'دانشجو')+' ثبت شد.');
@@ -348,7 +375,7 @@
         if(cameraActive)requestAnimationFrame(step);
       };
       requestAnimationFrame(step);
-    }catch(e){stopTicketCamera();status('دوربین در دسترس نیست؛ کد را دستی وارد کنید.',true);}
+    }catch(_){stopTicketCamera();status('دوربین در دسترس نیست؛ کد را دستی وارد کنید.',true);}
   }
   if(typeof document.addEventListener==='function')document.addEventListener('visibilitychange',()=>{if(document.hidden)stopTicketCamera();});
   async function submitClub(form) {
@@ -388,6 +415,7 @@
       ++seq; activeClub = target.value; editor = null; activeTab = 'club';
       await loadClubData();
     } else if (target.id === 'secretary-roster-select') {
+      stopTicketCamera();
       if (!target.value) { rosterEvent = ''; roster = []; render(); }
       else await loadRoster(target.value);
     }
@@ -445,7 +473,7 @@
       event.preventDefault();
       const ticket=String(new FormData(form).get('ticket')||'');
       void perform(async()=>{
-        const result=await backend.checkInTicket(ticket);
+        const result=await backend.checkInTicket(ticket,rosterEvent);
         if(result.result==='checked_in'){
           status('ورود '+(result.attendee||'دانشجو')+' ثبت شد.');
           await loadRoster(rosterEvent);

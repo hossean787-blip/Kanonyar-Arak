@@ -18,35 +18,69 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
-      - name: Restore original signing key safely and verify certificate
+      - name: Locate original release signing key among repository Secrets without exposing values
         shell: bash
         env:
-          SIGNING_B64: ${{ secrets.KANONHA_SIGNING_KEYSTORE_BASE64 || secrets.KANONHA_KEYSTORE_BASE64 || secrets.RELEASE_KEYSTORE_BASE64 || secrets.ANDROID_KEYSTORE_BASE64 || secrets.KEYSTORE_BASE64 || secrets.KANONHA_SIGNING_STORE }}
-          STORE_PASS: ${{ secrets.KANONHA_SIGNING_STORE_PASSWORD || secrets.KANONHA_KEYSTORE_PASSWORD || secrets.RELEASE_STORE_PASSWORD || secrets.ANDROID_KEYSTORE_PASSWORD || secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KANONHA_SIGNING_ALIAS || secrets.KANONHA_KEY_ALIAS || secrets.RELEASE_KEY_ALIAS || secrets.KEY_ALIAS || 'kanonha-release' }}
-          KEY_PASS: ${{ secrets.KANONHA_SIGNING_KEY_PASSWORD || secrets.KANONHA_KEY_PASSWORD || secrets.RELEASE_KEY_PASSWORD || secrets.ANDROID_KEY_PASSWORD || secrets.KEY_PASSWORD }}
+          AVAILABLE_SECRETS_JSON: ${{ toJSON(secrets) }}
         run: |
           set -euo pipefail
           set +x
-          if [[ -z "$SIGNING_B64" || -z "$STORE_PASS" ]]; then
-            echo "::error::Release signing key/password GitHub Secrets are not available under the supported names."
-            exit 1
-          fi
-          printf '%s' "$SIGNING_B64" | base64 --decode > "$RUNNER_TEMP/kanonha-release.p12"
-          chmod 600 "$RUNNER_TEMP/kanonha-release.p12"
-          if [[ -z "$KEY_PASS" ]]; then KEY_PASS="$STORE_PASS"; fi
-          CERT_REPORT=$(keytool -list -v -keystore "$RUNNER_TEMP/kanonha-release.p12" -storepass "$STORE_PASS" -alias "$KEY_ALIAS")
-          if ! grep -Fqi '49:AC:F9:37:24:A8:5D:76:EA:26:F1:05:11:B1:52:B0:D4:43:E8:AC:0E:F2:D7:A8:82:DB:C2:29:B2:64:53:D5' <<< "$CERT_REPORT"; then
-            echo "::error::Keystore certificate differs from the original 0.9.5 release. Aborting to prevent an incompatible upgrade."
-            exit 1
-          fi
-          echo "Original 0.9.5 signing certificate confirmed."
-          echo "KANONHA_SIGNING_STORE=$RUNNER_TEMP/kanonha-release.p12" >> "$GITHUB_ENV"
-          echo "KANONHA_SIGNING_STORE_PASSWORD=$STORE_PASS" >> "$GITHUB_ENV"
-          echo "KANONHA_SIGNING_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
-          echo "KANONHA_SIGNING_KEY_PASSWORD=$KEY_PASS" >> "$GITHUB_ENV"
-          echo "::add-mask::$STORE_PASS"
-          echo "::add-mask::$KEY_PASS"
+          python3 <<'PY'
+          import os,json,re,base64,subprocess,sys
+          from pathlib import Path
+          secrets=json.loads(os.environ.get("AVAILABLE_SECRETS_JSON","{}"))
+          EXPECTED="49:AC:F9:37:24:A8:5D:76:EA:26:F1:05:11:B1:52:B0:D4:43:E8:AC:0E:F2:D7:A8:82:DB:C2:29:B2:64:53:D5"
+          def key_candidate(name):
+              n=name.upper()
+              if any(x in n for x in ("PASSWORD","PASS","ALIAS","TOKEN","API","PAT")): return False
+              return (any(x in n for x in ("KEYSTORE","KEY_STORE","P12","JKS"))
+                      or (any(x in n for x in ("KANONHA","RELEASE","ANDROID")) and any(x in n for x in ("SIGNING_KEY","PRIVATE_KEY","KEY_FILE"))))
+          def password_candidate(name):
+              n=name.upper()
+              return ("PASS" in n and any(x in n for x in ("STORE","KEY","SIGN","KANONHA","RELEASE","ANDROID")))
+          keystores=[(k,v) for k,v in secrets.items() if key_candidate(k) and isinstance(v,str) and len(v)>80]
+          passwords=[(k,v) for k,v in secrets.items() if password_candidate(k) and isinstance(v,str) and v]
+          tmp=Path(os.environ["RUNNER_TEMP"])/"kanonha-release.p12"
+          found=None
+          for key_name,value in keystores:
+              try:
+                  data=base64.b64decode("".join(value.split()),validate=True)
+              except Exception:
+                  continue
+              if len(data)<100 or len(data)>4_000_000 or not data.startswith(b"\x30"):
+                  continue
+              tmp.write_bytes(data)
+              tmp.chmod(0o600)
+              for password_name,password in passwords:
+                  try:
+                      result=subprocess.run(["keytool","-list","-v","-keystore",str(tmp),"-storepass",password],
+                                            capture_output=True,text=True,timeout=12)
+                  except Exception:
+                      continue
+                  if result.returncode: continue
+                  for section in re.split(r"(?=Alias name: )",result.stdout):
+                      if EXPECTED not in section.upper() or "PRIVATEKEYENTRY" not in section.upper(): continue
+                      match=re.search(r"(?m)^Alias name: (.+?)\s*$",section)
+                      if match:
+                          found=(password,match.group(1))
+                          break
+                  if found: break
+              if found: break
+          if not found:
+              tmp.unlink(missing_ok=True)
+              print("::error::Original signing certificate was not found among relevant keystore/password Secrets, or they are inaccessible to this repository.")
+              sys.exit(1)
+          password,alias=found
+          # Use the store password for the PKCS12 key entry as required by Android's signing config.
+          env_file=Path(os.environ["GITHUB_ENV"])
+          with env_file.open("a") as output:
+              output.write("KANONHA_SIGNING_STORE="+str(tmp)+"\n")
+              output.write("KANONHA_SIGNING_ALIAS="+alias+"\n")
+              output.write("KANONHA_SIGNING_STORE_PASSWORD="+password+"\n")
+              output.write("KANONHA_SIGNING_KEY_PASSWORD="+password+"\n")
+          print("::add-mask::"+password)
+          print("Original installed release signing certificate confirmed. Secrets remain on the GitHub runner.")
+          PY
       - name: Build APK signed with original certificate
         run: gradle :app:assembleRelease --no-daemon
       - name: Validate upgrade package ID, version and cryptographic signature

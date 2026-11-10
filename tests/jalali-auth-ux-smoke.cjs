@@ -32,9 +32,11 @@ class Element{
 }
 const birth=new Element('input'),birthParent=new Element('label');birth.type='date';birth.required=true;birthParent.appendChild(birth);
 const when=new Element('input'),whenParent=new Element('label');when.type='datetime-local';when.required=true;
+const eventDate=new Element('input'),eventDateParent=new Element('label');
+eventDate.type='date';eventDate.required=true;eventDate.dataset.jalaliFuture='true';eventDateParent.appendChild(eventDate);
 when.value='2026-11-09T18:45';whenParent.appendChild(when);
 const document={createElement:tag=>new Element(tag),
- querySelectorAll:sel=>sel==='input[type="date"], input[type="datetime-local"]'?[birth,when]:[]};
+ querySelectorAll:sel=>sel==='input[type="date"], input[type="datetime-local"]'?[birth,when,eventDate]:[]};
 const window={};vm.runInNewContext(calendar,{window,document,Intl,Date,Number,String,Object,Math},{timeout:3500});
 const j=window.KanonhaJalali;
 assert.deepEqual(JSON.parse(JSON.stringify(j.g2j(new Date('2026-11-09T00:00:00Z')))),{year:1405,month:8,day:18});
@@ -48,6 +50,14 @@ assert.match(j.formatDate('2026-11-09T12:00:00Z'),/آبان/);
 j.enhance(document);
 assert.equal(birth.type,'hidden','Gregorian native date picker must be gone');
 assert.equal(when.type,'hidden','Gregorian native datetime picker must be gone');
+assert.equal(eventDate.type,'hidden','Future event dates must use the Jalali selector');
+const currentJalaliYear=j.g2j(new Date()).year;
+const birthYears=birthParent.children[1].children[0].children[0].children;
+const eventYears=eventDateParent.children[1].children[0].children[0].children;
+assert.equal(birthYears.some(x=>x.value===String(currentJalaliYear+1)),false,
+  'birth dates must not allow a future year');
+assert.equal(eventYears.some(x=>x.value===String(currentJalaliYear+1)),true,
+  'events must allow dates next Jalali year');
 assert.equal(when.value,'2026-11-09T18:45','ISO format must survive existing event editing');
 const wrap=birthParent.children[1],row=wrap.children[0];
 const [year,month,day]=row.children;

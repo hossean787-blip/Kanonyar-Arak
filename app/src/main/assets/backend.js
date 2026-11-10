@@ -168,7 +168,13 @@
     try {
       if (!preserveBiometric && session)
         await request(authPath + 'logout', { method: 'POST', requireUser: true });
-    } finally { session = null; user = null; }
+    } finally {
+      session = null; user = null;
+      // University-scoped survey reminders must not remain after logout.
+      if(typeof window!=='undefined'&&window.AndroidSurveyNotices&&
+         typeof window.AndroidSurveyNotices.clear==='function')
+        try{window.AndroidSurveyNotices.clear();}catch(_){}
+    }
   }
   async function me() {
     if (!session) return null;

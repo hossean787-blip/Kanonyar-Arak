@@ -686,6 +686,15 @@
     $('admin-panel').hidden = !managerMode;
     $('secretary-panel').hidden = !secretaryMode;
   }
+  function refreshSecretaryWorkspace() {
+    const ownerId = onlineBackend.currentUser?.id;
+    const panel = window.KanonhaSecretaryPanel;
+    if (!ownerId || !panel || typeof panel.refreshData !== 'function') return;
+    void Promise.resolve().then(() => panel.refreshData()).then(() => {
+      if (onlineBackend.currentUser?.id === ownerId && activePersona === 'secretary' &&
+          activeScreen.startsWith('secretary-')) renderWorkspace();
+    }).catch(error => notify(onlineError(error)));
+  }
   function setPersona(role) {
     if (!onlineMode || !onlineBackend.currentUser) return;
     if (role === 'manager' && (!state.isManager || !adminPanelReady)) return;
@@ -697,6 +706,7 @@
     renderPersonaSelector();
     updateProfileDisplay();
     go(personaHome());
+    if (role === 'secretary') refreshSecretaryWorkspace();
     if (role === 'student' && state.isManager && !studentProfileReady) {
       action('link-student');
     }
@@ -796,6 +806,7 @@
   /* ——— Navigation ——— */
   function go(screen, { scroll = true } = {}) {
     if (!routeNavItems().some(x => x.id === screen) && !(screen === 'club-detail' && clubDetailKey)) return;
+    const previousScreen = activeScreen;
     activeScreen = screen;
     const container = screen.endsWith('-account') ? 'profile' :
       screen.startsWith('manager-') || screen.startsWith('secretary-') ? 'workspace' : screen;
@@ -803,6 +814,7 @@
       el.hidden = el.dataset.screen !== container;
     });
     if (container === 'workspace') renderWorkspace();
+    if (screen === 'secretary-members' && previousScreen !== screen) refreshSecretaryWorkspace();
     if (container === 'profile') updateProfileDisplay();
     if (screen === 'ratings' && window.KanonhaRatings) void window.KanonhaRatings.open();
     renderNav();

@@ -25,6 +25,7 @@
     return local.toISOString().slice(0, 16);
   }
   let seq = 0;
+  let dataSeq = 0;
   let owner = null;
   let assigned = [];
   let activeClub = '';
@@ -65,6 +66,7 @@
   }
   function clear() {
     seq++;
+    dataSeq++;
     owner = null;
     assigned = [];
     activeClub = '';
@@ -125,28 +127,34 @@
   }
   async function loadClubData(requestId = seq) {
     if (!hasSession() || !hasClub(activeClub)) return;
+    const loadId = ++dataSeq;
     const club = activeClub;
     status('در حال دریافت اطلاعات از سرور…');
     try {
       const [m, e] = await Promise.all([
         backend.secretaryMemberships(club), backend.secretaryEvents(club)
       ]);
-      if (requestId !== seq || !hasSession() || club !== activeClub) return;
+      if (requestId !== seq || loadId !== dataSeq || !hasSession() || club !== activeClub) return;
       members = m.filter(x => x && validId(x.id) && validId(x.user_id) && x.club_id === club);
       events = e.filter(x => x && validId(x.id) && x.club_id === club);
       const ps = await backend.secretaryProfiles(members.map(x => x.user_id));
-      if (requestId !== seq || !hasSession() || club !== activeClub) return;
+      if (requestId !== seq || loadId !== dataSeq || !hasSession() || club !== activeClub) return;
       profiles = new Map(ps.filter(x => validId(x.user_id)).map(x => [x.user_id, x]));
       roster = [];
       rosterEvent = '';
       status('');
       render();
     } catch (error) {
-      if (requestId === seq && club === activeClub) {
+      if (requestId === seq && loadId === dataSeq && club === activeClub) {
         status(errorText(error), true);
         render();
       }
     }
+  }
+  async function refreshData() {
+    if (!hasSession() || !hasClub(activeClub)) return false;
+    await loadClubData();
+    return true;
   }
   function memberName(userId) {
     const p = profiles.get(userId);
@@ -323,6 +331,7 @@
     const button = event.target.closest('button');
     if (!button || !root.contains(button) || !hasSession() || !hasClub(activeClub)) return;
     const data = button.dataset;
+    if (data.secretaryRefresh !== undefined) { void perform(() => loadClubData()); return; }
     if (data.secretaryTab && ['club','members','events','attendance'].includes(data.secretaryTab)) {
       activeTab = data.secretaryTab; editor = null; render(); return;
     }
@@ -390,5 +399,5 @@
       club: clubName(activeClub)
     });
   }
-  window.KanonhaSecretaryPanel = Object.freeze({refresh, clear, hasAssignments, showTab, summary});
+  window.KanonhaSecretaryPanel = Object.freeze({refresh, refreshData, clear, hasAssignments, showTab, summary});
 })();

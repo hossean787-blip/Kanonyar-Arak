@@ -613,7 +613,11 @@
     eventCancelWorking.add(eventId);
     try{
       await onlineBackend.cancelEvent(eventId);
-      eventTickets.delete(eventId);
+       try{window.AndroidEventReminders?.sync?.(JSON.stringify(
+         events.filter((e,index)=>e.id!==eventId&&state.registered.includes(index)&&e.startsAtMs>Date.now())
+           .map(e=>({id:e.id,title:e.title,startsAt:e.startsAtMs}))
+       ));}catch(_){}
+       eventTickets.delete(eventId);
       state.registered=state.registered.filter(index=>index!==i);
       state.attended=(state.attended||[]).filter(index=>index!==i);
       renderAll();
@@ -1183,8 +1187,8 @@
       );
     } else if (name === 'about') {
       openSheet('درباره برنامه',
-        `<p>کانون‌ها — ${onlineMode ? 'نسخه ۰.۹.۱۷، کانون‌ها و مدیریت عضویت بهبود یافته' : 'نسخه نمایشی آفلاین'}</p>
-         <p>${onlineMode ? 'ورود و ثبت‌نام متصل به پایگاه داده مستقل؛ بلیت معتبر و تأیید شماره دانشجویی هنوز فعال نیست. نشست در حافظه موقت است.' : 'شش بخش با HTML، CSS و JavaScript در حالت نمایشی پیاده‌سازی شده‌اند. هیچ رأی آزمایشی به سرور ارسال نمی‌شود.'}</p>
+        `<p>کانون‌ها — ${onlineMode ? 'نسخه ۰.۹.۲۱ آزمایشی، رویدادها و بلیت QR' : 'نسخه نمایشی آفلاین'}</p>
+         <p>${onlineMode ? 'ثبت‌نام، بلیت QR و تأیید رویداد به سرور مستقل متصل‌اند؛ اعلان رویدادها محلی است و تأیید رسمی شماره دانشجویی هنوز فعال نیست.' : 'شش بخش با HTML، CSS و JavaScript در حالت نمایشی پیاده‌سازی شده‌اند. هیچ رأی آزمایشی به سرور ارسال نمی‌شود.'}</p>
          ${onlineMode ? '' : '<button type="button" data-action="reset" class="pill-btn soft">بازنشانی داده‌های نمایشی</button>'}`
       );
     } else if (name === 'exit') {

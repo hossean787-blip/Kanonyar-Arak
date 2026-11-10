@@ -21,7 +21,7 @@ assert.doesNotMatch(html,/صدای دانشجو|ratings-home-entry/);
 assert.match(sql,/p_sources uuid\[\]/,'Atomic catalog selection');
 assert.match(sql,/kanonha_surveys_audience_pair_check/);
 assert.match(sql,/kanonha_survey_one_vote_per_person|kanonha_survey_votes_student_insert/);
-assert.match(sql,/from public\.kanonha_survey_catalog/);
+assert.match(sql,/create or replace function public\.kanonha_survey_catalog/);
 assert.match(pauseSql,/status='paused'/);
 assert.match(backend,/surveyCatalog,surveySaveV21,surveyDuplicate,surveyChangeStatus,surveyParticipation,surveyAudit/);
 assert.match(read('app/src/main/java/ir/kanonha/app/SurveyNoticeReceiver.java'),/setAndAllowWhileIdle/);

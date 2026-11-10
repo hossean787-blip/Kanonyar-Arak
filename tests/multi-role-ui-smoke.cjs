@@ -22,7 +22,7 @@ const api={enabled:true,get currentUser(){return user},
  async signIn(){user={id:uid};return user},async signOut(){user=null},async isManager(){return true},
  async clubs(){return []},async events(){return []},async profile(){return profile?{full_name:'Test Student',student_number:'12345678'}:null},
  async ensureProfile(){return this.profile()},async memberships(){return []},async registrations(){return []},
- async academicDetails(){return null},async adminAction(op){assert.equal(op,'manager.student.attach');links++;profile=true;return {linked:true}}
+ async academicDetails(){return profile?{birth_date:'2000-01-01',university:'Sample University',faculty:'Sample Faculty',major:'Sample Major',mobile:'09000000000'}:null},async adminAction(op){assert.equal(op,'manager.student.attach');links++;profile=true;return {linked:true}}
 };
 const window={KanonhaBackend:api,location,addEventListener(){}};
 window.KanonhaAdminPanel={async refresh(){get('admin-panel').hidden=false},clear(){get('admin-panel').hidden=true}};

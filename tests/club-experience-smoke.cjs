@@ -13,6 +13,9 @@ for(const [name,script] of [['app',app],['backend',api],['secretary',secretary],
 for(const id of ['clubs-university','clubs-faculty','clubs-category','screen-club-detail','club-detail-content'])
  assert.match(html,new RegExp('id="'+id+'"'),'missing UI '+id);
 assert.match(css,/#screen-clubs\s+\.club-list\s*\{[^}]*grid-template-columns:\s*repeat\(2/);
+assert.match(html,/img-src 'self' data: blob: https:\/\/cnqcysnjinghzzrzanpj\.supabase\.co;/,
+ 'CSP must permit selected image previews and only the dedicated logo host');
+assert.doesNotMatch(html,/img-src[^;]*\*/,'CSP must not allow wildcard image origins');
 for(const feature of ['clubImageSrc','renderClubDetail','onlineCancelMembership','reapplyClub','cancelClubMembership','clubLogoUrl','secretaryUploadClubLogo'])
  assert.ok((app+api).includes(feature),'missing '+feature);
 assert.ok(secretary.includes('secretary-logo-form'));

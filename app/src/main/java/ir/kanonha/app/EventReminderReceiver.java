@@ -127,7 +127,7 @@ public final class EventReminderReceiver extends BroadcastReceiver {
  @Override public void onReceive(Context c,Intent in){
   if(in==null)return;
   String action=in.getAction();
-  if(Intent.ACTION_BOOT_COMPLETED.equals(action)||Intent.ACTION_TIME_SET.equals(action)
+  if(Intent.ACTION_BOOT_COMPLETED.equals(action)||Intent.ACTION_TIME_CHANGED.equals(action)
     ||Intent.ACTION_TIMEZONE_CHANGED.equals(action)){
    syncInternal(c,prefs(c).getString(DATA,"[]"));return;
   }

@@ -52,6 +52,7 @@
     for(const input of inputs) {
       if(input.dataset.jalaliReady==='true')continue;
       const dateTime=input.type==='datetime-local';
+      const allowFuture=dateTime||input.dataset.jalaliFuture==='true';
       const original=input.value||'';
       const originalDate=/^\d{4}-\d{2}-\d{2}/.test(original)
         ? new Date(original.slice(0,10)+'T00:00:00Z'):null;
@@ -67,8 +68,8 @@
       const y=makeSelect('سال شمسی','سال');
       const m=makeSelect('ماه شمسی','ماه');
       const d=makeSelect('روز شمسی','روز');
-      const minYear=dateTime?currentYear-2:1300;
-      const maxYear=dateTime?currentYear+12:currentYear;
+      const minYear=allowFuture?currentYear-2:1300;
+      const maxYear=allowFuture?currentYear+12:currentYear;
       for(let n=maxYear;n>=minYear;n--)option(y,n,numeral(n));
       months.forEach((x,i)=>option(m,i+1,x));
       row.appendChild(y);row.appendChild(m);row.appendChild(d);

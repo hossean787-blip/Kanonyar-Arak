@@ -2360,3 +2360,137 @@ button:focus-visible,input:focus-visible,select:focus-visible {outline-color:#39
  #screen-clubs .club-card .club-icon{width:67px;height:67px}
  #screen-clubs .club-card .club-art{width:60px;height:60px}
 }
+
+
+/* Survey 2.1 finalization: manager authoring, authentic catalog, results + student lifecycle. */
+.survey-life-filters,.survey-status-filters{
+ display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;
+ padding:3px 0 10px;align-items:center
+}
+.survey-life-filters::-webkit-scrollbar,.survey-status-filters::-webkit-scrollbar{display:none}
+.survey-life-filters button,.survey-status-filters button{
+ white-space:nowrap;flex:0 0 auto;
+ font:inherit;font-size:11px;font-weight:800;
+ color:#65719F;background:#F3F5FC;border:1px solid #E4E8F7;
+ padding:10px 13px;border-radius:14px;min-height:40px
+}
+.survey-life-filters button.active,.survey-status-filters button.active{
+ color:#fff;background:linear-gradient(135deg,#6470BF,#3E4D9F);
+ border-color:#4B56A9;box-shadow:0 4px 12px #4A55A32B
+}
+.survey-status-filters small{font-size:10px;color:inherit}
+.survey-alerts{
+ border:1px solid #D9DFF4;border-radius:15px;background:linear-gradient(135deg,#F8F9FF,#EEF1FC);
+ padding:9px 12px;margin:8px 0 15px
+}
+.survey-alerts[hidden]{display:none}
+.survey-alerts p{font-size:11px;font-weight:800;line-height:1.9;
+ color:#394992;margin:4px 0}
+.survey-audience-badge{font-size:10px;line-height:1.8;color:#626EAA;
+ margin:6px 0;padding:5px 9px;background:#F3F5FC;border-radius:10px;
+ display:inline-block}
+.survey-coming-start{font-size:10px;color:#5D68A9;border-radius:10px;
+ background:#EFF1FC;padding:9px 10px;line-height:1.8}
+.survey-public-leader{margin:12px 0 0;padding:12px 11px;
+ border:1px solid #C8D0F0;border-radius:12px;
+ color:#354492;font-size:11px;line-height:1.8;font-weight:900;
+ background:linear-gradient(115deg,#EDEFFD,#FAFAFF)}
+.survey-public-threshold{margin:11px 0 0;color:#808CAD;font-size:10px;line-height:1.85}
+.survey-state.scheduled{background:#F0EEFE;color:#6144AD}
+.survey-admin-card{overflow:hidden}
+.survey-admin-card .survey-admin-item-details{gap:10px;flex-direction:column;align-items:flex-start}
+.survey-audience-line{display:flex;gap:8px;justify-content:space-between;
+ flex-wrap:wrap;margin:9px 0;color:#626F9B;font-size:10px;line-height:1.8;
+ padding:10px;background:#F7F8FE;border:1px solid #E9ECFA;border-radius:12px}
+.survey-admin-form{row-gap:12px}
+.survey-admin-form .survey-form-hint{margin:0;color:#7F89A7;
+ font-size:10px;line-height:1.9}
+.survey-option-title{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.survey-option-title strong{color:#35438D;font-size:12px}
+.survey-option-title span{color:#6976AF;font-size:10px}
+.survey-catalog-grid{display:grid;gap:7px;grid-template-columns:repeat(2,minmax(0,1fr));
+ max-height:260px;overflow-y:auto;scrollbar-width:thin;padding:3px}
+.survey-catalog-entry{
+ display:flex!important;flex-direction:row!important;align-items:center;
+ border:1px solid #E3E8F5;background:#FCFCFF;padding:11px 9px;
+ border-radius:13px;cursor:pointer;gap:9px!important
+}
+.survey-catalog-entry:has(input:checked){border-color:#8490D7;background:#F0F2FE;
+ box-shadow:inset 0 0 0 1px #8490D744}
+.survey-catalog-entry input{width:18px!important;min-height:18px!important;
+ height:18px!important;flex:0 0 18px;accent-color:#5B69BE}
+.survey-catalog-identity{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.survey-catalog-identity strong{font-size:11px;line-height:1.7;
+ font-weight:900;overflow-wrap:anywhere;color:#34417F}
+.survey-catalog-identity small{font-size:9px;color:#929BB7;line-height:1.7;overflow-wrap:anywhere}
+.survey-catalog-empty{padding:16px;color:#777FA3;border:1px dashed #CED6ED;
+ border-radius:14px;background:#F8F9FD;font-size:11px;line-height:1.95}
+.survey-admin-form-actions{display:grid;grid-template-columns:1fr 1.4fr;gap:8px}
+.survey-admin-form-actions button:first-child{min-height:44px;border:1px solid #CCD4EC;
+ background:#F2F4FC;color:#46549E;border-radius:13px;font:inherit;
+ font-size:11px;font-weight:900;padding:8px}
+.survey-admin-form-actions button.survey-admin-save{grid-column:auto;min-height:44px}
+.survey-manager-preview{display:grid;gap:9px;margin:15px 0 4px;
+ border:1px solid #D4DAF3;border-radius:15px;padding:13px;background:#F4F6FF;
+ color:#4C5898;font-size:11px;line-height:1.8}
+.survey-preview-label{color:#6875A9;font-size:10px;font-weight:900}
+.survey-manager-preview h4{font-size:14px;color:#283877;margin:0}
+.survey-manager-preview p{font-size:11px;color:#6975A5;margin:0}
+.survey-manager-preview span{background:#FFF;border:1px solid #E4E7F6;
+ padding:9px;border-radius:10px;display:block}
+.survey-manager-preview small{font-size:10px;color:#7A85AC}
+.survey-professor-form{display:grid;grid-template-columns:1fr 1fr;gap:8px;
+ margin-top:15px;padding:13px;background:#F8F9FE;
+ border:1px solid #E3E8F7;border-radius:14px}
+.survey-professor-form h4{grid-column:1/-1;color:#33438D;font-size:12px;margin:0}
+.survey-professor-form label{display:grid;gap:6px;font-size:10px;font-weight:900;color:#6470A1}
+.survey-professor-form input{min-height:42px;padding:9px;border:1px solid #D7DCF1;
+ border-radius:10px;min-width:0;width:100%;box-sizing:border-box;background:#FFF;
+ color:#323F85;font:inherit}
+.survey-professor-form button{grid-column:1/-1;border:0;border-radius:11px;
+ min-height:42px;color:#FFF;font:inherit;font-size:11px;font-weight:900;
+ background:#4A5AB1}
+.survey-manager-report{margin-top:14px;display:grid;gap:11px;padding:12px;
+ border:1px solid #D5DCF3;background:#F6F7FD;border-radius:14px}
+.survey-admin-report-heading{display:flex;justify-content:space-between;
+ gap:10px;font-size:12px;color:#35448D}
+.survey-admin-report-heading span{font-size:10px;color:#8790AC}
+.survey-report-stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.survey-report-stat-row>div{background:#FFF;border-radius:11px;border:1px solid #E2E6F5;
+ padding:9px 4px;text-align:center;display:grid;gap:4px}
+.survey-report-stat-row strong{font-size:16px;color:#374693}
+.survey-report-stat-row small{font-size:9px;color:#929BB7}
+.survey-manager-winner{padding:12px;margin:0;border:1px solid #F1D9A4;
+ background:#FFF7E7;border-radius:11px;color:#8D6418;font-weight:900;
+ font-size:11px;line-height:1.8}
+.survey-admin-report-empty{color:#68749C;font-size:11px;line-height:1.8}
+.survey-rank-rows{display:grid;gap:6px}
+.survey-rank-rows>div{display:grid;grid-template-columns:1.4fr .6fr .55fr;
+ gap:6px;align-items:center;padding:8px 9px;border:1px solid #E6E8F7;
+ border-radius:10px;background:#FFF;color:#44518C;font-size:10px}
+.survey-rank-rows span{overflow-wrap:anywhere}
+.survey-rank-rows strong{font-size:11px}
+.survey-rank-rows small{color:#8190B0}
+.survey-rank-rows b{grid-column:1/-1;font-size:9px;color:#6472AF}
+.survey-export-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.survey-export-actions button{min-height:43px;border:1px solid #B9C3EB;
+ color:#4555A2;background:#F8FAFF;border-radius:11px;font:inherit;
+ font-weight:900;font-size:10px;padding:8px}
+.survey-export-actions button:last-child{color:white;background:#4656AD;border-color:#4656AD}
+.survey-audit-toggle{border:1px solid #D9DEEF;color:#4B5898;
+ background:#F4F6FD;border-radius:12px;font:inherit;font-size:11px;
+ font-weight:900;padding:12px;min-height:43px}
+.survey-audit-list{display:grid;gap:7px;border:1px solid #E4E8F6;
+ border-radius:17px;padding:12px;background:#FFF}
+.survey-audit-list h4{font-size:13px;color:#35428D;margin:4px 0}
+.survey-audit-list>div{display:flex;align-items:center;justify-content:space-between;
+ flex-wrap:wrap;gap:7px;padding:9px 6px;border-bottom:1px solid #EEF1F8;font-size:10px}
+.survey-audit-list span{font-weight:900;color:#4855A0}
+.survey-audit-list small{color:#8D96AF;font-size:9px}
+.survey-admin-buttons button{min-height:43px;white-space:normal}
+@media(max-width:365px){
+ .survey-catalog-grid{grid-template-columns:1fr}
+ .survey-professor-form{grid-template-columns:1fr}
+ .survey-admin-form-actions{grid-template-columns:1fr}
+ .survey-rank-rows>div{grid-template-columns:1.4fr 1fr}
+}

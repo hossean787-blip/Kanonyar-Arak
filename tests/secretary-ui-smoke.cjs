@@ -120,7 +120,7 @@ function submit(id,fields){
     registration_deadline:'2035-03-09T15:00',capacity:'25',is_published:'1'
   });
   await flush();await flush();
-  assert.equal(ops.creates,1);
+  assert.equal(ops.creates,1,'event create failed: '+el.get('secretary-message').textContent);
   assert.ok(events.some(e=>e.title==='رویداد آینده' && e.starts_at==='2035-03-10T15:00'),
     'separate date/time must persist as one event start timestamp');
   click({secretaryRoster:eventId});

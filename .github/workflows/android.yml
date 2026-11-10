@@ -1,4 +1,4 @@
-name: Kanonha v0.9.11 parallel debug install
+name: Kanonha v0.9.12 notification-only Jalali date
 on:
   push:
     branches: [main]
@@ -140,16 +140,16 @@ jobs:
           ! find app/src -type f -name '*.keystore' | grep -q .
           ! find app/src -type f -name '*.p12' | grep -q .
           grep -q 'applicationId = "ir.kanonha.app"' app/build.gradle.kts
-          grep -q 'versionCode = 26' app/build.gradle.kts
+          grep -q 'versionCode = 27' app/build.gradle.kts
           grep -q 'android:allowBackup="false"' app/src/main/AndroidManifest.xml
           echo 'Release output validated; unsigned candidate requires secure external signing'
       - uses: actions/upload-artifact@v4
         with:
-          name: kanonha-0.9.11-release-unsigned
+          name: kanonha-0.9.12-release-unsigned
           path: app/build/outputs/apk/release/app-release-unsigned.apk
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
-          name: kanonha-0.9.11-debug-validation
+          name: kanonha-0.9.12-debug-validation
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error

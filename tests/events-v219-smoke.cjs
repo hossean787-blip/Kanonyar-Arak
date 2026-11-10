@@ -160,8 +160,8 @@ function testSecurityWiring(){
  assert.match(edge,/event\.reject/);
  assert.match(edge,/event\.report/);
  assert.match(edge,/email_confirmed_at/);
- assert.match(manager,/data-admin-approve-event/);
- assert.match(manager,/data-admin-reject-event/);
+ assert.doesNotMatch(manager,/data-admin-approve-event/);
+ assert.doesNotMatch(manager,/data-admin-reject-event/);
  assert.match(manager,/data-admin-export-event/);
  assert.match(secretary,/name="poster"/);
  assert.match(secretary,/confirmAction\('secretary-event'\)/);

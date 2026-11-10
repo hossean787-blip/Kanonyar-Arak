@@ -127,6 +127,7 @@ jobs:
           node tests/ratings-manager-smoke.cjs
           node tests/survey-image-upload-smoke.cjs
           node tests/secretary-backend-smoke.cjs
+          node tests/secretary-academic-smoke.cjs
           node tests/secretary-ui-smoke.cjs
           node tests/club-experience-smoke.cjs
           node tests/club-logo-upload-smoke.cjs

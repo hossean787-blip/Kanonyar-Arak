@@ -65,6 +65,17 @@ const backend = {
   async ensureProfile() { return {full_name:'دانشجوی نمونه',student_number:'123456'}; },
   async memberships() { return memberRows; },
   async registrations() { return eventRows; },
+  async myClubMemberships() { return memberRows.map(m=>({
+    club_id:m.club_id,club_name:untrustedClub,category:'فرهنگی',
+    university:'دانشگاه نمونه',status:m.status,is_active:true
+  })); },
+  async myEventHistory() { return eventRows.map(r=>({
+    registration_id:'a0b5a40b-98a3-4bab-8cd8-a9fcaf0dd422',event_id:r.event_id,
+    event_title:untrustedEvent,event_location:untrustedLocation,
+    event_starts_at:'2035-05-01T10:00:00Z',ticket_expires_at:'2035-05-08T10:00:00Z',
+    club_name:untrustedClub,status:r.status,attended_at:null,ticket_token:r.ticket_token||null
+  })); },
+  async myCertificates() { return []; },
   async joinClub(id) { assert.equal(id,clubId); actions.joins++; memberRows=[{club_id:id,status:'pending'}]; },
   async reapplyClub(id) { assert.equal(id,clubId); actions.reapplies++; memberRows=[{club_id:id,status:'pending'}]; },
   async cancelClubMembership(id) { assert.equal(id,clubId); actions.cancellations++; memberRows=[]; },
@@ -144,14 +155,9 @@ const click = dataset => eventHandlers.click({target:{closest(){return {dataset}
   assert.equal(actions.registrations,1,'duplicate online registration must be disabled');
   assert.ok(!get('activity-tickets').innerHTML.includes('sample-qr'),'online should never show fake QR');
   app.go('activity');
-  click({eventCancel:'0'});
-  assert.equal(get('sheet-overlay').hidden,false,'event cancellation must require confirmation');
-  click({confirmEventCancel:'0'});
-  click({confirmEventCancel:'0'});
-  await delay(); await delay(); await delay();
-  assert.equal(actions.eventCancellations,1,'double cancellation must be idempotent');
-  assert.equal(app.state.registered.length,0,'cancelled event must disappear immediately');
-  assert.match(get('activity-tickets').innerHTML,/هنوز بلیتی/,'cancelled ticket must be removed');
+  assert.ok(!get('activity-events').innerHTML.includes('لغو ثبت‌نام'),'event registrations are permanent');
+  assert.ok(!get('activity-tickets').innerHTML.includes('data-event-cancel'),'no manual ticket removal');
+  assert.equal(actions.eventCancellations,0,'students cannot cancel event registrations');
   app.go('clubs');
   click({clubDetails:'0'});
   assert.equal(app.screen,'club-detail');

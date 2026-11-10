@@ -412,7 +412,9 @@
       state.isManager ? onlineBackend.profile() : onlineBackend.ensureProfile(),
       onlineBackend.memberships(), onlineBackend.registrations(),
       typeof onlineBackend.academicDetails === 'function' ? onlineBackend.academicDetails() : null,
-      onlineBackend.myEventHistory(), onlineBackend.myClubMemberships(), onlineBackend.myCertificates()
+      typeof onlineBackend.myEventHistory==='function'?onlineBackend.myEventHistory():[],
+      typeof onlineBackend.myClubMemberships==='function'?onlineBackend.myClubMemberships():[],
+      typeof onlineBackend.myCertificates==='function'?onlineBackend.myCertificates():[]
     ]);
     if (refreshId !== onlinePersonalSequence ||
         !onlineBackend.currentUser || onlineBackend.currentUser.id !== ownerId) return;

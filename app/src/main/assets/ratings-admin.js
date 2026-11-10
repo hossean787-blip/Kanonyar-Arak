@@ -16,15 +16,14 @@ const actionNames={created:'ایجاد',edited:'ویرایش',published:'انت�
 const authorized=()=>Boolean(window.KanonhaAdminPanel?.hasAccess?.());
 const area=()=>$('admin-ratings-content');
 const reports=()=>window.KanonhaSurveyReports;
-const fmtDate=iso=>window.KanonhaJalali?.formatDate?.(iso,true)||
-   new Date(iso).toLocaleString('fa-IR');
+const fmtDate=iso=>iso?(window.KanonhaJalali?.formatDate?.(iso,true)||new Date(iso).toLocaleString('fa-IR')):'بدون محدودیت زمانی';
 const toLocal=iso=>{
  const d=new Date(iso||Date.now()+15*60000);
  return Number.isFinite(d.getTime())
   ?new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16):'';
 };
-const ended=s=>Date.now()>=Date.parse(s.ends_at);
-const started=s=>Date.now()>=Date.parse(s.starts_at);
+const ended=s=>s.kind==='competition'&&Boolean(s.ends_at)&&Date.now()>=Date.parse(s.ends_at);
+const started=s=>s.kind==='regular'||(Boolean(s.starts_at)&&Date.now()>=Date.parse(s.starts_at));
 const state=s=>s.status==='draft'?'پیش‌نویس':s.status==='cancelled'?'لغوشده':
  s.status==='archived'?'بایگانی':s.status==='paused'?'متوقف':
  !started(s)?'زمان‌بندی‌شده':ended(s)?'پایان‌یافته':'در حال رأی‌گیری';
@@ -64,8 +63,8 @@ function saveFromForm(form){
   description:String(fd.get('description')||'').trim(),
   category:String(fd.get('category')||'faculty'),
   kind:String(fd.get('kind')||'regular'),
-  starts_at:String(fd.get('starts_at')||''),
-  ends_at:String(fd.get('ends_at')||''),
+  starts_at:String(fd.get('kind')||'regular')==='competition'?String(fd.get('starts_at')||''):'',
+  ends_at:String(fd.get('kind')||'regular')==='competition'?String(fd.get('ends_at')||''):'',
   min_rank_votes:Number(fd.get('min_rank_votes')||5),
   university_id:String(fd.get('university_id')||''),
   faculty_id:String(fd.get('faculty_id')||''),
@@ -104,7 +103,7 @@ function formPreviewBlock(){
  return '<section class="survey-manager-preview"><div class="survey-preview-label">پیش‌نمایش قبل از انتشار</div>'+
   '<h4>'+esc(formState.title||'عنوان نظرسنجی')+'</h4>'+
   '<p>'+esc(types[formState.kind])+' • '+esc(categories[formState.category])+'</p>'+
-  '<small>شروع: '+esc(formState.starts_at||'نامشخص')+' | پایان: '+esc(formState.ends_at||'نامشخص')+'</small>'+
+  '<small>'+(formState.kind==='competition'?'شروع: '+esc(formState.starts_at||'نامشخص')+' | پایان: '+esc(formState.ends_at||'نامشخص'):'از زمان انتشار؛ بدون تاریخ پایان')+'</small>'+
   '<div>'+choiceNames.map((x,i)=>'<span>'+nf(i+1)+'. '+esc(x)+'</span>').join('')+'</div>'+
   '<p>حداقل رأی برای رتبه رسمی: '+nf(formState.min_rank_votes)+'</p></section>';
 }
@@ -132,19 +131,18 @@ function managerForm(){
   '<div class="survey-admin-editor-title"><div><span>✦ استودیوی مدیریت</span><h4>'+
   (editing?'ویرایش پیش‌نویس':'ایجاد نظرسنجی جدید')+'</h4></div>'+
   (editing?'<button type="button" data-surveys-action="cancel-edit">انصراف</button>':'')+'</div>'+
-  '<p class="survey-admin-editor-hint">نوع، مخاطب، گزینه‌ها و زمان‌بندی را قبل از انتشار تعیین کنید. '+
-  'بعد از انتشار، این اطلاعات قفل می‌شوند.</p>'+
+  '<p class="survey-admin-editor-hint">نوع، مخاطب و گزینه‌ها را تعیین کنید. فقط نظرسنجی مسابقه‌ای نیاز به بازه زمانی دارد؛ بعد از انتشار، مشخصات قفل می‌شوند.</p>'+
   '<form id="survey-manager-form" class="survey-admin-form">'+
   '<label>عنوان نظرسنجی<input name="title" required minlength="4" maxlength="120" value="'+esc(formState.title)+
   '" placeholder="مثلاً انتخاب برترین دانشکده"></label>'+
   '<label>دسته‌بندی<select name="category" required>'+catOptions+'</select></label>'+
   '<label>نوع نظرسنجی<select name="kind" required>'+kindOptions+'</select></label>'+
-  '<p class="survey-admin-mode-help">معمولی: آمار از آغاز انتشار قابل مشاهده است. مسابقه‌ای: آمار و رتبه‌ها '+
-  'تا پایان مهلت و تأیید مدیرکل پنهان می‌مانند.</p>'+
-  '<label>شروع (تاریخ و ساعت شمسی)<input type="datetime-local" name="starts_at" required value="'+
-    esc(toLocal(formState.starts_at))+'"></label>'+
-  '<label>پایان (تاریخ و ساعت شمسی)<input type="datetime-local" name="ends_at" required value="'+
-    esc(toLocal(formState.ends_at))+'"></label>'+
+  '<p class="survey-admin-mode-help">معمولی: از لحظه انتشار، بدون پایان خودکار فعال و نتایج آن قابل مشاهده است. مسابقه‌ای: تاریخ شروع و پایان اجباری و نتایج تا پایان و تأیید مدیرکل مخفی است.</p>'+
+  (formState.kind==='competition'?'<label>شروع مسابقه (تاریخ و ساعت شمسی)<input type="datetime-local" name="starts_at" required value="'+
+    esc(toLocal(formState.starts_at||Date.now()+15*60000))+'"></label>'+
+  '<label>پایان مسابقه (تاریخ و ساعت شمسی)<input type="datetime-local" name="ends_at" required value="'+
+    esc(toLocal(formState.ends_at||Date.now()+7*86400000))+'"></label>':
+  '<p class="survey-admin-wide survey-admin-mode-help">◉ نظرسنجی معمولی بدون محدودیت زمانی منتشر می‌شود؛ مدیرکل می‌تواند آن را متوقف یا لغو کند.</p>')+
   '<label>حداقل رأی برای رتبه معتبر<input name="min_rank_votes" type="number" min="1" max="100" required value="'+
     esc(formState.min_rank_votes)+'"></label>'+
   '<label>توضیحات<textarea name="description" maxlength="500" rows="2" placeholder="هدف نظرسنجی">'+
@@ -238,7 +236,7 @@ function card(s){
     (danger?pending?'-confirm':'-ask':'')+'" data-survey-id="'+s.id+'" class="'+css+
     '">'+(pending?'تأیید نهایی: ':'')+label+'</button>');
  }
- if(draft){button('edit','ویرایش');button('publish','انتشار'+(Date.parse(s.starts_at)>Date.now()?' زمان‌بندی‌شده':''),'publish',true);
+ if(draft){button('edit','ویرایش');button('publish','انتشار'+(isContest&&Date.parse(s.starts_at)>Date.now()?' زمان‌بندی‌شده':''),'publish',true);
   button('delete','حذف','delete',true);}
  if(s.status==='published'&&!timeOver)button('pause','توقف موقت','',true);
  if(s.status==='paused'&&!timeOver)button('resume','ادامه رأی‌گیری','publish',true);
@@ -258,8 +256,9 @@ function card(s){
   '<span class="survey-state '+(isActive?'active':isScheduled?'scheduled':'')+'">'+esc(state(s))+'</span></header>'+
   (s.cover_path&&api.surveyCoverUrl(s.id,s.cover_path)?'<img class="survey-manager-cover" src="'+esc(api.surveyCoverUrl(s.id,s.cover_path))+'" alt="عکس نظرسنجی">':'')+
   '<h4>'+esc(s.title)+'</h4>'+(s.description?'<p>'+esc(s.description)+'</p>':'')+
-  '<div class="survey-admin-item-details"><span>شروع: '+esc(fmtDate(s.starts_at))+
-  '</span><span>پایان: '+esc(fmtDate(s.ends_at))+'</span></div>'+
+  (isContest?'<div class="survey-admin-item-details"><span>شروع: '+esc(fmtDate(s.starts_at))+
+  '</span><span>پایان: '+esc(fmtDate(s.ends_at))+'</span></div>':
+  '<div class="survey-admin-item-details"><span>فعال از زمان انتشار • بدون تاریخ پایان</span></div>')+
   '<div class="survey-audience-line"><span>مخاطبان: '+esc(university)+
   (s.audience_faculty_id?' / '+esc(faculty):'')+'</span><span>'+nf(opts.length)+' گزینه • حدنصاب '+
   nf(s.min_rank_votes||5)+'</span></div>'+
@@ -349,13 +348,14 @@ async function submit(form){
  const selected=new FormData(form).get('cover_file');
  const coverFile=pendingCoverFile||(selected&&typeof selected.size==='number'&&selected.name?selected:null);
  if(coverFile){try{api.surveyCoverValidateFile(coverFile);}catch(e){notice(String(e?.message||e),true);return;}}
- if(window.KanonhaJalali&&!window.KanonhaJalali.validateForm(form)){
+ if(String(new FormData(form).get('kind')||'regular')==='competition'&&window.KanonhaJalali&&!window.KanonhaJalali.validateForm(form)){
   notice('تاریخ و ساعت شمسی شروع و پایان را کامل انتخاب کنید.',true);return;
  }
  saveFromForm(form);
  const fields={title:formState.title,description:formState.description,
   category:formState.category,kind:formState.kind,
-  starts_at:formState.starts_at,ends_at:formState.ends_at,
+  starts_at:formState.kind==='competition'?formState.starts_at:null,
+  ends_at:formState.kind==='competition'?formState.ends_at:null,
   min_rank_votes:formState.min_rank_votes,
   audience_university_id:formState.university_id||null,
   audience_faculty_id:formState.faculty_id||null};

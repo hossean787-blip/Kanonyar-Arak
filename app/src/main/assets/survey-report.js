@@ -43,7 +43,7 @@
     for(const r of rows){
       lines.push([
         survey.title,survey.kind==='competition'?'مسابقه‌ای':'معمولی',survey.category,
-        survey.ends_at,count,eligible,r.title,
+        survey.kind==='competition'?survey.ends_at:'بدون محدودیت زمانی',count,eligible,r.title,
         r.count?r.average.toFixed(3):'',r.count,r.rank??'',
         r.qualified?'بله':'خیر'
       ].map(csvEscape).join(','));
@@ -82,7 +82,7 @@
       '<div class="small">گزارش رسمی آماری پنل مدیرکل اپ کانون‌ها</div>'+
       '<p>'+esc(survey.description||'')+'</p>'+
       '<div>نوع: '+esc(survey.kind==='competition'?'مسابقه‌ای':'معمولی')+
-      ' | پایان: '+esc(date(survey.ends_at))+'</div></header>'+
+      ' | پایان: '+esc(survey.kind==='competition'?date(survey.ends_at):'بدون محدودیت زمانی')+'</div></header>'+
       '<section class="stats"><div><strong>'+nf(count)+'</strong>شرکت‌کننده</div>'+
       '<div><strong>'+nf(eligible)+'</strong>واجد شرایط</div>'+
       '<div><strong>'+ratio+'</strong>نرخ مشارکت</div></section>'+

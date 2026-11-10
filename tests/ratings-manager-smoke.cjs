@@ -167,8 +167,9 @@ function submit(fields){
  await delay();
  let v=el('admin-ratings-content').innerHTML;
  assert.match(v,/استودیوی مدیریت/);
- assert.match(v,/name="starts_at"/);
- assert.match(v,/name="ends_at"/);
+ assert.doesNotMatch(v,/name="starts_at"/,'regular polls have no start field');
+ assert.doesNotMatch(v,/name="ends_at"/,'regular polls have no end field');
+ assert.match(v,/بدون محدودیت زمانی/);
  assert.match(v,/name="university_id"/);
  assert.match(v,/name="faculty_id"/);
  assert.match(v,/name="min_rank_votes"/);
@@ -185,6 +186,8 @@ function submit(fields){
  assert.equal(operations[0].action,'save');
  assert.deepEqual(operations[0].sources,[ids.faculty1,ids.faculty2]);
  assert.equal(operations[0].fields.kind,'regular');
+ assert.equal(operations[0].fields.starts_at,null);
+ assert.equal(operations[0].fields.ends_at,null);
  assert.match(el('admin-ratings-content').innerHTML,/نظرسنجی برترین دانشکده/);
 
  click('publish-ask',ids.created);
@@ -246,5 +249,13 @@ function submit(fields){
   click('publish-confirm',ids.single);await delay();
   assert.equal(polls.find(p=>p.id===ids.single).status,'published','single-option poll must publish');
   assert.equal(polls.find(p=>p.id===ids.single).cover_path,ids.single+'/cover.webp');
+  el('survey-manager-form').fields={...makeForm([ids.faculty1]),kind:'competition',
+    starts_at:new Date(Date.now()+60000).toISOString().slice(0,16),
+    ends_at:future.slice(0,16)};
+  el('admin-content').listeners.change({target:{name:'kind'}});
+  const contestForm=el('admin-ratings-content').innerHTML;
+  assert.match(contestForm,/name="starts_at" required/);
+  assert.match(contestForm,/name="ends_at" required/);
+  assert.match(contestForm,/شروع مسابقه/);
  console.log('PASS: single-option save/publish, zero-option rejection, manager Jalali/form controls, 2-click publish/approval/pause, ranking, Excel/PDF bridges and role guard');
 })().catch(e=>{console.error(e);process.exitCode=1});

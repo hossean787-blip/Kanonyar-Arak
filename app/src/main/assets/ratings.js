@@ -20,10 +20,10 @@
  let currentCategory='all',life='active',polls=[],options=[],votes=new Map(),results=new Map();
  let chosen=new Map(),stars=new Map(),loading=false,sending=false,seq=0,message='',error=false;
  const uid=()=>api?.currentUser?.id||null;
- const isEnded=s=>Date.now()>=new Date(s.ends_at).getTime();
+ const isEnded=s=>s.kind==='competition'&&Boolean(s.ends_at)&&Date.now()>=new Date(s.ends_at).getTime();
  const canShow=s=>['published','paused','archived'].includes(s.status)&&
    (s.kind==='regular' || (isEnded(s)&&s.results_approved===true));
- const isLive=s=>s.status==='published'&&Date.now()>=new Date(s.starts_at||0).getTime()&&!isEnded(s);
+ const isLive=s=>s.status==='published'&&(s.kind==='regular'||(Boolean(s.starts_at)&&Date.now()>=new Date(s.starts_at).getTime()&&!isEnded(s)));
  const optionName=id=>options.find(o=>o.id===id)?.title||'گزینه ثبت‌شده';
  function announce(text,isError=false){message=text;error=isError;}
  function resultMap(id){return new Map((results.get(id)||[]).map(x=>[x.option_id,x]));}
@@ -42,8 +42,8 @@
    const choices=options.filter(o=>o.survey_id===s.id).sort((a,b)=>a.sort_order-b.sort_order);
    const contest=s.kind==='competition';
    const type=contest?'مسابقه‌ای':'معمولی';
-   const state=s.status==='paused'?'موقتاً متوقف':s.status==='archived'?'بایگانی‌شده':
-      active?'در حال رأی‌گیری':ended?'پایان‌یافته':'شروع به‌زودی';
+   const state=s.status==='paused'?'موقتاً متوقف':s.status==='cancelled'?'لغوشده':
+      s.status==='archived'?'بایگانی‌شده':active?'در حال رأی‌گیری':ended?'پایان‌یافته':'شروع به‌زودی';
    const selected=chosen.get(s.id)||'';
    const score=stars.get(s.id)||0;
    const votesTotal=reveal?Array.from(visible.values()).reduce((v,x)=>v+Number(x.rating_count||0),0):0;
@@ -100,9 +100,10 @@
      '<div><span class="survey-card-category">'+esc(categories[s.category])+'</span>'+
      '<h3>'+esc(s.title)+'</h3></div></div>'+
      (s.description?'<p class="survey-description">'+esc(s.description)+'</p>':'')+
-     '<div class="survey-deadline"><span>◷ پایان رأی‌گیری</span><strong>'+esc(date(s.ends_at))+'</strong></div>'+ 
+     (contest?'<div class="survey-deadline"><span>◷ پایان رأی‌گیری</span><strong>'+esc(date(s.ends_at))+'</strong></div>':
+       '<div class="survey-deadline"><span>◉ بازه رأی‌گیری</span><strong>بدون محدودیت زمانی</strong></div>')+ 
      '<div class="survey-audience-badge">◉ مخاطبان: '+esc(audience)+'</div>'+ 
-     (s.status==='published'&&!active&&!ended?'<div class="survey-coming-start">شروع: '+esc(date(s.starts_at))+'</div>':'')+
+     (contest&&s.status==='published'&&!active&&!ended?'<div class="survey-coming-start">شروع: '+esc(date(s.starts_at))+'</div>':'')+
      '<div class="survey-options" role="group" aria-label="گزینه‌های '+esc(s.title)+'">'+choiceHtml+'</div>'+
      action+secrecy+leader+'</article>';
  }
@@ -124,8 +125,8 @@
    $('ratings-notice').hidden=!message;
    const alerts=$('ratings-alerts');
    if(alerts){
-     const urgent=polls.filter(p=>isLive(p)&&Date.parse(p.ends_at)-Date.now()<=24*3600000);
-     const soon=polls.filter(p=>p.status==='published'&&Date.now()<Date.parse(p.starts_at)&&
+     const urgent=polls.filter(p=>p.kind==='competition'&&isLive(p)&&Date.parse(p.ends_at)-Date.now()<=24*3600000);
+     const soon=polls.filter(p=>p.kind==='competition'&&p.status==='published'&&Date.now()<Date.parse(p.starts_at)&&
        Date.parse(p.starts_at)-Date.now()<=24*3600000);
      const released=polls.filter(p=>p.kind==='competition'&&isEnded(p)&&p.results_approved);
      const paused=polls.filter(p=>p.status==='paused');
@@ -166,8 +167,8 @@
      results=new Map(reports);
      if(userId&&window.AndroidSurveyNotices&&typeof window.AndroidSurveyNotices.sync==='function'){
        try{window.AndroidSurveyNotices.sync(JSON.stringify(list.map(p=>({
-         id:p.id,title:p.title,startsAt:Date.parse(p.starts_at),
-         endsAt:Date.parse(p.ends_at),kind:p.kind,approved:p.results_approved===true,
+         id:p.id,title:p.title,startsAt:p.kind==='competition'?Date.parse(p.starts_at):0,
+         endsAt:p.kind==='competition'?Date.parse(p.ends_at):0,kind:p.kind,approved:p.results_approved===true,
          status:p.status
        }))));}catch(_){}
      }

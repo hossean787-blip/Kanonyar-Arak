@@ -1,4 +1,4 @@
-name: Kanonha 0.9.22 signed event lifecycle
+name: Kanonha 0.9.23 signed event lifecycle
 on:
   push:
     branches: [main]
@@ -56,16 +56,16 @@ jobs:
           APK=app/build/outputs/apk/release/app-release.apk
           test -s "$APK"
           unzip -t "$APK" >/dev/null
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -q "^package: name='ir.kanonha.app' versionCode='37'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -q "^package: name='ir.kanonha.app' versionCode='38'"
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK" > "$RUNNER_TEMP/apk-cert.txt"
           grep -Eqi 'Signer #1 certificate SHA-256 digest: 49acf93724a85d76ea26f10511b152b0d443e8ac0ef2d7a882dbc229b26453d5' "$RUNNER_TEMP/apk-cert.txt"
           grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true' "$RUNNER_TEMP/apk-cert.txt"
-          echo "PASS: same original release signing certificate; package ir.kanonha.app; versionCode 37."
+          echo "PASS: same original release signing certificate; package ir.kanonha.app; versionCode 38."
           sha256sum "$APK"
       - name: Upload verified installable signed upgrade
         uses: actions/upload-artifact@v4
         with:
-          name: Kanonha-0.9.22-EVENTS-SIGNED-UPGRADE-TEST
+          name: Kanonha-0.9.23-EVENTS-SIGNED-UPGRADE-TEST
           path: app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
       - name: Purge temporary signing key

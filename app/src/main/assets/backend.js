@@ -790,9 +790,9 @@
     if(title.length<4||title.length>120||description.length>500||
        !['club','professor','faculty'].includes(category)||
        !['regular','competition'].includes(kind)||
-       !Number.isFinite(Date.parse(ends_at))||Date.parse(ends_at)<=Date.now())
+       (kind==='competition'&&(!Number.isFinite(Date.parse(ends_at))||Date.parse(ends_at)<=Date.now())))
       throw new ApiError('عنوان، دسته، نوع یا مهلت پایان نظرسنجی معتبر نیست.');
-    return {title,description,category,kind,ends_at:new Date(ends_at).toISOString()};
+    return {title,description,category,kind,ends_at:kind==='competition'?new Date(ends_at).toISOString():null};
   }
   function surveyItems(items) {
     if(!Array.isArray(items)||items.length<1||items.length>12)
@@ -931,8 +931,8 @@
     if(title.length<4||title.length>120||description.length>500||
        !['club','professor','faculty'].includes(category)||
        !['regular','competition'].includes(kind)||
-       !Number.isFinite(startsAt)||!Number.isFinite(endsAt)||
-       endsAt<=Date.now()||startsAt>=endsAt||
+       (kind==='competition'&&(!Number.isFinite(startsAt)||!Number.isFinite(endsAt)||
+        endsAt<=Date.now()||startsAt>=endsAt))||
        !Number.isInteger(minVotes)||minVotes<1||minVotes>100||
        (audienceFaculty&&!audienceUniversity))
       throw new ApiError('اطلاعات فرم، بازه زمانی یا مخاطبان معتبر نیست.');
@@ -944,7 +944,8 @@
       throw new ApiError('بین ۱ تا ۱۲ گزینه واقعی و متفاوت از فهرست انتخاب کنید.');
     return {
       p_title:title,p_description:description,p_category:category,p_kind:kind,
-      p_starts_at:new Date(startsAt).toISOString(),p_ends_at:new Date(endsAt).toISOString(),
+      p_starts_at:kind==='competition'?new Date(startsAt).toISOString():null,
+      p_ends_at:kind==='competition'?new Date(endsAt).toISOString():null,
       p_min_rank_votes:minVotes,p_university_id:audienceUniversity,
       p_faculty_id:audienceFaculty,p_sources:sources
     };

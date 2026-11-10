@@ -114,6 +114,17 @@ function createClient(config) {
   assert.equal(saved,'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
   const rpc=responses.findLast(r=>r.url.endsWith('/rest/v1/rpc/kanonha_survey_save'));
   assert.deepEqual(rpc.body.p_sources,[club],'one catalog option must reach the RPC');
+  assert.equal(rpc.body.p_starts_at,null,'regular poll omits start');
+  assert.equal(rpc.body.p_ends_at,null,'regular poll omits end');
+  const competitionFields={...surveyFields,kind:'competition'};
+  await assert.rejects(()=>online.surveySaveV21(null,
+    {...competitionFields,starts_at:null,ends_at:null},[club]),/بازه زمانی/);
+  await assert.rejects(()=>online.surveySaveV21(null,
+    {...competitionFields,starts_at:future,ends_at:future},[club]),/بازه زمانی/);
+  await online.surveySaveV21(null,competitionFields,[club]);
+  const contestRpc=responses.findLast(r=>r.url.endsWith('/rest/v1/rpc/kanonha_survey_save'));
+  assert.equal(typeof contestRpc.body.p_starts_at,'string');
+  assert.equal(typeof contestRpc.body.p_ends_at,'string');
   await assert.rejects(()=>online.surveySaveV21(null,surveyFields,[]),/۱ تا ۱۲/);
   await assert.rejects(()=>online.surveySaveV21(null,surveyFields,[club,club]),/۱ تا ۱۲/);
   await online.signOut();

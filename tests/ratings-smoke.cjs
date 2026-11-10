@@ -53,7 +53,7 @@ const past=new Date(Date.now()-86400000).toISOString();
 const start=new Date(Date.now()-2*3600000).toISOString();
 const polls=[
  {id:ids[0],title:'<script>bad</script>',category:'club',status:'published',
-   kind:'regular',starts_at:start,ends_at:future,min_rank_votes:5,
+   kind:'regular',starts_at:null,ends_at:null,min_rank_votes:5,
    cover_path:ids[0]+'/cover.webp'},
  {id:ids[1],title:'مسابقه در حال اجرا',category:'professor',status:'published',
    kind:'competition',starts_at:start,ends_at:future,results_approved:false,min_rank_votes:5},
@@ -97,6 +97,8 @@ function click(q,data){
 (async()=>{
  await window.KanonhaRatings.open();
  let view=el('ratings-list').innerHTML;
+ assert.match(view,/بدون محدودیت زمانی/,'regular survey has no deadline');
+ assert.doesNotMatch(view,/زمان نامشخص/);
  assert.match(view,/survey-cover-image/,'student cover must display');
  assert.match(view,/kanonha-survey-covers/);
  assert.match(view,/&lt;script&gt;bad&lt;\/script&gt;/,'XSS escaping');
@@ -107,6 +109,7 @@ function click(q,data){
  assert.match(view,/برترین گزینه/);
  assert.match(view,/آمار مسابقه تا روز پایان مخفی است/);
  assert.ok(synced.length===1,'local Android alerts synced on student refresh');
+ assert.equal(JSON.parse(synced[0]).find(s=>s.id===ids[0]).endsAt,0,'regular poll has no deadline alarm');
 
  click('[data-ratings-life]',{ratingsLife:'history'});
  view=el('ratings-list').innerHTML;

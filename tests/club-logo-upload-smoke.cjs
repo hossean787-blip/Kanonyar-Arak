@@ -18,6 +18,11 @@ const otherClubId = '3a2d54f5-cea9-4b81-b8d1-7544e2d2cce3';
 const userId = '92fa1ff3-a431-4238-ab28-f2bcfd13bf9e';
 const calls = [];
 const webp = {size:16000,type:'image/webp'};
+const signature = [137,80,78,71,13,10,26,10];
+assert.match(native,/pendingPngOnly/);
+assert.match(native,/setType\(pendingPngOnly\?"image\/png":"image\/\*"\)/);
+assert.match(native,/validLogoUri\(uri,pendingPngOnly\)/);
+assert.match(native,/if\(!pendingPngOnly\)/,'event posters keep additional image types');
 let objectsCreated=0,objectsRevoked=0,drawn=0;
 const testUrl='https://kanonha-test.supabase.co';
 const json=(data,status=200)=>({
@@ -90,8 +95,13 @@ const api=window.KanonhaBackend;
  assert.equal(api.clubLogoUrl(clubId,'https://malicious.example/logo.webp'),'');
  await assert.rejects(()=>api.secretaryUploadClubLogo(clubId,{type:'image/png',size:100}),/وارد حساب/);
  await api.signIn('member@test.example','passphrase-good');
- const file={type:'image/png',size:10000};
- await assert.rejects(()=>api.secretaryUploadClubLogo(clubId,{...file,type:'image/svg+xml'}),/PNG/);
+ const file={type:'image/png',size:10000,
+  slice(){return {async arrayBuffer(){return Uint8Array.from(signature).buffer;}}}};
+ for(const type of ['image/svg+xml','image/jpeg','image/webp'])
+  await assert.rejects(()=>api.secretaryUploadClubLogo(clubId,{...file,type}),/PNG/);
+ await assert.rejects(()=>api.secretaryUploadClubLogo(clubId,{
+   ...file,slice(){return {async arrayBuffer(){return Uint8Array.from([255,216,255,0,0,0,0,0]).buffer;}}}
+ }),/PNG/);
  await assert.rejects(()=>api.secretaryUploadClubLogo(clubId,{...file,size:2097153}),/۲ مگابایت/);
  await assert.rejects(()=>api.secretaryUploadClubLogo('not-a-club',file),/معتبر/);
  assert.equal(objectsCreated,0,'bad upload must not allocate object URLs');

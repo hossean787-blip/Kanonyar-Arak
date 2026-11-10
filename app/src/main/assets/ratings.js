@@ -14,15 +14,16 @@
    const d=new Date(s);
    if(!Number.isFinite(d.getTime()))return 'زمان نامشخص';
    try{return new Intl.DateTimeFormat('fa-IR-u-ca-persian',
-      {year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'}).format(d);}
+      {year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Tehran'}).format(d);}
    catch(_){return d.toLocaleString('fa-IR');}
  };
- let currentCategory='all',polls=[],options=[],votes=new Map(),results=new Map();
+ let currentCategory='all',life='active',polls=[],options=[],votes=new Map(),results=new Map();
  let chosen=new Map(),stars=new Map(),loading=false,sending=false,seq=0,message='',error=false;
  const uid=()=>api?.currentUser?.id||null;
  const isEnded=s=>Date.now()>=new Date(s.ends_at).getTime();
- const canShow=s=>s.kind==='regular' || (isEnded(s)&&s.results_approved===true);
- const isLive=s=>s.status==='published'&&!isEnded(s);
+ const canShow=s=>['published','paused','archived'].includes(s.status)&&
+   (s.kind==='regular' || (isEnded(s)&&s.results_approved===true));
+ const isLive=s=>s.status==='published'&&Date.now()>=new Date(s.starts_at||0).getTime()&&!isEnded(s);
  const optionName=id=>options.find(o=>o.id===id)?.title||'گزینه ثبت‌شده';
  function announce(text,isError=false){message=text;error=isError;}
  function resultMap(id){return new Map((results.get(id)||[]).map(x=>[x.option_id,x]));}
@@ -41,7 +42,8 @@
    const choices=options.filter(o=>o.survey_id===s.id).sort((a,b)=>a.sort_order-b.sort_order);
    const contest=s.kind==='competition';
    const type=contest?'مسابقه‌ای':'معمولی';
-   const state=active?'در حال رأی‌گیری':ended?'پایان‌یافته':'در انتظار انتشار';
+   const state=s.status==='paused'?'موقتاً متوقف':s.status==='archived'?'بایگانی‌شده':
+      active?'در حال رأی‌گیری':ended?'پایان‌یافته':'شروع به‌زودی';
    const selected=chosen.get(s.id)||'';
    const score=stars.get(s.id)||0;
    const votesTotal=reveal?Array.from(visible.values()).reduce((v,x)=>v+Number(x.rating_count||0),0):0;
@@ -80,6 +82,14 @@
     ?'<div class="survey-privacy-lock">🔒 '+(ended?'در انتظار تأیید و انتشار نتایج توسط مدیرکل':'آمار مسابقه تا روز پایان مخفی است')+'</div>'
     :!contest&&!uid()?'<div class="survey-privacy-lock">برای مشاهده آمار وارد حساب شوید.</div>'
     :reveal?'<div class="survey-privacy-open">✦ '+n(votesTotal)+' رأی ثبت شده • نتایج قابل مشاهده</div>':'';
+   const ranked=reveal&&window.KanonhaSurveyReports?
+      window.KanonhaSurveyReports.rank(s,choices,results.get(s.id)||[]):[];
+   const winners=ranked.filter(x=>x.rank===1);
+   const leader=reveal?(winners.length?
+     '<div class="survey-public-leader">★ '+(winners.length>1?'رتبه اول مشترک: ':'برترین گزینه: ')+
+        esc(winners.map(x=>x.title).join('، '))+'</div>':
+     '<p class="survey-public-threshold">رتبه رسمی پس از رسیدن گزینه‌ها به حداقل '+n(s.min_rank_votes||5)+' رأی مشخص می‌شود.</p>'):'';
+   const audience=s.audience_university_id?'دانشگاه و دانشکده مشخص':'همه دانشجویان';
    return '<article class="survey-card" data-survey-card="'+esc(s.id)+'">'+
      '<div class="survey-card-top"><span class="survey-kind '+(contest?'contest':'regular')+'">'+
        (contest?'♛':'✧')+' '+type+'</span>'+
@@ -88,20 +98,42 @@
      '<div><span class="survey-card-category">'+esc(categories[s.category])+'</span>'+
      '<h3>'+esc(s.title)+'</h3></div></div>'+
      (s.description?'<p class="survey-description">'+esc(s.description)+'</p>':'')+
-     '<div class="survey-deadline"><span>◷ پایان رأی‌گیری</span><strong>'+esc(date(s.ends_at))+'</strong></div>'+
+     '<div class="survey-deadline"><span>◷ پایان رأی‌گیری</span><strong>'+esc(date(s.ends_at))+'</strong></div>'+ 
+     '<div class="survey-audience-badge">◉ مخاطبان: '+esc(audience)+'</div>'+ 
+     (s.status==='published'&&!active&&!ended?'<div class="survey-coming-start">شروع: '+esc(date(s.starts_at))+'</div>':'')+
      '<div class="survey-options" role="group" aria-label="گزینه‌های '+esc(s.title)+'">'+choiceHtml+'</div>'+
-     action+secrecy+'</article>';
+     action+secrecy+leader+'</article>';
  }
  function render(){
    if(!$('ratings-list'))return;
    categoryTabs();
-   const relevant=polls.filter(s=>currentCategory==='all'||s.category===currentCategory);
+   const relevant=polls.filter(s=>(currentCategory==='all'||s.category===currentCategory)&&
+     (life==='all'||(life==='active'&&!isEnded(s)&&s.status!=='archived')||
+      (life==='history'&&(isEnded(s)||s.status==='archived'))));
+   document.querySelectorAll('[data-ratings-life]').forEach(el=>{
+     const on=el.dataset.ratingsLife===life;
+     el.classList.toggle('active',on);el.setAttribute('aria-pressed',String(on));
+   });
    $('ratings-active-count').textContent=n(polls.filter(isLive).length);
    $('ratings-finished-count').textContent=n(polls.filter(isEnded).length);
    $('ratings-contest-count').textContent=n(polls.filter(s=>s.kind==='competition').length);
    $('ratings-notice').textContent=message;
    $('ratings-notice').classList.toggle('error',error);
    $('ratings-notice').hidden=!message;
+   const alerts=$('ratings-alerts');
+   if(alerts){
+     const urgent=polls.filter(p=>isLive(p)&&Date.parse(p.ends_at)-Date.now()<=24*3600000);
+     const soon=polls.filter(p=>p.status==='published'&&Date.now()<Date.parse(p.starts_at)&&
+       Date.parse(p.starts_at)-Date.now()<=24*3600000);
+     const released=polls.filter(p=>p.kind==='competition'&&isEnded(p)&&p.results_approved);
+     const paused=polls.filter(p=>p.status==='paused');
+     const items=[...urgent.map(p=>'⌛ پایان نزدیک: '+p.title),
+       ...soon.map(p=>'✦ آغاز به‌زودی: '+p.title),
+       ...released.map(p=>'🏆 نتایج مسابقه منتشر شد: '+p.title),
+       ...paused.map(p=>'⏸ رأی‌گیری موقتاً متوقف شد: '+p.title)].slice(0,4);
+     alerts.hidden=items.length===0;
+     alerts.innerHTML=items.map(x=>'<p>'+esc(x)+'</p>').join('');
+   }
    const shortcut=$('ratings-admin-open');
    if(shortcut)shortcut.hidden=!(window.KanonhaAdminPanel?.hasAccess?.());
    $('ratings-list').innerHTML=loading?'<div class="surveys-empty">در حال بارگذاری نظرسنجی‌ها…</div>':
@@ -130,6 +162,13 @@
      if(token!==seq||uid()!==userId)return;
      polls=list;options=items;votes=new Map(myVotes.map(v=>[v.survey_id,v]));
      results=new Map(reports);
+     if(userId&&window.AndroidSurveyNotices&&typeof window.AndroidSurveyNotices.sync==='function'){
+       try{window.AndroidSurveyNotices.sync(JSON.stringify(list.map(p=>({
+         id:p.id,title:p.title,startsAt:Date.parse(p.starts_at),
+         endsAt:Date.parse(p.ends_at),kind:p.kind,approved:p.results_approved===true,
+         status:p.status
+       }))));}catch(_){}
+     }
      announce('');
    }catch(e){
      if(token!==seq)return;
@@ -158,6 +197,8 @@
  function init(){
    const root=$('screen-ratings');if(!root)return;
    root.addEventListener('click',e=>{
+     const lf=e.target.closest('[data-ratings-life]');
+     if(lf){life=lf.dataset.ratingsLife;render();return;}
      const tab=e.target.closest('[data-ratings-tab]');
      if(tab){currentCategory=tab.dataset.ratingsTab;render();return;}
      if(e.target.closest('#ratings-refresh')){void refresh();return;}
@@ -181,6 +222,6 @@
    });
    render();
  }
- window.KanonhaRatings=Object.freeze({open:refresh});
+ window.KanonhaRatings=Object.freeze({open:refresh,backgroundSync:refresh});
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();

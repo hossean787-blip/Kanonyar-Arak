@@ -29,8 +29,8 @@ android {
         applicationId = "ir.kanonha.app"  // Do not change: preserves installed app identity.
         minSdk = 26
         targetSdk = 35
-        versionCode = 30
-        versionName = "0.9.15-independent-surveys"
+        versionCode = 31
+        versionName = "0.9.16-surveys-navigation-fix"
         manifestPlaceholders["appLabel"] = "کانون‌ها"
     }
     signingConfigs {

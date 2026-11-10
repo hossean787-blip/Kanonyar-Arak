@@ -56,6 +56,9 @@ jobs:
           node --check tests/live-api-smoke.cjs
           node --check app/src/main/assets/secretary.js
           node --check app/src/main/assets/admin.js
+          node --check app/src/main/assets/admin-notifications.js
+          node --check app/src/main/assets/notifications.js
+          node --check tests/notifications-v022-smoke.cjs
           node --check tests/unified-auth-smoke.cjs
           node --check tests/admin-ui-smoke.cjs
           node --check tests/multi-role-ui-smoke.cjs
@@ -111,6 +114,8 @@ jobs:
           assert 'setAutoCancel(true)' not in receiver
           print('UI, persistent Persian calendar, and SVG assets valid')
           PY
+      - name: Verify targeted notification contracts
+        run: node tests/notifications-v022-smoke.cjs
       - name: Smoke-test navigation, offline state and Android Back bridge
         run: node tests/ui-smoke.cjs
       - name: Verify online API, RLS schema and account isolation

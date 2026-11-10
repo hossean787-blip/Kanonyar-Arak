@@ -114,6 +114,7 @@
     return defaultState();
   }
 
+  const eventTickets = new Map();
   let state = loadState();
   let activeScreen = 'home';
   let activeFilter = 'همه';
@@ -381,6 +382,8 @@
             ? window.KanonhaJalali.formatDate(new Date(start),true)
             : new Date(start).toLocaleString('fa-IR-u-ca-persian')) : 'زمان نامشخص',
           location: String(e.location || ''), capacity: free, poster: 'poster-books.svg',
+          posterUrl: onlineBackend.eventPosterUrl?.(e.club_id,e.id,e.poster_path)||'assets/poster-books.svg',
+          startsAtMs:start,
           category, club: clubs.findIndex(c => c.id === e.club_id),
           registrationOpen: Number.isFinite(start) && Number.isFinite(close) && start > now && close > now && free > 0
         };
@@ -407,6 +410,8 @@
         !onlineBackend.currentUser || onlineBackend.currentUser.id !== ownerId) return;
     const memberMap = new Map(memberRows.map(m => [m.club_id, m.status]));
     const eventIds = new Set(eventRows.filter(e => e.status === 'confirmed').map(e => e.event_id));
+    eventTickets.clear();
+    for(const r of eventRows)if(r.status==='confirmed'&&r.ticket_token)eventTickets.set(r.event_id,r.ticket_token);
     state.joined = clubs.map((c, i) => memberMap.get(c.id) === 'approved' ? i : -1).filter(i => i >= 0);
     state.requested = clubs.map((c, i) => memberMap.get(c.id) === 'pending' ? i : -1).filter(i => i >= 0);
     state.rejected = clubs.map((c, i) => memberMap.get(c.id) === 'rejected' ? i : -1).filter(i => i >= 0);
@@ -417,6 +422,10 @@
     state.academic = academic;
     renderAll();
     onlineRenderAuth();
+    try{window.AndroidEventReminders?.sync?.(JSON.stringify(
+      events.filter(e=>eventIds.has(e.id)&&e.startsAtMs>Date.now())
+        .map(e=>({id:e.id,title:e.title,startsAt:e.startsAtMs}))
+    ));}catch(_){}
     if (!profile && !state.isManager) onlineMessage('برای درخواست عضویت، اطلاعات دانشجویی خود را تکمیل کنید.');
   }
   const signupFieldIds = Object.freeze({
@@ -585,8 +594,24 @@
       await onlineRefreshPublic();
       await onlineRefreshPersonal();
       closeSheet();
-      notify('ثبت‌نام رویداد در سرور تأیید شد.');
+      notify('ثبت‌نام رویداد تأیید شد؛ بلیت در فعالیت‌های من آماده است.');
     } catch (error) { notify(onlineError(error)); }
+  }
+  async function onlineCancelEvent(i){
+    if(!onlineMode||!events[i]||!state.registered.includes(i))return;
+    try{
+      await onlineBackend.cancelEvent(events[i].id);
+      eventTickets.delete(events[i].id);
+      await onlineRefreshPublic();
+      closeSheet();
+      notify('ثبت‌نام لغو و ظرفیت آزاد شد.');
+    }catch(error){notify(onlineError(error));}
+  }
+  function confirmEventCancel(i){
+    if(!events[i]||!state.registered.includes(i))return;
+    openSheet('لغو ثبت‌نام رویداد',
+      '<p>آیا از لغو ثبت‌نام «'+escapeHTML(events[i].title)+'» مطمئن هستید؟ بلیت باطل خواهد شد.</p>'+
+      '<button type="button" class="pill-btn sheet-action" data-confirm-event-cancel="'+i+'">تأیید لغو ثبت‌نام</button>');
   }
   async function onlineLogout({forgetBiometric=false}={}) {
     // Normal logout keeps opt-in biometric refresh token ONLY on this device,
@@ -606,6 +631,8 @@
       if(forgetBiometric) biom.clear();
       else if(biom.lock) biom.lock();
     }
+    eventTickets.clear();
+    try{window.AndroidEventReminders?.clear?.();}catch(_){}
     state = defaultState();
     activePersona = 'student'; assignedSecretary = false; studentProfileReady = false;
     adminPanelReady = false; secretaryPanelReady = false;
@@ -838,7 +865,7 @@
   function eventCard(event, index, { compact = false } = {}) {
     const registered = state.registered.includes(index);
     return `<article class="card event-card${compact ? ' compact' : ''}" data-event-card="${index}">
-      <img class="event-poster" src="assets/${event.poster}" alt="پوستر ${escapeHTML(event.title)}" width="88" height="${compact ? 88 : 120}" loading="lazy">
+      <img class="event-poster" src="${escapeHTML(event.posterUrl || "assets/"+event.poster)}" alt="پوستر ${escapeHTML(event.title)}" width="88" height="${compact ? 88 : 120}" loading="lazy">
       <div class="event-info">
         <h3>${escapeHTML(event.title)}</h3>
         <div class="event-meta">${svg('calendar', 13)}<span>${escapeHTML(event.date)}</span></div>
@@ -887,7 +914,7 @@
   function homeCarouselCard(event,index){
     return `<article class="home-event-slide" role="group" aria-label="${escapeHTML(event.title)}">
       <div class="home-slide-cover">
-        <img src="assets/${event.poster}" alt="پوستر ${escapeHTML(event.title)}" width="244" height="119" loading="lazy">
+        <img src="${escapeHTML(event.posterUrl || "assets/"+event.poster)}" alt="پوستر ${escapeHTML(event.title)}" width="244" height="119" loading="lazy">
         <span class="home-slide-status"><span class="home-slide-pulse" aria-hidden="true"></span> ${onlineMode ? 'ثبت‌نام باز' : 'ثبت‌نام آزمایشی'}</span>
       </div>
       <div class="home-slide-info">
@@ -1011,12 +1038,18 @@
               <h3>${escapeHTML(events[i].title)}</h3>
               <p>${svg('calendar', 12)} ${escapeHTML(events[i].date)}</p>
               <p>${svg('map-pin', 12)} ${escapeHTML(events[i].location)}</p>
-              <div class="ticket-label">${onlineMode ? 'ثبت‌نام تأیید شده — بلیت صادر نشده' : 'بلیت نمونه — فاقد اعتبار ورود'}</div>
+              <div class="ticket-label">${onlineMode ? 'بلیت الکترونیکی معتبر — یک‌بار مصرف' : 'بلیت نمونه — فاقد اعتبار ورود'}</div>
+              ${onlineMode&&events[i].startsAtMs>Date.now()?'<button type="button" class="pill-btn ticket-cancel" data-event-cancel="'+i+'">لغو ثبت‌نام</button>':''}
             </div>
-            ${onlineMode ? '<div class="ticket-label">بلیت قابل‌استفاده پس از راه‌اندازی صدور بلیت ارائه می‌شود.</div>' : qrMarkup(i)}
+            ${onlineMode ? '<div class="kanonha-ticket-qr" data-ticket-qr="'+i+'" role="img" aria-label="کد QR معتبر بلیت"></div>' : qrMarkup(i)}
           </article>`
         ).join('')
       : '<div class="empty">هنوز بلیتی ندارید.</div>';
+    if(onlineMode)for(const el of $('activity-tickets').querySelectorAll('[data-ticket-qr]')){
+      const i=Number(el.dataset.ticketQr),ev=events[i];
+      if(!ev||!window.KanonhaEventTools?.renderQr(el,eventTickets.get(ev.id)))
+        el.textContent='کد بلیت دریافت نشده؛ صفحه را تازه‌سازی کنید.';
+    }
   }
 
   /* ——— Sheet ——— */
@@ -1052,6 +1085,7 @@
       `<p>${svg('calendar', 15)} ${escapeHTML(ev.date)}<br>${svg('map-pin', 15)} ${escapeHTML(ev.location)}<br>
        کانون برگزارکننده: ${clubs[ev.club] ? escapeHTML(clubs[ev.club].title) : 'نامشخص'}</p>
        <p>${onlineMode ? 'ثبت‌نام آنلاین با تأیید سرور انجام می‌شود.' : 'این یک رویداد نمونه رابط کاربری است. ثبت‌نام واقعی انجام نمی‌شود.'}</p>
+       ${onlineMode&&state.registered.includes(i)?'<button class="pill-btn sheet-action ticket-cancel" type="button" data-event-cancel="'+i+'">لغو ثبت‌نام</button>':''}
        <button class="pill-btn sheet-action" type="button" ${onlineMode && (!ev.registrationOpen || state.registered.includes(i)) ? "disabled" : `data-register="${i}"`}>
          ${state.registered.includes(i) ? 'ثبت‌نام‌شده' : onlineMode ? (ev.registrationOpen ? 'ثبت‌نام آنلاین' : 'ثبت‌نام بسته است') : 'ثبت‌نام نمایشی'}
        </button>`
@@ -1360,6 +1394,8 @@
       if (btn.dataset.reapply !== undefined)     { join(Number(btn.dataset.reapply)); return; }
       if (btn.dataset.cancelMembership !== undefined) { confirmMembershipCancel(Number(btn.dataset.cancelMembership)); return; }
       if (btn.dataset.confirmCancel !== undefined) { void onlineCancelMembership(Number(btn.dataset.confirmCancel)); return; }
+      if (btn.dataset.confirmEventCancel !== undefined) { void onlineCancelEvent(Number(btn.dataset.confirmEventCancel)); return; }
+      if (btn.dataset.eventCancel !== undefined) { confirmEventCancel(Number(btn.dataset.eventCancel)); return; }
       if (btn.dataset.register !== undefined)    { register(Number(btn.dataset.register)); return; }
       if (btn.dataset.details !== undefined)     { eventDetails(Number(btn.dataset.details)); return; }
       if (btn.dataset.clubDetails !== undefined) { clubDetails(Number(btn.dataset.clubDetails)); return; }

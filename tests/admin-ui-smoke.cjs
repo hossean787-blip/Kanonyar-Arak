@@ -1,6 +1,8 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const src=fs.readFileSync(path.join(__dirname,'../app/src/main/assets/admin.js'),'utf8');
+assert.match(src,/name="description" maxlength="2000" required/,'manager about field required');
+assert.match(src,/if\(!v\(fd,'description'\)\)/,'manager must reject blank about field');
 const html=fs.readFileSync(path.join(__dirname,'../app/src/main/assets/index.html'),'utf8');
 for(const id of ['admin-panel','admin-content','admin-tabs','admin-message','home-management'])
  assert.ok(html.includes('id="'+id+'"'),'Missing admin UI element '+id);

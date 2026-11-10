@@ -26,7 +26,8 @@ const ticket='cc11cc11-4c11-4c11-8c11-cc11cc11cc11';
 const calls=[];
 function ok(payload,status=200){
  return {status,ok:status>=200&&status<300,
-  async text(){return payload==null?'':JSON.stringify(payload)}};
+  async text(){return payload==null?'':JSON.stringify(payload)},
+  async json(){return payload}};
 }
 async function fetchMock(url,request){
  const method=request.method||'GET';

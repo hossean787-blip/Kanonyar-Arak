@@ -174,7 +174,7 @@
       '<p class="secretary-danger-note">فعال یا غیرفعال‌کردن کانون و تعیین دبیر فقط توسط مدیر اصلی انجام می‌شود.</p></form>' +
       '<form id="secretary-logo-form" class="secretary-card secretary-form">' +
       '<h3 class="secretary-card-title">لوگوی اختصاصی کانون</h3>' +
-      (backend.clubLogoUrl(club.id,club.logo_path) ?
+      (typeof backend.clubLogoUrl === 'function' && backend.clubLogoUrl(club.id,club.logo_path) ?
         '<img class="secretary-logo-preview" alt="لوگوی فعلی کانون" src="' +
         escape(backend.clubLogoUrl(club.id,club.logo_path)) + '">' : '') +
       '<label class="field">انتخاب لوگو<input type="file" name="logo" required accept="image/png,image/jpeg,image/webp"></label>' +

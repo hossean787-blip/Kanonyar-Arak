@@ -836,7 +836,7 @@
   function clubImageSrc(club) {
     const icon = club.icon === 'book' ? 'book' : club.icon === 'code' ? 'tech' :
       club.icon === 'leaf' ? 'leaf' : club.icon === 'flask' ? 'science' : 'sport';
-    const custom = onlineMode && onlineBackend.clubLogoUrl(club.id,club.logoPath);
+    const custom = onlineMode && typeof onlineBackend.clubLogoUrl === 'function' && onlineBackend.clubLogoUrl(club.id,club.logoPath);
     return custom || 'assets/club-' + icon + '.svg';
   }
   function clubCard(club,index) {
@@ -1224,7 +1224,7 @@
 
     // Clubs search
     $('clubs-search').addEventListener('input', renderClubs);
-    for (const id of ['clubs-university','clubs-faculty','clubs-category']) $(id).addEventListener('change',renderClubs);
+    for (const id of ['clubs-university','clubs-faculty','clubs-category']) { const filter=$(id); if(filter)filter.addEventListener('change',renderClubs); }
     if (window.KanonhaJalali) window.KanonhaJalali.enhance(document);
     if (onlineMode) {
       $('online-events-heading').textContent = 'رویدادهای در حال ثبت‌نام';

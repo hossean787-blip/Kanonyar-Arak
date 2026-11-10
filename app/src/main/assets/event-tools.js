@@ -35,7 +35,7 @@
   return true;
  }
  function renderQr(container,token){
-  if(!container||!/^([0-9a-f]{8}-){4}[0-9a-f]{12}$/i.test(String(token)))return false;
+  if(!container||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(token)))return false;
   if(typeof window.QRCode!=='function')return false;
   container.textContent='';
   new window.QRCode(container,{text:'KANONHA1:'+token,width:172,height:172,

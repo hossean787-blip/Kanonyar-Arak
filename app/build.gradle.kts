@@ -29,8 +29,8 @@ android {
         applicationId = "ir.kanonha.app"  // Do not change: preserves installed app identity.
         minSdk = 26
         targetSdk = 35
-        versionCode = 24
-        versionName = "0.9.9-persistent-calendar-beta"
+        versionCode = 25
+        versionName = "0.9.10-persistent-calendar-beta"
     }
     signingConfigs {
         if (releaseSigningConfigured) {

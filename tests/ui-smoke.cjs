@@ -12,6 +12,7 @@ const js = read('assets/app.js');
 const css = read('assets/styles.css');
 const manifest = read('AndroidManifest.xml');
 const nativeActivity = read('java/ir/kanonha/app/MainActivity.java');
+const nativeCalendar = read('java/ir/kanonha/app/DailyCalendarReceiver.java');
 const pages = ['home', 'clubs', 'events', 'activity', 'profile'];
 
 for (const page of pages) {
@@ -24,6 +25,9 @@ const gradle = fs.readFileSync(path.join(root, 'app/build.gradle.kts'), 'utf8');
 assert.match(gradle, /applicationIdSuffix = "\.test"/, 'Debug app must install next to the original');
 assert.match(gradle, /manifestPlaceholders\["appLabel"\] = "کانون‌ها آزمایشی"/);
 assert.match(html, /<title>کانون‌ها \| اپ مستقل دانشجویی<\/title>/);
+assert.doesNotMatch(html, /student-calendar\.(?:js|css)/, 'Jalali calendar must appear only in persistent Android notification');
+assert.match(nativeCalendar, /setOngoing\(true\)/, 'persistent notification must remain enabled');
+assert.match(nativeCalendar, /setCustomContentView\(view\)/, 'custom Jalali notification must remain enabled');
 assert.match(html, /رویدادهای نمونه/);
 for (const content of [html, css, manifest]) {
   assert.doesNotMatch(content, /همراه|hamrah/i, 'companion branding leaked into new app');

@@ -2,7 +2,7 @@
   <defs>
     <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#FFFFFF"/><stop offset="1" stop-color="#E9ECFA"/></linearGradient>
     <linearGradient id="panel" x1=".1" y1="0" x2=".95" y2="1"><stop stop-color="#8D97E3"/><stop offset=".55" stop-color="#5563C8"/><stop offset="1" stop-color="#293782"/></linearGradient>
-    <linearGradient id="gem" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#94F1BF"/><stop offset=".52" stop-color="#51CA8D"/><stop offset="1" stop-color="#16865A"/></linearGradient>
+    <linearGradient id="gem" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#E2E8FF"/><stop offset=".52" stop-color="#91A2F1"/><stop offset="1" stop-color="#5066C9"/></linearGradient>
     <filter id="shadow" x="-0.4" y="-0.4" width="1.8" height="1.9"><feDropShadow dx="0" dy="3" stdDeviation="2.4" flood-color="#17285D" flood-opacity=".26"/></filter>
   </defs>
   <ellipse cx="47" cy="86" rx="29" ry="4" fill="#505CC8" opacity=".13"/>

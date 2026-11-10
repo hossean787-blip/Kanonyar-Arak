@@ -19,7 +19,8 @@ const sql=file('supabase/events-v219.sql')+
  file('supabase/events-v219-rls-fix.sql')+
  file('supabase/events-v219-scoped-checkin.sql')+
  file('supabase/activity-certificates-v0923.sql')+
- file('supabase/activity-membership-history-v0924.sql');
+ file('supabase/activity-membership-history-v0924.sql')+
+ file('supabase/events-v220-secretary-autonomy.sql');
 const edge=file('supabase/functions/kanonha-admin-console/index.ts');
 const userId='fefea2f1-ef77-4b8f-b38f-fd1c40d35900';
 const clubId='aa11aa11-4a11-4a11-8a11-aa11aa11aa11';
@@ -83,7 +84,8 @@ async function testFlows(){
  const evs=await api.events();
  assert.equal(evs[0].id,eventId);
  const publicCall=calls.find(x=>x.url.includes('kanonha_events?select='));
- assert.match(publicCall.url,/approval_status=eq.approved/);
+ assert.match(publicCall.url,/is_published=eq.true/);
+ assert.doesNotMatch(publicCall.url,/approval_status=eq.approved/,'secretary events publish directly');
  assert.equal(publicCall.headers.Authorization,undefined);
  assert.equal((await api.myEventHistory())[0].ticket_token,ticket);
  await api.registrations();
@@ -107,12 +109,10 @@ async function testFlows(){
  assert.equal(report.rows.length,1);
  assert.equal(report.rows[0].student.student_number,'12345678');
  assert.equal(report.summary.registrations,1);
- await api.adminAction('event.approve',{id:eventId});
- await api.adminAction('event.reject',{id:eventId});
  const adminReport=await api.adminAction('event.report',{id:eventId});
  assert.equal(adminReport.event.id,eventId);
  const ops=calls.filter(c=>c.url.includes('kanonha-admin-console')).map(x=>x.body.action);
- assert.deepEqual(ops,['event.approve','event.reject','event.report']);
+ assert.deepEqual(ops,['event.report']);
 }
 function testQrCsv(){
  const used=[];
@@ -142,6 +142,10 @@ function testQrCsv(){
 function testSecurityWiring(){
  assert.match(sql,/approval_status.*pending/s);
  assert.match(sql,/kanonha_private\.guard_event_approval/);
+ assert.match(sql,/alter column approval_status set default 'approved'/);
+ assert.match(sql,/kanonha_auto_certificate_on_attendance/);
+ assert.match(sql,/char_length\(btrim\(new.location\)\)/);
+ assert.match(sql,/kanonha_private\.current_student_has_profile/);
  assert.match(sql,/kanonha_private\.release_event_capacity/);
  assert.match(sql,/kanonha_private\.current_student_has_profile/);
  assert.match(sql,/p_event_id uuid/);
@@ -159,13 +163,19 @@ function testSecurityWiring(){
  assert.match(manager,/data-admin-approve-event/);
  assert.match(manager,/data-admin-reject-event/);
  assert.match(manager,/data-admin-export-event/);
- assert.match(secretary,/secretary-poster-form/);
+ assert.match(secretary,/name="poster"/);
+ assert.match(secretary,/confirmAction\('secretary-event'\)/);
+ assert.match(secretary,/data-secretary-export-excel/);
+ assert.match(secretary,/data-secretary-export-pdf/);
  assert.match(secretary,/backend\.uploadEventPoster/);
  assert.match(secretary,/secretary-ticket-form/);
  assert.match(secretary,/window\.jsQR/);
  assert.match(secretary,/backend\.checkInTicket\(raw,ticketEvent\)/);
  assert.match(secretary,/secretary-export/);
+ assert.doesNotMatch(secretary,/data-secretary-certificate=/,'certificate is automatic');
  assert.match(student,/AndroidEventReminders/);
+ assert.match(student,/confirmAction\('student-registration'\)/);
+ assert.match(student,/data-event-deadline/);
  assert.doesNotMatch(student,/onlineBackend\.cancelEvent/);
  assert.match(student,/activityCertificates/);
  assert.match(activity,/data-ticket-qr/);
@@ -178,6 +188,8 @@ function testSecurityWiring(){
  assert.match(native,/BOOT_COMPLETED/);
  assert.match(native,/POST_NOTIFICATIONS/);
  assert.match(activityNative,/AndroidEventReminders/);
+ assert.match(activityNative,/AndroidEventExcel/);
+ assert.match(file('app/src/main/java/ir/kanonha/app/EventExcelBridge.java'),/ZipOutputStream/);
  assert.match(activityNative,/RESOURCE_VIDEO_CAPTURE/);
  assert.match(activityNative,/appassets\.androidplatform\.net/);
  assert.match(file('app/src/main/assets/vendor/qrcode.js'),/QRCode/);
@@ -188,5 +200,5 @@ function testSecurityWiring(){
 }
 (async()=>{
  await testFlows();testQrCsv();testSecurityWiring();
- console.log('PASS: event approvals, QR, immutable registrations, private activity history, certificates, reminders and UTF8 CSV');
+ console.log('PASS: secretary-direct event publication, QR, immutable registrations, automatic certificates, biometrics and exports');
 })().catch(e=>{console.error(e);process.exitCode=1});

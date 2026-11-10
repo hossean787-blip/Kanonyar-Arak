@@ -208,15 +208,20 @@
   function eventForm() {
     const editing = editor && editor.id && events.find(e => e.id === editor.id);
     const e = editing || {};
+    const poster=editing?backend.eventPosterUrl?.(e.club_id,e.id,e.poster_path)||'':'';
     return '<form id="secretary-event-form" class="secretary-form secretary-card">' +
       '<h3 class="secretary-card-title">' + (editing ? 'ویرایش رویداد' : 'ثبت رویداد جدید') + '</h3>' +
-      '<label class="field">عنوان رویداد<input name="title" maxlength="160" required value="' + escape(e.title || '') + '"></label>' +
-      '<label class="field">مکان رویداد<input name="location" maxlength="250" value="' + escape(e.location || '') + '"></label>' +
-      '<label class="field">زمان شروع<input name="starts_at" type="datetime-local" required value="' + escape(inputDate(e.starts_at)) + '"></label>' +
+      '<label class="field">نام رویداد<input name="title" maxlength="160" required value="' + escape(e.title || '') + '"></label>' +
+      '<label class="field">محل برگزاری<input name="location" maxlength="250" required value="' + escape(e.location || '') + '"></label>' +
+      '<label class="field">تاریخ و ساعت برگزاری<input name="starts_at" type="datetime-local" required value="' + escape(inputDate(e.starts_at)) + '"></label>' +
+      '<label class="field">توضیحات رویداد<textarea name="description" maxlength="4000" rows="4" placeholder="موضوع، برنامه و شرایط حضور را توضیح دهید">' + escape(e.description || '') + '</textarea></label>' +
       '<label class="field">مهلت ثبت‌نام<input name="registration_deadline" type="datetime-local" required value="' + escape(inputDate(e.registration_deadline)) + '"></label>' +
-      '<label class="field">ظرفیت<input name="capacity" type="number" min="1" max="100000" required value="' + escape(e.capacity || 30) + '"></label>' +
-      '<p class="field-hint">بعد از ثبت، رویداد برای بررسی مدیرکل ارسال می‌شود. انتشار فقط با تأیید مدیرکل انجام می‌شود؛ ویرایش محتوای تأییدشده نیاز به تأیید مجدد دارد.</p>' +
-      '<div class="secretary-actions"><button type="submit" class="positive">ذخیره رویداد</button>' +
+      '<label class="field">ظرفیت<input name="capacity" type="number" min="' + Math.max(1,Number(e.registered_count||0)) + '" max="100000" required value="' + escape(e.capacity || 30) + '"></label>' +
+      (poster?'<img class="kanonha-event-poster" src="'+escape(poster)+'" alt="پوستر کنونی">':'') +
+      '<label class="field">پوستر رویداد (PNG، JPG یا WebP تا ۲ مگابایت)' +
+      '<input name="poster" type="file" accept="image/png,image/jpeg,image/webp"' + (editing&&e.poster_path?'':' required') + '></label>' +
+      '<p class="field-hint">رویداد بدون تأیید مدیرکل منتشر می‌شود. ثبت نهایی به تأیید اثر انگشت یا چهره روی دستگاه دبیر نیاز دارد. مشخصات رویداد در همه مراحل قابل ویرایش است؛ ظرفیت نباید از تعداد ثبت‌نام قطعی کمتر باشد.</p>' +
+      '<div class="secretary-actions"><button type="submit" class="positive">ذخیره و انتشار رویداد</button>' +
       '<button type="button" data-secretary-action="cancel-editor">انصراف</button></div></form>';
   }
   function renderEvents() {
@@ -224,25 +229,20 @@
     const form = editor ? eventForm() : '';
     const rows = !events.length ? empty('هنوز رویدادی برای این کانون ایجاد نشده است.') : events.map(e => {
       const seats = Number(e.registered_count) || 0;
-      const canEdit = seats === 0 && new Date(e.starts_at).getTime() > Date.now();
       const poster=backend.eventPosterUrl?.(e.club_id,e.id,e.poster_path)||'';
-      const label=e.approval_status==='approved'?(e.is_published?'تأیید و منتشرشده':'تأییدشده'):
-        e.approval_status==='rejected'?'ردشده توسط مدیرکل':'در انتظار تأیید مدیرکل';
       return '<article class="secretary-card"><h3 class="secretary-card-title">' + escape(e.title || '') + '</h3>' +
-        '<span class="secretary-chip ' + (e.is_published ? '' : 'pending') + '">' + label + '</span>' +
+        '<span class="secretary-chip ' + (e.is_published ? '' : 'pending') + '">' +
+        (e.is_published?'منتشرشده':'پیش‌نویس؛ منتظر تکمیل پوستر') + '</span>' +
         (poster?'<img class="kanonha-event-poster" src="'+escape(poster)+'" alt="پوستر رویداد">':'') +
-        '<p class="secretary-card-p">شروع: ' + escape(stamp(e.starts_at)) + '</p>' +
+        '<p class="secretary-card-p">برگزاری: ' + escape(stamp(e.starts_at)) + '</p>' +
+        '<p class="secretary-card-meta">مهلت ثبت‌نام: ' + escape(stamp(e.registration_deadline)) + '</p>' +
         '<p class="secretary-card-meta">ثبت‌نام: ' + seats + ' از ' + Number(e.capacity || 0) + ' نفر</p>' +
         '<div class="secretary-actions">' +
-        (canEdit ? '<button type="button" data-secretary-edit="' + escape(e.id) + '">ویرایش رویداد</button>' : '') +
-        '<button type="button" data-secretary-roster="' + escape(e.id) + '">ثبت‌نام‌کنندگان</button>' +
-        '<button type="button" data-secretary-export="' + escape(e.id) + '">گزارش CSV</button>' +
-        '</div>' +
-        (canEdit?'<form id="secretary-poster-form" data-event-id="'+escape(e.id)+'" class="secretary-form">'+
-         '<label class="field">پوستر اختصاصی (PNG، JPG، WebP، حداکثر ۲ مگابایت)'+
-         '<input type="file" name="poster" accept="image/png,image/jpeg,image/webp" required></label>'+
-         '<button class="positive" type="submit">بارگذاری پوستر</button></form>':'')+
-        '</article>';
+        '<button type="button" data-secretary-edit="' + escape(e.id) + '">ویرایش رویداد</button>' +
+        '<button type="button" data-secretary-roster="' + escape(e.id) + '">ثبت‌نام‌کنندگان و اسکن QR</button>' +
+        '<button type="button" data-secretary-export-excel="' + escape(e.id) + '">دریافت اکسل</button>' +
+        '<button type="button" data-secretary-export-pdf="' + escape(e.id) + '">دریافت PDF</button>' +
+        '</div></article>';
     }).join('');
     return heading + form + rows;
   }
@@ -272,9 +272,7 @@
       '<div class="secretary-actions"><button type="button" class="' + (r.attended_at ? 'negative' : 'positive') +
       '" data-secretary-attendance="' + escape(r.id) + '" data-secretary-present="' + (r.attended_at ? 'false' : 'true') +
       '"' + (started ? '' : ' disabled') + '>' + (r.attended_at ? 'لغو حضور' : 'ثبت حضور') + '</button>' +
-      (r.attended_at ? '<button type="button" class="positive" data-secretary-certificate="' + escape(r.id) +
-      '"' + (rosterCertificates.has(r.id) ? ' disabled' : '') + '>' +
-      (rosterCertificates.has(r.id) ? 'گواهینامه صادرشده' : 'صدور گواهینامه') + '</button>' : '') +
+      (r.attended_at ? '<span class="secretary-chip">' + (rosterCertificates.has(r.id) ? 'گواهینامه صادرشده' : 'گواهینامه در حال بررسی') + '</span>' : '') +
       '</div></div>').join('');
   }
   function render() {
@@ -374,7 +372,7 @@
               const result=await backend.checkInTicket(raw,ticketEvent);
               if(result.result==='checked_in'){
                 await loadRoster(ticketEvent);
-                status('ورود '+(result.attendee||'دانشجو')+' ثبت شد.');
+                status('حضور '+(result.attendee||'دانشجو')+' ثبت و گواهینامه به‌صورت خودکار صادر شد.');
               }else status(result.result==='already'?'بلیت قبلاً استفاده شده است.':
                 result.result==='early'?'رویداد هنوز آغاز نشده است.':'بلیت معتبر نیست.',true);
             });
@@ -401,15 +399,36 @@
   }
   async function submitEvent(form) {
     const fd = new FormData(form);
+    const poster=form.querySelector('input[name="poster"]')?.files?.[0]||null;
+    const existing=editor&&editor.id?events.find(e=>e.id===editor.id):null;
+    if(!poster&&!existing?.poster_path)throw new Error('انتخاب پوستر برای انتشار رویداد الزامی است.');
+    if(poster&&(!['image/png','image/jpeg','image/webp'].includes(poster.type)||poster.size<1||poster.size>2097152))
+      throw new Error('پوستر باید PNG، JPG یا WebP و حداکثر ۲ مگابایت باشد.');
     const data = {
-      title: formValue(fd, 'title'), location: formValue(fd, 'location'),
-      starts_at: formValue(fd, 'starts_at'), registration_deadline: formValue(fd, 'registration_deadline'),
-      capacity: Number(fd.get('capacity')), is_published: false
+      title: formValue(fd,'title'), location: formValue(fd,'location'),
+      description: formValue(fd,'description'),
+      starts_at: formValue(fd,'starts_at'), registration_deadline: formValue(fd,'registration_deadline'),
+      capacity: Number(fd.get('capacity')), is_published: true
     };
-    if (editor && editor.id) await backend.secretaryUpdateEvent(editor.id, data);
-    else await backend.secretaryCreateEvent(activeClub, data);
-    editor = null;
-    status('رویداد برای تأیید مدیرکل ارسال شد.');
+    if(!window.KanonhaBiometric?.confirmAction)
+      throw new Error('برای ثبت نهایی باید نسخه اندروید با احراز هویت بیومتریک نصب باشد.');
+    await window.KanonhaBiometric.confirmAction('secretary-event');
+    if(existing){
+      await backend.secretaryUpdateEvent(existing.id,data);
+      if(poster)await backend.uploadEventPoster(activeClub,existing.id,poster);
+    }else{
+      const created=await backend.secretaryCreateEvent(activeClub,{...data,is_published:false});
+      try{
+        await backend.uploadEventPoster(activeClub,created.id,poster);
+        await backend.secretaryUpdateEvent(created.id,data);
+      }catch(error){
+        editor={id:created.id};
+        await loadClubData();
+        throw error;
+      }
+    }
+    editor=null;
+    status('رویداد بدون نیاز به تأیید مدیرکل منتشر و ذخیره شد.');
     await loadClubData();
   }
   async function perform(task) {
@@ -443,17 +462,20 @@
     if (data.secretaryEdit && events.some(e => e.id === data.secretaryEdit)) {
       activeTab = 'events'; editor = {id:data.secretaryEdit}; render(); return;
     }
-    if (data.secretaryExport && events.some(e=>e.id===data.secretaryExport)) {
-      const event=events.find(e=>e.id===data.secretaryExport);
+    const exportId=data.secretaryExportExcel||data.secretaryExportPdf;
+    if(exportId&&events.some(e=>e.id===exportId)){
+      const current=events.find(e=>e.id===exportId);
       void perform(async()=>{
-        const report=await backend.secretaryEventExport(event.id);
-        report.event=event;report.registered=Number(report.summary?.registrations||0);
+        const report=await backend.secretaryEventExport(current.id);
+        report.event=current;report.registered=Number(report.summary?.registrations||0);
         report.attended=Number(report.summary?.attendees||0);
-        if(!window.KanonhaEventTools?.exportEventCsv(report,'secretary'))
-          throw new Error('ذخیره CSV در این دستگاه در دسترس نیست.');
-        status(report.truncated?'گزارش بیش از ۱۰۰۰۰ نفر؛ فایل ناقص است.':'گزارش رویداد آماده ذخیره است.');
-      });
-      return;
+        const excel=Boolean(data.secretaryExportExcel);
+        const ok=excel?window.KanonhaEventTools?.exportEventExcel(report,'secretary'):
+          window.KanonhaEventTools?.exportEventPdf(report,'secretary');
+        if(!ok)throw new Error('دریافت گزارش در این دستگاه در دسترس نیست یا گزارش بیش از حد بزرگ است.');
+        status(report.truncated?'گزارش بیش از ۱۰۰۰۰ نفر است؛ خروجی ناقص خواهد بود.':
+          'گزارش '+(excel?'اکسل':'PDF')+' آماده ذخیره است.');
+      });return;
     }
     if (data.secretaryScan) {void startTicketCamera();return;}
     if (data.secretaryRoster && events.some(e => e.id === data.secretaryRoster)) {
@@ -465,18 +487,6 @@
       void perform(async () => {
         await backend.secretaryDecideMembership(data.secretaryDecide, data.secretaryStatus);
         if (club === activeClub && hasSession()) await loadClubData();
-      });
-      return;
-    }
-    if (data.secretaryCertificate && roster.some(r=>r.id===data.secretaryCertificate&&r.attended_at)
-        && !rosterCertificates.has(data.secretaryCertificate)) {
-      const eventId=rosterEvent,clubId=activeClub,registrationId=data.secretaryCertificate;
-      void perform(async()=>{
-        await backend.issueCertificate(registrationId);
-        if(hasSession()&&eventId===rosterEvent&&clubId===activeClub){
-          await loadRoster(eventId);
-          status('گواهینامه دانشجو صادر و در حساب او ثبت شد.');
-        }
       });
       return;
     }
@@ -516,7 +526,7 @@
       void perform(async()=>{
         await backend.uploadEventPoster(club,eventId,file);
         if(club===activeClub&&hasSession())await loadClubData();
-        status('پوستر ذخیره و برای بررسی مدیرکل ارسال شد.');
+        status('پوستر رویداد ذخیره شد.');
       });
       return;
     }

@@ -13,6 +13,9 @@ const css = read('assets/styles.css');
 const manifest = read('AndroidManifest.xml');
 const nativeActivity = read('java/ir/kanonha/app/MainActivity.java');
 const nativeCalendar = read('java/ir/kanonha/app/DailyCalendarReceiver.java');
+const notificationLayout = read('res/layout/notification_jalali.xml');
+const notificationBackground = read('res/drawable/calendar_notice_background.xml');
+const notificationBadge = read('res/drawable/calendar_notice_badge.xml');
 const pages = ['home', 'clubs', 'events', 'ratings', 'activity', 'profile'];
 
 for (const page of pages) {
@@ -27,6 +30,16 @@ assert.match(gradle, /manifestPlaceholders\["appLabel"\] = "کانون‌ها آ
 assert.match(html, /<title>کانون‌ها \| اپ مستقل دانشجویی<\/title>/);
 assert.doesNotMatch(html, /student-calendar\.(?:js|css)/, 'Jalali calendar must appear only in persistent Android notification');
 assert.match(nativeCalendar, /setOngoing\(true\)/, 'persistent notification must remain enabled');
+assert.doesNotMatch(notificationLayout, /calendar_label|تقویم دانشجویی|کانون‌ها/, 'custom notification must show only the date');
+assert.doesNotMatch(nativeCalendar, /setContentTitle\("تقویم دانشجویی"\)/, 'fallback notification must show only the date');
+assert.match(nativeCalendar, /\.setContentTitle\(today\(\)\)/, 'notification fallback title is the Persian date');
+assert.match(notificationLayout, /calendar_date/, 'Persian date text must exist');
+assert.match(notificationLayout, /#252E76/i, 'use the app navy date text');
+assert.match(notificationBackground, /#EFF1FC/i, 'use the app purple and white palette');
+assert.match(notificationBadge, /#7581DB/i, 'day badge must not be green');
+assert.doesNotMatch(notificationBackground+notificationBadge, /#137747|#50C878/i, 'old green is not allowed');
+assert.match(nativeCalendar, /setTextSize\(84f\)/, 'status day icon should be maximized');
+assert.match(nativeCalendar, /measureText\(text\)/, 'fit two-digit Persian day numbers to small icon');
 assert.match(nativeCalendar, /setCustomContentView\(view\)/, 'custom Jalali notification must remain enabled');
 assert.match(html, /رویدادهای نمونه/);
 assert.doesNotMatch(html, /صدای دانشجو/, 'the former survey label must be removed');

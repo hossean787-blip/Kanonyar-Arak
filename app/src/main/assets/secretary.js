@@ -30,6 +30,7 @@
   let assigned = [];
   let activeClub = '';
   let clubCatalog = [];
+  let directory = { universities: [], faculties: [] };
   let members = [];
   let events = [];
   let profiles = new Map();
@@ -72,6 +73,7 @@
     assigned = [];
     activeClub = '';
     clubCatalog = [];
+    directory = { universities: [], faculties: [] };
     members = [];
     events = [];
     profiles = new Map();
@@ -111,9 +113,13 @@
       if (requestId !== seq || !hasSession()) return;
       assigned = [...new Set(roles.map(x => x.club_id).filter(validId))];
       if (!assigned.length) { root.hidden = true; return; }
-      const catalog = await backend.clubs();
+      const [catalog, academics] = await Promise.all([backend.clubs(), backend.academicCatalog()]);
       if (requestId !== seq || !hasSession()) return;
       clubCatalog = catalog.filter(x => x && validId(x.id));
+      directory = {
+        universities: Array.isArray(academics?.universities) ? academics.universities : [],
+        faculties: Array.isArray(academics?.faculties) ? academics.faculties : []
+      };
       activeClub = assigned[0];
       root.hidden = false;
       secretaryHome(true);
@@ -168,6 +174,18 @@
   }
   const empty = (message) => '<div class="secretary-empty">' + escape(message) + '</div>';
   const statuses = {pending:'در انتظار بررسی', approved:'عضو تأییدشده', rejected:'درخواست ردشده'};
+  function universityOptions(selected = '') {
+    return '<option value="">انتخاب دانشگاه</option>' +
+      directory.universities.map(u => '<option value="' + escape(u.name) + '"' +
+        (u.name === selected ? ' selected' : '') + '>' + escape(u.name) + '</option>').join('');
+  }
+  function facultyOptions(university, selected = '') {
+    const u = directory.universities.find(x => x.name === university);
+    return '<option value="">انتخاب دانشکده</option>' +
+      directory.faculties.filter(f => u && f.university_id === u.id)
+        .map(f => '<option value="' + escape(f.name) + '"' +
+          (f.name === selected ? ' selected' : '') + '>' + escape(f.name) + '</option>').join('');
+  }
   function renderClub() {
     const club = activeClubInfo();
     if (!club) return empty('این کانون غیرفعال است یا اطلاعات آن برای نمایش موجود نیست.');
@@ -179,6 +197,11 @@
       '<h3 class="secretary-card-title">ویرایش مشخصات کانون</h3>' +
       '<label class="field">نام کانون<input name="name" maxlength="120" required value="' + escape(club.name) + '"></label>' +
       '<label class="field">دسته‌بندی<input name="category" maxlength="80" required value="' + escape(club.category || 'سایر') + '"></label>' +
+      '<label class="field">دانشگاه *<select name="university" data-secretary-university required aria-required="true">' +
+        universityOptions(club.university || '') + '</select></label>' +
+      '<label class="field">دانشکده *<select name="faculty" data-secretary-faculty required aria-required="true"' +
+        (directory.universities.some(u => u.name === club.university) ? '' : ' disabled') + '>' +
+        facultyOptions(club.university || '', club.faculty || '') + '</select></label>' +
       '<label class="field">درباره کانون *<textarea name="description" maxlength="2000" required aria-required="true" placeholder="درباره کانون بنویسید">' + escape(club.description || '') + '</textarea></label>' +
       '<button class="secretary-cta" type="submit">ذخیره تغییرات کانون</button>' +
       '<p class="secretary-danger-note">فعال یا غیرفعال‌کردن کانون و تعیین دبیر فقط توسط مدیر اصلی انجام می‌شود.</p></form>' +
@@ -392,9 +415,16 @@
   async function submitClub(form) {
     const fd = new FormData(form);
     if (!formValue(fd,'description')) { status('پر کردن بخش درباره کانون الزامی است.',true);return; }
+    const university = formValue(fd, 'university');
+    const faculty = formValue(fd, 'faculty');
+    const chosen = directory.universities.find(u => u.name === university);
+    if (!chosen || !directory.faculties.some(f => f.university_id === chosen.id && f.name === faculty)) {
+      status('دانشگاه و دانشکده را از فهرست معتبر انتخاب کنید.', true);
+      return;
+    }
     const result = await backend.secretaryUpdateClub(activeClub, {
       name: formValue(fd, 'name'), description: formValue(fd, 'description'),
-      category: formValue(fd, 'category')
+      category: formValue(fd, 'category'), university, faculty
     });
     const old = activeClubInfo();
     if (old) Object.assign(old, result);
@@ -444,6 +474,16 @@
   }
   root.addEventListener('change', async event => {
     const target = event.target;
+    if (target.dataset && 'secretaryUniversity' in target.dataset) {
+      const form = target.closest('form');
+      const faculty = form?.querySelector('select[data-secretary-faculty]');
+      if (faculty) {
+        faculty.innerHTML = facultyOptions(target.value);
+        faculty.value = '';
+        faculty.disabled = !directory.universities.some(u => u.name === target.value);
+      }
+      return;
+    }
     if (target.id === 'secretary-club-select' && hasClub(target.value)) {
       ++seq; activeClub = target.value; editor = null; activeTab = 'club';
       await loadClubData();

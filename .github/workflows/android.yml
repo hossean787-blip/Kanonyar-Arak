@@ -1,4 +1,4 @@
-name: Kanonha v0.9.7 signup validation and precise field errors
+name: Kanonha v0.9.8 student calendar
 on:
   push:
     branches: [main]
@@ -25,6 +25,7 @@ jobs:
       - name: Validate offline UI and SVG assets
         run: |
           node --check app/src/main/assets/app.js
+          node --check app/src/main/assets/student-calendar.js
           node --check app/src/main/assets/biometric.js
           node --check tests/academic-biometric-smoke.cjs
           node --check tests/biometric-relogin-smoke.cjs
@@ -62,7 +63,7 @@ jobs:
           html=(root/'index.html').read_text(encoding='utf-8')
           for name in ('home','clubs','events','activity','profile'):
               assert 'data-screen="'+name+'"' in html, name
-          for name in ('styles.css','app.js','backend.js','secretary.js','admin.js','config.js','biometric.js'):
+          for name in ('styles.css','app.js','backend.js','secretary.js','admin.js','config.js','biometric.js','student-calendar.js','student-calendar.css'):
               assert (root/name).is_file(), name
           for svg in (root/'assets').glob('*.svg'):
               ET.parse(svg)
@@ -118,16 +119,16 @@ jobs:
           ! find app/src -type f -name '*.keystore' | grep -q .
           ! find app/src -type f -name '*.p12' | grep -q .
           grep -q 'applicationId = "ir.kanonha.app"' app/build.gradle.kts
-          grep -q 'versionCode = 22' app/build.gradle.kts
+          grep -q 'versionCode = 23' app/build.gradle.kts
           grep -q 'android:allowBackup="false"' app/src/main/AndroidManifest.xml
           echo 'Release output validated; unsigned candidate requires secure external signing'
       - uses: actions/upload-artifact@v4
         with:
-          name: kanonha-0.9.7-release-unsigned
+          name: kanonha-0.9.8-release-unsigned
           path: app/build/outputs/apk/release/app-release-unsigned.apk
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
-          name: kanonha-0.9.7-debug-validation
+          name: kanonha-0.9.8-debug-validation
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error

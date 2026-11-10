@@ -918,6 +918,37 @@
     ).join('');
   }
 
+  /* Event registration window is a live countdown, not a static date label. */
+  function eventTimeRemaining(epoch){
+    const left=Number(epoch)-Date.now();
+    if(!Number.isFinite(left))return 'نامشخص';
+    if(left<=0)return 'مهلت ثبت‌نام تمام شد';
+    const min=Math.ceil(left/60000),days=Math.floor(min/1440),
+      hours=Math.floor(min%1440/60),minutes=min%60;
+    const fa=n=>n.toLocaleString('fa-IR');
+    if(days)return fa(days)+' روز و '+fa(hours)+' ساعت';
+    if(hours)return fa(hours)+' ساعت و '+fa(minutes)+' دقیقه';
+    return fa(minutes)+' دقیقه';
+  }
+  function deadlineMarkup(ev){
+    if(!onlineMode||!Number.isFinite(ev.deadlineMs))return '';
+    return '<div class="event-meta event-deadline"><span>زمان باقی‌مانده ثبت‌نام: <strong data-event-deadline="'+
+      ev.deadlineMs+'">'+escapeHTML(eventTimeRemaining(ev.deadlineMs))+'</strong></span></div>';
+  }
+  function refreshEventCountdowns(){
+    for(const node of document.querySelectorAll('[data-event-deadline]')){
+      const epoch=Number(node.dataset.eventDeadline);
+      node.textContent=eventTimeRemaining(epoch);
+      if(epoch<=Date.now()){
+        node.classList.add('expired');
+        const card=node.closest('[data-event-card]');
+        if(card){const btn=card.querySelector('[data-register]');
+          if(btn){btn.disabled=true;btn.removeAttribute('data-register');btn.textContent='ثبت‌نام بسته است';}}
+      }
+    }
+  }
+  if(typeof window.setInterval==='function')window.setInterval(refreshEventCountdowns,30000);
+
   /* ——— Event card ——— */
   function eventCard(event, index, { compact = false } = {}) {
     const registered = state.registered.includes(index);
@@ -926,6 +957,7 @@
       <div class="event-info">
         <h3>${escapeHTML(event.title)}</h3>
         <div class="event-meta">${svg('calendar', 13)}<span>${escapeHTML(event.date)}</span></div>
+        ${deadlineMarkup(event)}
         ${compact ? '' : `<div class="event-meta">${svg('map-pin', 13)}<span>${escapeHTML(event.location)}</span></div>
         <div class="capacity">${onlineMode ? 'ظرفیت باقی‌مانده' : 'ظرفیت نمونه'}: <strong>${event.capacity} نفر</strong></div>`}
       </div>
@@ -977,6 +1009,7 @@
       <div class="home-slide-info">
         <h3>${escapeHTML(event.title)}</h3>
         <span class="home-slide-date">${svg('calendar',13)}${escapeHTML(event.date)}</span>
+        ${deadlineMarkup(event)}
         <button class="home-slide-view" type="button" data-details="${index}" aria-label="مشاهده ${escapeHTML(event.title)}">مشاهده جزئیات <span aria-hidden="true">‹</span></button>
       </div>
     </article>`;
@@ -1006,6 +1039,7 @@
     const found=events.map((event,index)=>[event,index]).filter(([event])=>event.registrationOpen===true&&event.capacity>0&&(!query||event.title.includes(query)));
     $('home-events').innerHTML=found.length?found.map(([event,index])=>homeCarouselCard(event,index)).join(''):'<div class="home-carousel-empty" role="status">رویداد دارای ثبت‌نام فعال پیدا نشد.</div>';
     $('home-events').scrollLeft=0;updateHomeCarouselControls();
+    refreshEventCountdowns();
     const foundClubs=(onlineMode ? clubs.map((_, i) => i) : [0,2,3]).filter(i=>!query||clubs[i].title.includes(query)||clubs[i].desc.includes(query));
     $('home-clubs').innerHTML=foundClubs.length?foundClubs.map(i=>
       `<button type="button" class="home-mini-club" data-club-details="${i}">
@@ -1045,6 +1079,7 @@
     $('events-list').innerHTML = found.length
       ? found.map(([ev, i]) => eventCard(ev, i)).join('')
       : '<div class="no-results">رویدادی پیدا نشد.</div>';
+    refreshEventCountdowns();
   }
 
   /* ——— QR placeholder (non-scannable, labeled) ——— */
@@ -1105,7 +1140,9 @@
     openSheet(ev.title,
       `<p>${svg('calendar', 15)} ${escapeHTML(ev.date)}<br>${svg('map-pin', 15)} ${escapeHTML(ev.location)}<br>
        کانون برگزارکننده: ${clubs[ev.club] ? escapeHTML(clubs[ev.club].title) : 'نامشخص'}</p>
-       <p>${onlineMode ? 'ثبت‌نام آنلاین با تأیید سرور انجام می‌شود.' : 'این یک رویداد نمونه رابط کاربری است. ثبت‌نام واقعی انجام نمی‌شود.'}</p>
+       <p>${escapeHTML(ev.description||'')}</p>
+       ${deadlineMarkup(ev)}
+       <p>${onlineMode ? 'ثبت‌نام قطعی پس از تکمیل مشخصات و تأیید اثر انگشت یا چهره انجام می‌شود.' : 'این یک رویداد نمونه رابط کاربری است. ثبت‌نام واقعی انجام نمی‌شود.'}</p>
        <button class="pill-btn sheet-action" type="button" ${onlineMode && (!ev.registrationOpen || state.registered.includes(i)) ? "disabled" : `data-register="${i}"`}>
          ${state.registered.includes(i) ? 'ثبت‌نام‌شده' : onlineMode ? (ev.registrationOpen ? 'ثبت‌نام آنلاین' : 'ثبت‌نام بسته است') : 'ثبت‌نام نمایشی'}
        </button>`

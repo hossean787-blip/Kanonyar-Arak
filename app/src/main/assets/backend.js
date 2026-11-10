@@ -293,11 +293,17 @@
   async function secretaryUploadClubLogo(clubId, file) {
     requireUuid(clubId, 'کانون');
     mustUser();
-    if (!file || !['image/png','image/jpeg','image/webp'].includes(file.type) ||
+    if (!file || file.type !== 'image/png' ||
         file.size < 1 || file.size > 2097152)
-      throw new ApiError('فقط تصویر PNG، JPG یا WebP با حجم حداکثر ۲ مگابایت پذیرفته می‌شود.');
+      throw new ApiError('فقط فایل PNG با حجم حداکثر ۲ مگابایت پذیرفته می‌شود.');
     if (typeof document === 'undefined' || typeof URL === 'undefined')
       throw new ApiError('بارگذاری تصویر در این دستگاه پشتیبانی نمی‌شود.');
+    // PNG magic bytes: reject a forged MIME type; optimize accepted images as WebP internally.
+    if (typeof file.slice !== 'function')
+      throw new ApiError('فایل PNG قابل بررسی نیست.');
+    const magic = new Uint8Array(await file.slice(0,8).arrayBuffer());
+    if (magic.length !== 8 || [137,80,78,71,13,10,26,10].some((v,i)=>magic[i]!==v))
+      throw new ApiError('محتوای فایل PNG معتبر نیست.');
     const objectUrl = URL.createObjectURL(file);
     let bitmap;
     try {
@@ -447,7 +453,8 @@
     const description = String(input && input.description || '').trim();
     const category = String(input && input.category || '').trim();
     if (name.length < 2 || name.length > 120) throw new ApiError('نام کانون باید بین ۲ و ۱۲۰ نویسه باشد.');
-    if (description.length > 2000 || !category || category.length > 80) throw new ApiError('توضیحات یا دسته‌بندی معتبر نیست.');
+    if (!description || description.length > 2000) throw new ApiError('پر کردن بخش درباره کانون الزامی است (حداکثر ۲۰۰۰ نویسه).');
+    if (!category || category.length > 80) throw new ApiError('دسته‌بندی کانون معتبر نیست.');
     return { name, description, category };
   }
   function checkEventFields(input) {

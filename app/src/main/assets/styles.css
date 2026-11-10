@@ -2318,3 +2318,45 @@ button:focus-visible,input:focus-visible,select:focus-visible {outline-color:#39
 .bottom-nav{grid-template-columns:repeat(6,minmax(0,1fr))!important}
 .bottom-nav button{width:100%;max-width:100%;min-width:0;box-sizing:border-box}
 .bottom-nav button .nav-art{max-width:100%}
+
+/* Kanonha club discovery, emerald edition — 2026-11-10 */
+#screen-clubs .club-filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0 0 16px}
+#screen-clubs .club-filters label{min-width:0;display:flex;flex-direction:column;gap:6px;font-size:11px;font-weight:800;color:#226448}
+#screen-clubs .club-filters label:last-child{grid-column:1/-1}
+#screen-clubs .club-filters select{width:100%;min-width:0;min-height:43px;border:1px solid #D5EBDE;border-radius:13px;background:#fff;padding:8px 10px;color:#264538;font-family:inherit;font-size:12px}
+#screen-clubs .club-filters select:focus-visible{outline:2px solid #50C878;outline-offset:2px}
+#screen-clubs .club-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:stretch}
+#screen-clubs .club-list .no-results{grid-column:1/-1}
+#screen-clubs .club-card{margin:0;min-height:230px;min-width:0;padding:14px 10px 11px;display:flex;flex-direction:column;justify-content:space-between;gap:10px;border:1px solid #E0EFE6;border-radius:22px;background:linear-gradient(145deg,#fff 24%,#EFFBF3);box-shadow:0 7px 18px rgba(40,117,76,.085)}
+#screen-clubs .club-card-open{border:0;background:transparent;width:100%;min-width:0;padding:0;display:flex;flex:1;align-items:center;flex-direction:column;justify-content:flex-start;gap:5px;color:#1D3D2D;cursor:pointer;font-family:inherit;text-align:center}
+#screen-clubs .club-card-open:focus-visible{outline:2px solid #50C878;border-radius:12px}
+#screen-clubs .club-card .club-icon{height:82px;width:82px;max-width:100%;border-radius:22px;display:grid;place-items:center;background:#E8F8ED;border:1px solid #D9F0E0;box-shadow:0 4px 12px rgba(50,126,78,.08)}
+#screen-clubs .club-card .club-art{height:73px;width:73px;max-width:100%;object-fit:contain;border-radius:18px}
+#screen-clubs .club-card-name{font-size:12px;line-height:1.65;font-weight:900;overflow-wrap:anywhere}
+#screen-clubs .club-card-category,#screen-clubs .club-card-scope{font-size:10px;line-height:1.6;color:#587568;overflow-wrap:anywhere}
+#screen-clubs .club-join-btn{width:100%;min-width:0;margin:0;padding:6px 2px;min-height:36px;height:auto;border-radius:13px;font-size:11px;font-weight:850;background:linear-gradient(125deg,#42B970,#268B55);color:#fff;border:1px solid #41B872;box-shadow:0 5px 11px rgba(51,161,94,.16)}
+#screen-clubs .club-join-btn.joined,#screen-clubs .club-join-btn.signed{background:#E6F7ED;color:#256F4B;border-color:#C9EAD6;box-shadow:none}
+#screen-club-detail{color:#234334}
+#screen-club-detail .club-detail-back{border:0;background:transparent;padding:7px 0 14px;color:#287B51;font-family:inherit;font-weight:800;font-size:13px}
+#screen-club-detail .club-detail-hero{border-radius:27px;padding:27px 15px 23px;background:radial-gradient(circle at 10% 4%,#D4F6E0,transparent 65%),linear-gradient(135deg,#F8FFF9,#E6F8ED);border:1px solid #D9EFE1;text-align:center;box-shadow:0 10px 27px rgba(33,119,75,.09)}
+#screen-club-detail .club-detail-logo{width:125px;height:125px;object-fit:contain;background:white;border-radius:28px;padding:10px;box-shadow:0 9px 24px rgba(35,98,60,.12)}
+#screen-club-detail .club-detail-hero h1{margin:16px 0 7px;font-weight:950;font-size:19px;color:#17422D}
+#screen-club-detail .club-detail-hero span{display:inline-block;padding:4px 10px;border-radius:12px;background:#DEF5E5;color:#26774E;font-size:12px;font-weight:800}
+#screen-club-detail .club-detail-hero p{font-size:12px;color:#517361}
+#screen-club-detail .club-detail-section{margin:18px 0;padding:18px 15px;background:#fff;border:1px solid #E0EFE5;border-radius:20px;box-shadow:0 5px 17px rgba(37,108,62,.055)}
+#screen-club-detail .club-detail-section h2{font-size:15px;color:#195637;margin:0 0 11px}
+#screen-club-detail .club-detail-section p{font-size:12px;line-height:2;color:#476753}
+#screen-club-detail .club-detail-action{margin:17px 0 4px}
+#screen-club-detail .club-detail-action .pill-btn{width:100%;max-width:none;min-height:44px;height:auto;padding:10px;border:0;background:linear-gradient(125deg,#50C878,#259759);color:#fff;box-shadow:0 6px 15px rgba(46,156,95,.16)}
+#screen-club-detail .club-detail-action .club-leave{background:#FFF2EF;color:#B0493B;border:1px solid #F4D6D0;box-shadow:none}
+#screen-club-detail .club-detail-status{color:#26744C;font-weight:700}
+#screen-club-detail .activity-row{width:100%;margin-top:7px}
+.secretary-logo-preview{max-width:125px;max-height:125px;object-fit:contain;border-radius:18px;background:#EDF8F1;padding:8px;border:1px solid #D9EFE0}
+.secretary-form input[type="file"]{width:100%;max-width:100%;padding:11px;border-radius:13px;box-sizing:border-box;border:1px solid #D4E8DB;background:#F7FCF9;font-size:11px}
+@media(max-width:350px){
+ #screen-clubs .club-list{gap:8px}
+ #screen-clubs .club-card{padding:10px 7px;min-height:228px;border-radius:17px}
+ #screen-clubs .club-card-name{font-size:11px}
+ #screen-clubs .club-card .club-icon{width:67px;height:67px}
+ #screen-clubs .club-card .club-art{width:60px;height:60px}
+}

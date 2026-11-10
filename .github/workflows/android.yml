@@ -1,4 +1,4 @@
-name: Kanonha v0.9.16 survey navigation six-slot fix
+name: Kanonha club experience and membership RLS regression
 on:
   push:
     branches: [main]
@@ -56,6 +56,7 @@ jobs:
           deno check supabase/functions/kanonha-admin-console/index.ts
           node --check tests/secretary-backend-smoke.cjs
           node --check tests/secretary-ui-smoke.cjs
+          node --check tests/club-experience-smoke.cjs
           python3 - <<'PY'
           from pathlib import Path
           import xml.etree.ElementTree as ET
@@ -109,6 +110,7 @@ jobs:
           node tests/ratings-manager-smoke.cjs
           node tests/secretary-backend-smoke.cjs
           node tests/secretary-ui-smoke.cjs
+          node tests/club-experience-smoke.cjs
           node tests/unified-auth-smoke.cjs
           node tests/admin-ui-smoke.cjs
           node tests/multi-role-ui-smoke.cjs

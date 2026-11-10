@@ -228,7 +228,7 @@
     return saveProfile(metadata.full_name, metadata.student_number);
   }
   async function clubs() {
-    const rows = await request(restPath + 'kanonha_clubs?select=id,name,description,category&is_active=eq.true&order=name.asc', { auth: false });
+    const rows = await request(restPath + 'kanonha_clubs?select=id,name,description,category,university,faculty,logo_path&is_active=eq.true&order=name.asc', { auth: false });
     return Array.isArray(rows) ? rows : [];
   }
   async function events() {
@@ -252,6 +252,87 @@
       headers: { Prefer: 'return=minimal' },
       body: { user_id: mustUser(), club_id: clubId }
     });
+  }
+  async function reapplyClub(clubId) {
+    const id = mustUser();
+    if (!uuid(clubId)) throw new ApiError('کانون معتبر نیست.');
+    const rows = await request(restPath + 'kanonha_memberships?user_id=eq.' +
+      encodeURIComponent(id) + '&club_id=eq.' + encodeURIComponent(clubId) +
+      '&status=eq.rejected&select=club_id,status', {
+      method: 'PATCH', requireUser: true, headers: {Prefer:'return=representation'},
+      body: {status:'pending'}
+    });
+    if (!Array.isArray(rows) || rows.length !== 1)
+      throw new ApiError('درخواست قابل تکرار نیست؛ وضعیت عضویت را به‌روزرسانی کنید.',409);
+    return rows[0];
+  }
+  async function cancelClubMembership(clubId) {
+    const id = mustUser();
+    if (!uuid(clubId)) throw new ApiError('کانون معتبر نیست.');
+    const rows = await request(restPath + 'kanonha_memberships?user_id=eq.' +
+      encodeURIComponent(id) + '&club_id=eq.' + encodeURIComponent(clubId) +
+      '&status=in.(pending,approved)&select=id', {
+      method:'DELETE', requireUser:true, headers:{Prefer:'return=representation'}
+    });
+    if (!Array.isArray(rows) || rows.length !== 1)
+      throw new ApiError('این عضویت دیگر فعال نیست؛ صفحه را به‌روزرسانی کنید.',409);
+    return true;
+  }
+  const logoRevision = new Map();
+  function clubLogoUrl(clubId, logoPath) {
+    if (!uuid(clubId) || logoPath !== clubId + '/logo.webp' || !enabled) return '';
+    return url + '/storage/v1/object/public/kanonha-club-logos/' +
+      clubId + '/logo.webp?v=' + (logoRevision.get(clubId) || 1);
+  }
+  async function secretaryUploadClubLogo(clubId, file) {
+    requireUuid(clubId, 'کانون');
+    mustUser();
+    if (!file || !['image/png','image/jpeg','image/webp'].includes(file.type) ||
+        file.size < 1 || file.size > 2097152)
+      throw new ApiError('فقط تصویر PNG، JPG یا WebP با حجم حداکثر ۲ مگابایت پذیرفته می‌شود.');
+    if (typeof document === 'undefined' || typeof URL === 'undefined')
+      throw new ApiError('بارگذاری تصویر در این دستگاه پشتیبانی نمی‌شود.');
+    const objectUrl = URL.createObjectURL(file);
+    let bitmap;
+    try {
+      bitmap = await new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new ApiError('فایل تصویر قابل خواندن نیست.'));
+        img.src = objectUrl;
+      });
+      const ratio = Math.min(1, 480 / Math.max(bitmap.naturalWidth,bitmap.naturalHeight));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(bitmap.naturalWidth * ratio));
+      canvas.height = Math.max(1, Math.round(bitmap.naturalHeight * ratio));
+      canvas.getContext('2d').drawImage(bitmap,0,0,canvas.width,canvas.height);
+      const blob = await new Promise(resolve => canvas.toBlob(resolve,'image/webp',0.83));
+      if (!blob || blob.type !== 'image/webp' || blob.size > 2097152)
+        throw new ApiError('تبدیل لوگو به WebP در این دستگاه ممکن نبود.');
+      await refreshIfNeeded();
+      const path = clubId + '/logo.webp';
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 20000);
+      try {
+        const response = await fetch(url + '/storage/v1/object/kanonha-club-logos/' + path, {
+          method:'POST', signal:controller.signal, body:blob,
+          headers:{apikey:key,Authorization:'Bearer '+session.access_token,
+            'Content-Type':'image/webp','x-upsert':'true','cache-control':'60'}
+        });
+        if (!response.ok) throw new ApiError(
+          response.status===403 ? 'مجوز آپلود لوگو برای این کانون تأیید نشد.' : 'بارگذاری لوگو ناموفق بود.',
+          response.status);
+      } finally { clearTimeout(timeout); }
+      const rows = await request(restPath + 'kanonha_clubs?id=eq.' +
+        encodeURIComponent(clubId) + '&select=id,logo_path', {
+        method:'PATCH', requireUser:true, headers:{Prefer:'return=representation'},
+        body:{logo_path:path}
+      });
+      if (!Array.isArray(rows) || rows.length !== 1)
+        throw new ApiError('لوگو آپلود شد اما اتصال آن به کانون ذخیره نشد.');
+      logoRevision.set(clubId,Date.now());
+      return path;
+    } finally { URL.revokeObjectURL(objectUrl); }
   }
   async function registerEvent(eventId) {
     if (!uuid(eventId)) throw new ApiError('رویداد معتبر نیست.');
@@ -711,7 +792,8 @@
   window.KanonhaBackend = Object.freeze({
     enabled, signUp, signIn, signOut, me, profile, ensureProfile,
     saveProfile, clubs, events, memberships, registrations,
-    joinClub, registerEvent, secretaryClubs, secretaryEvents, secretaryMemberships,
+    joinClub, reapplyClub, cancelClubMembership, clubLogoUrl, secretaryUploadClubLogo,
+    registerEvent, secretaryClubs, secretaryEvents, secretaryMemberships,
     secretaryProfiles, secretaryUpdateClub, secretaryCreateEvent, secretaryUpdateEvent,
     secretaryDecideMembership, secretaryRoster, secretarySetAttendance,
     studentSignUp,studentSignIn,managerSignUp,isManager,academicDetails,saveAcademicDetails,adminAction,

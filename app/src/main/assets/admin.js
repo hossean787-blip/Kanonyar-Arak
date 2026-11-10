@@ -48,12 +48,28 @@ function dashboard(){
  '<p class="secretary-card-p">این پنل فقط برای حساب مدیرکل تأییدشده توسط سرور فعال است. تغییر دبیران و اعتبارسنجی دانشجو از همین بخش انجام می‌شود.</p>'+
  '<button type="button" class="secretary-cta" data-admin-action="reload">بروزرسانی اطلاعات</button></div>';
 }
+function clubUniversityOptions(selected=''){
+ return '<option value="">انتخاب دانشگاه</option>'+
+ (data.universities||[]).map(u=>'<option value="'+esc(u.name)+'"'+
+ (u.name===selected?' selected':'')+'>'+esc(u.name)+'</option>').join('');
+}
+function clubFacultyOptions(university,selected=''){
+ const u=(data.universities||[]).find(x=>x.name===university);
+ return '<option value="">همه دانشکده‌ها</option>'+
+ (data.faculties||[]).filter(f=>f.university_id===u?.id).map(f=>
+ '<option value="'+esc(f.name)+'"'+(f.name===selected?' selected':'')+'>'+
+ esc(f.name)+'</option>').join('');
+}
 function clubForm(){
  const c=editor?.type==='club'?(data.clubs.find(x=>x.id===editor.id)||{}):{};
  return '<form id="admin-club-form" class="secretary-form secretary-card">'+
  '<h3 class="secretary-card-title">'+(editor?.id?'ویرایش کانون':'ثبت کانون جدید')+'</h3>'+
  '<label class="field">نام کانون<input name="name" required maxlength="120" value="'+esc(c.name||'')+'"></label>'+
  '<label class="field">دسته‌بندی<input name="category" required maxlength="80" value="'+esc(c.category||'فرهنگی')+'"></label>'+
+ '<label class="field">دانشگاه<select name="university" data-admin-club-university required>'+
+ clubUniversityOptions(c.university||'')+'</select></label>'+
+ '<label class="field">دانشکده<select name="faculty" data-admin-club-faculty>'+
+ clubFacultyOptions(c.university||'',c.faculty||'')+'</select></label>'+
  '<label class="field">معرفی کانون<textarea name="description" maxlength="2000">'+esc(c.description||'')+'</textarea></label>'+
  '<label class="field admin-check"><input type="checkbox" name="is_active" value="1"'+(c.is_active?' checked':'')+'> فعال و قابل مشاهده برای دانشجویان</label>'+
  '<div class="secretary-actions"><button class="positive" type="submit">ذخیره کانون</button>'+
@@ -115,8 +131,7 @@ function memberships(){
  return requests.length?requests.map(m=>'<article class="secretary-card"><h3 class="secretary-card-title">'+esc(student(m.user_id))+'</h3>'+
  '<p class="secretary-card-p">کانون: '+esc(club(m.club_id))+'</p><span class="secretary-chip '+(m.status==='pending'?'pending':'')+'">'+
  esc(m.status==='pending'?'در انتظار بررسی':m.status==='approved'?'تأییدشده':'رد شده')+'</span>'+
- (m.status==='pending'?'<div class="secretary-actions">'+action('تأیید','data-admin-member',m.id,'data-status="approved" class="positive"')+
- action('رد','data-admin-member',m.id,'data-status="rejected" class="negative"')+'</div>':'')+'</article>').join('')
+ (m.status==='pending'?'<p class="secretary-card-meta">تأیید یا رد درخواست فقط توسط دبیر همین کانون انجام می‌شود.</p>':'')+'</article>').join('')
  :empty('درخواست عضویتی ثبت نشده است.');
 }
 function secretaries(){
@@ -261,13 +276,19 @@ root.addEventListener('click',ev=>{
   void perform(d.adminDeleteClub?'club.delete':'event.delete',{id,confirm:'DELETE'});
   return;
  }
- if(d.adminMember&&['approved','rejected'].includes(d.status)){void perform('member.decide',{id:d.adminMember,status:d.status});return}
  if(d.adminRevoke&&d.clubId){void perform('secretary.revoke',{user_id:d.adminRevoke,club_id:d.clubId});return}
  if(d.adminVerify&&['true','false'].includes(d.verify)){void perform('student.verify',{user_id:d.adminVerify,verified:d.verify==='true'});return}
  if(d.adminAttendance&&d.present){void perform('roster.attendance',{id:d.adminAttendance,present:d.present==='true'});return}
 });
 root.addEventListener('change',ev=>{
- if(!ev.target || !ev.target.dataset || !('adminStudentUniversity' in ev.target.dataset))return;
+ if(!ev.target || !ev.target.dataset)return;
+ if('adminClubUniversity' in ev.target.dataset){
+  const form=ev.target.closest('form');
+  const faculty=form?.querySelector('select[data-admin-club-faculty]');
+  if(faculty)faculty.innerHTML=clubFacultyOptions(ev.target.value);
+  return;
+ }
+ if(!('adminStudentUniversity' in ev.target.dataset))return;
  const form=ev.target.closest('form');
  if(!form)return;
  const faculty=form.querySelector('select[data-admin-student-faculty]');
@@ -297,7 +318,9 @@ root.addEventListener('submit',ev=>{
  }
  if(f.id==='admin-club-form'){
    void perform(editor?.id?'club.update':'club.create',{id:editor?.id,name:v(fd,'name'),
-    description:v(fd,'description'),category:v(fd,'category'),is_active:fd.get('is_active')==='1'});return;
+    description:v(fd,'description'),category:v(fd,'category'),
+    university:v(fd,'university'),faculty:v(fd,'faculty'),
+    is_active:fd.get('is_active')==='1'});return;
  }
  const iso=name=>{const d=new Date(v(fd,name));return Number.isFinite(d.getTime())?d.toISOString():''};
  void perform(editor?.id?'event.update':'event.create',{

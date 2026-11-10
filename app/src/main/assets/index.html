@@ -146,14 +146,22 @@
 
       <!-- ==================== صفحه کانون‌ها ==================== -->
       <section class="screen padded-screen" id="screen-clubs" data-screen="clubs" aria-labelledby="title-clubs" hidden>
-        <div class="screen-kicker"><span class="brand-mark">کانون‌ها</span><span class="kicker-spark">✦ فضای دانشجویی</span></div>
         <h1 id="title-clubs" class="screen-title">کانون‌ها</h1>
         <p class="screen-description">دنبال علاقه‌ت بگرد و به جمع دوست‌داشتنی‌ها بپیوند ✨</p>
         <label class="search-field">
           <span data-icon="search" aria-hidden="true"></span>
           <input id="clubs-search" type="search" placeholder="جستجو در کانون‌ها ..." aria-label="جستجو در کانون‌ها">
         </label>
-        <div id="clubs-list" class="club-list"></div>
+        <div class="club-filters" aria-label="فیلتر کانون‌ها">
+          <label>دانشگاه<select id="clubs-university" aria-label="فیلتر دانشگاه"><option value="">همه دانشگاه‌ها</option></select></label>
+          <label>دانشکده<select id="clubs-faculty" aria-label="فیلتر دانشکده"><option value="">همه دانشکده‌ها</option></select></label>
+          <label>موضوع<select id="clubs-category" aria-label="فیلتر موضوع"><option value="">همه دسته‌ها</option></select></label>
+        </div>
+        <div id="clubs-list" class="club-list" aria-live="polite"></div>
+      </section>
+      <section class="screen padded-screen" id="screen-club-detail" data-screen="club-detail" aria-label="صفحه اختصاصی کانون" hidden>
+        <button type="button" class="club-detail-back" data-goto="clubs">‹ بازگشت به کانون‌ها</button>
+        <div id="club-detail-content"></div>
       </section>
 
       <!-- ==================== صفحه رویدادها ==================== -->

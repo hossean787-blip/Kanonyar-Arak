@@ -96,7 +96,7 @@
 
   /* ——— State ——— */
   const STORAGE_KEY = 'kanonha-ui-v3';
-  const defaultState = () => ({ joined: [], requested: [], registered: [], name: onlineMode ? 'مهمان' : 'کاربر آزمایشی', number: 'ثبت نشده', isManager: false, academic: null });
+  const defaultState = () => ({ joined: [], requested: [], rejected: [], registered: [], name: onlineMode ? 'مهمان' : 'کاربر آزمایشی', number: 'ثبت نشده', isManager: false, academic: null });
 
   function loadState() {
     // Never read a previous offline demo account while online mode is active.
@@ -107,6 +107,7 @@
         s.joined = [...new Set(s.joined.filter(n => Number.isInteger(n) && n >= 0 && n < clubs.length))];
         s.registered = [...new Set(s.registered.filter(n => Number.isInteger(n) && n >= 0 && n < events.length))];
         s.requested = [];
+        s.rejected = [];
         return s;
       }
     } catch (_) {}
@@ -362,7 +363,8 @@
       clubs = rawClubs.filter(c => c && typeof c.id === 'string').map(c => ({
         id: c.id, title: String(c.name || ''), short: String(c.name || '').slice(0, 28),
         desc: String(c.description || ''), icon: onlineClubIcon(c.category),
-        tone: 'green'
+        category: String(c.category || 'سایر'), university: String(c.university || ''),
+        faculty: String(c.faculty || ''), logoPath: String(c.logo_path || ''), tone: 'green'
       }));
       const now = Date.now();
       events = rawEvents.filter(e => e && typeof e.id === 'string').map(e => {
@@ -404,6 +406,7 @@
     const eventIds = new Set(eventRows.filter(e => e.status === 'confirmed').map(e => e.event_id));
     state.joined = clubs.map((c, i) => memberMap.get(c.id) === 'approved' ? i : -1).filter(i => i >= 0);
     state.requested = clubs.map((c, i) => memberMap.get(c.id) === 'pending' ? i : -1).filter(i => i >= 0);
+    state.rejected = clubs.map((c, i) => memberMap.get(c.id) === 'rejected' ? i : -1).filter(i => i >= 0);
     state.registered = events.map((e, i) => eventIds.has(e.id) ? i : -1).filter(i => i >= 0);
     studentProfileReady = Boolean(profile);
     state.name = profile ? profile.full_name : state.isManager ? 'مدیرکل کانون‌ها' : 'اطلاعات تکمیل نشده';
@@ -531,11 +534,36 @@
     if (!clubs[i] || !onlineRequireProfile()) return;
     if (state.joined.includes(i) || state.requested.includes(i)) { notify('این درخواست قبلاً ثبت شده است.'); return; }
     try {
-      await onlineBackend.joinClub(clubs[i].id);
+      if (state.rejected.includes(i)) await onlineBackend.reapplyClub(clubs[i].id);
+      else await onlineBackend.joinClub(clubs[i].id);
       await onlineRefreshPersonal();
       closeSheet();
       notify('درخواست عضویت ثبت شد و در انتظار تأیید است.');
+    } catch (error) {
+      if (error?.status === 409) {
+        try { await onlineRefreshPersonal(); } catch (_) {}
+        notify('وضعیت عضویت تغییر کرده است؛ لطفاً دوباره بررسی کنید.');
+      } else notify(onlineError(error));
+    }
+  }
+  async function onlineCancelMembership(i) {
+    if (!onlineMode || !clubs[i] || !onlineRequireProfile()) return;
+    if (!state.joined.includes(i) && !state.requested.includes(i)) return;
+    const wasMember = state.joined.includes(i);
+    try {
+      await onlineBackend.cancelClubMembership(clubs[i].id);
+      await onlineRefreshPersonal();
+      closeSheet();
+      notify(wasMember ? 'عضویت شما در کانون پایان یافت.' : 'درخواست عضویت لغو شد.');
     } catch (error) { notify(onlineError(error)); }
+  }
+  function confirmMembershipCancel(i) {
+    if (!clubs[i]) return;
+    const member = state.joined.includes(i);
+    openSheet(member ? 'خروج از کانون' : 'لغو درخواست عضویت',
+      '<p>آیا از ' + (member ? 'خروج از این کانون' : 'لغو درخواست عضویت') +
+      ' مطمئن هستید؟</p><button type="button" class="pill-btn sheet-action" data-confirm-cancel="' +
+      i + '">بله، تأیید می‌کنم</button>');
   }
   async function onlineRegister(i) {
     if (!events[i] || !onlineRequireProfile()) return;
@@ -756,7 +784,7 @@
 
   /* ——— Navigation ——— */
   function go(screen, { scroll = true } = {}) {
-    if (!routeNavItems().some(x => x.id === screen)) return;
+    if (!routeNavItems().some(x => x.id === screen) && !(screen === 'club-detail' && clubDetailKey)) return;
     activeScreen = screen;
     const container = screen.endsWith('-account') ? 'profile' :
       screen.startsWith('manager-') || screen.startsWith('secretary-') ? 'workspace' : screen;
@@ -768,6 +796,7 @@
     if (screen === 'ratings' && window.KanonhaRatings) void window.KanonhaRatings.open();
     renderNav();
     if (screen === 'activity') renderActivity();
+    if (screen === 'club-detail') renderClubDetail();
     if (scroll) $('main').scrollTop = 0;
     try { history.replaceState(null, '', `#${screen}`); } catch (_) {}
   }
@@ -775,7 +804,7 @@
   function renderNav() {
     $('bottom-nav').innerHTML = routeNavItems().map(x =>
       `<button type="button" data-screen-btn="${x.id}"
-        class="${x.id === activeScreen ? 'active' : ''}"
+        class="${x.id === activeScreen || (x.id==='clubs' && activeScreen==='club-detail') ? 'active' : ''}"
         ${x.id === activeScreen ? 'aria-current="page"' : ''}>
         <img class="nav-art" src="assets/nav-${x.art || x.id}.svg" alt="" width="34" height="34"><span>${x.label}</span>
       </button>`
@@ -802,22 +831,32 @@
     </article>`;
   }
 
-  /* ——— Club card ——— */
-  function clubCard(club, index) {
+  /* ——— Club cards and verified detail ——— */
+  let clubDetailKey = '';
+  function clubImageSrc(club) {
+    const icon = club.icon === 'book' ? 'book' : club.icon === 'code' ? 'tech' :
+      club.icon === 'leaf' ? 'leaf' : club.icon === 'flask' ? 'science' : 'sport';
+    const custom = onlineMode && onlineBackend.clubLogoUrl(club.id,club.logoPath);
+    return custom || 'assets/club-' + icon + '.svg';
+  }
+  function clubCard(club,index) {
     const member = state.joined.includes(index);
+    const pending = state.requested.includes(index);
+    const rejected = state.rejected.includes(index);
     const isViewOnly = !onlineMode && (index === 0 || index === 3);
-    const pending = (state.requested || []).includes(index);
+    const label = member ? 'عضو هستید' : pending ? 'در انتظار تأیید' :
+      rejected ? 'درخواست مجدد' : isViewOnly ? 'مشاهده' : 'عضویت';
+    const attr = rejected ? 'data-reapply="' + index + '"' :
+      member || pending || isViewOnly ? 'data-club-details="' + index + '"' :
+      'data-join="' + index + '"';
     return `<article class="card club-card">
-      <div class="club-icon ${club.tone === 'blue' ? '' : club.tone}"><img class="club-art" src="assets/club-${club.icon === "book" ? "book" : club.icon === "code" ? "tech" : club.icon === "leaf" ? "leaf" : club.icon === "flask" ? "science" : "sport"}.svg" alt="" width="48" height="48"></div>
-      <div class="club-info">
-        <h3>${escapeHTML(club.title)}</h3>
-        <p>${escapeHTML(club.desc)}</p>
-        <button type="button"
-          ${member || pending || isViewOnly ? `data-club-details="${index}"` : `data-join="${index}"`}
-          class="pill-btn ${member ? 'joined' : pending ? 'signed' : isViewOnly ? 'view-btn' : ''}">
-          ${member ? 'عضو هستید' : pending ? 'در انتظار تأیید' : isViewOnly ? 'مشاهده' : 'عضویت'}
-        </button>
-      </div>
+      <button type="button" class="club-card-open" data-club-details="${index}" aria-label="مشاهده ${escapeHTML(club.title)}">
+        <span class="club-icon"><img class="club-art" src="${escapeHTML(clubImageSrc(club))}" alt="" width="76" height="76" loading="lazy"></span>
+        <strong class="club-card-name">${escapeHTML(club.title)}</strong>
+        <span class="club-card-category">${escapeHTML(club.category || 'کانون دانشجویی')}</span>
+        <span class="club-card-scope">${escapeHTML(club.university || 'دانشگاه نامشخص')}</span>
+      </button>
+      <button type="button" class="pill-btn club-join-btn ${member?'joined':pending?'signed':''}" ${attr}>${label}</button>
     </article>`;
   }
 
@@ -868,11 +907,27 @@
   }
 
   function renderClubs() {
+    const unique = values => [...new Set(values.filter(Boolean))].sort((a,b)=>a.localeCompare(b,'fa'));
+    const choose = (id,values,placeholder) => {
+      const select = $(id);
+      if (!select) return '';
+      const current = select.value;
+      select.innerHTML = '<option value="">'+placeholder+'</option>'+values.map(value =>
+        '<option value="'+escapeHTML(value)+'">'+escapeHTML(value)+'</option>').join('');
+      select.value = values.includes(current) ? current : '';
+      return select.value;
+    };
     const q = $('clubs-search').value.trim();
-    const found = clubs.map((c, i) => [c, i]).filter(([c]) => !q || c.title.includes(q) || c.desc.includes(q));
-    $('clubs-list').innerHTML = found.length
-      ? found.map(([c, i]) => clubCard(c, i)).join('')
-      : '<div class="no-results">کانونی با این نام پیدا نشد.</div>';
+    const uni = choose('clubs-university',unique(clubs.map(c=>c.university)),'همه دانشگاه‌ها');
+    const faculty = choose('clubs-faculty',unique(clubs.filter(c=>!uni||c.university===uni).map(c=>c.faculty)),'همه دانشکده‌ها');
+    const category = choose('clubs-category',unique(clubs.map(c=>c.category)),'همه دسته‌ها');
+    const found = clubs.map((c,i)=>[c,i]).filter(([c]) =>
+      (!q || c.title.includes(q) || c.desc.includes(q)) &&
+      (!uni || c.university===uni) &&
+      (!faculty || c.faculty===faculty) &&
+      (!category || c.category===category));
+    $('clubs-list').innerHTML = found.length ? found.map(([c,i])=>clubCard(c,i)).join('') :
+      '<div class="no-results">کانونی با این فیلتر پیدا نشد.</div>';
   }
 
   function renderEvents() {
@@ -906,12 +961,12 @@
   }
 
   function renderActivity() {
-    const activityMembers = [...new Set([...state.joined, ...(state.requested || [])])];
+    const activityMembers = [...new Set([...state.joined, ...state.requested, ...state.rejected])];
     $('activity-clubs').innerHTML = activityMembers.length
       ? activityMembers.filter(i => clubs[i]).map(i =>
           `<button class="activity-row" type="button" data-club-details="${i}">
             <span class="club-icon ${clubs[i].tone}"><img class="row-club-art" src="assets/club-${clubs[i].icon === "book" ? "book" : clubs[i].icon === "code" ? "tech" : clubs[i].icon === "leaf" ? "leaf" : clubs[i].icon === "flask" ? "science" : "sport"}.svg" alt="" width="31" height="31"></span>
-            <span class="activity-copy">${escapeHTML(clubs[i].title)}${state.requested.includes(i) ? '<small>در انتظار تأیید عضویت</small>' : ''}</span>
+            <span class="activity-copy">${escapeHTML(clubs[i].title)}${state.requested.includes(i) ? '<small>در انتظار تأیید عضویت</small>' : state.rejected.includes(i) ? '<small>درخواست رد شده؛ امکان درخواست مجدد</small>' : ''}</span>
             <span class="arrow">${svg('chevron-left', 15)}</span>
           </button>`
         ).join('')
@@ -961,6 +1016,7 @@
   /* ——— Native Android back action: close the sheet first, then return Home. ——— */
   function handleBack() {
     if (!$('sheet-overlay').hidden) { closeSheet(); return true; }
+    if (activeScreen === 'club-detail') { go('clubs'); return true; }
     if (activeScreen !== personaHome()) { go(personaHome()); return true; }
     return false;
   }
@@ -979,16 +1035,38 @@
     );
   }
 
+  function renderClubDetail() {
+    const i = clubs.findIndex(c => (c.id || String(clubs.indexOf(c))) === clubDetailKey);
+    const club = clubs[i], root = $('club-detail-content');
+    if (!root) return;
+    if (!club) { root.innerHTML = '<p class="empty">اطلاعات کانون در دسترس نیست.</p>'; return; }
+    const member = state.joined.includes(i);
+    const pending = state.requested.includes(i);
+    const rejected = state.rejected.includes(i);
+    const related = events.map((e,index)=>[e,index]).filter(([e])=>e.club===i).slice(0,8);
+    const button = member || pending ?
+      `<button class="pill-btn club-leave" type="button" data-cancel-membership="${i}">${member?'خروج از کانون':'لغو درخواست عضویت'}</button>` :
+      `<button class="pill-btn" type="button" ${rejected?'data-reapply':'data-join'}="${i}">${rejected?'درخواست مجدد عضویت':'درخواست عضویت'}</button>`;
+    root.innerHTML = `<div class="club-detail-hero">
+      <img src="${escapeHTML(clubImageSrc(club))}" alt="" class="club-detail-logo">
+      <h1>${escapeHTML(club.title)}</h1>
+      <span>${escapeHTML(club.category||'کانون دانشجویی')}</span>
+      <p>${escapeHTML(club.university||'دانشگاه ثبت نشده')}${club.faculty?' · '+escapeHTML(club.faculty):''}</p>
+    </div>
+    <section class="club-detail-section"><h2>درباره کانون</h2><p>${escapeHTML(club.desc||'هنوز توضیحی ثبت نشده است.')}</p>
+    <div class="club-detail-action">${button}</div>
+    ${pending?'<p class="club-detail-status">درخواست شما منتظر تأیید دبیر است.</p>':''}
+    </section>
+    <section class="club-detail-section"><h2>رویدادهای کانون</h2>
+    ${related.length?related.map(([event,j])=>`<button type="button" class="activity-row" data-details="${j}"><span class="activity-copy">${escapeHTML(event.title)}<small>${escapeHTML(event.date)}</small></span><span>‹</span></button>`).join(''):'<p class="empty">فعلاً رویدادی برای این کانون ثبت نشده است.</p>'}
+    </section>`;
+  }
   function clubDetails(i) {
-    const club = clubs[i];
+    const club=clubs[i];
     if (!club) return;
-    openSheet(club.title,
-      `<p>${escapeHTML(club.desc)}</p>
-       <p>${onlineMode ? 'عضویت در کانون پس از تأیید مدیر کانون فعال می‌شود.' : 'برای مشاهده عملکرد ظاهری عضویت می‌توانید روی دکمه زیر بزنید. هیچ اطلاعاتی به سرور ارسال نمی‌شود.'}</p>
-       <button class="pill-btn sheet-action" type="button" ${state.joined.includes(i) || state.requested.includes(i) ? 'disabled' : 'data-join="' + i + '"'}>
-         ${state.joined.includes(i) ? 'عضو هستید' : state.requested.includes(i) ? 'در انتظار تأیید' : onlineMode ? 'درخواست عضویت' : 'درخواست عضویت نمایشی'}
-       </button>`
-    );
+    clubDetailKey=club.id || String(i);
+    renderClubDetail();
+    go('club-detail');
   }
 
   /* ——— Actions ——— */
@@ -1095,6 +1173,7 @@
   function renderAll() {
     renderHome();
     renderClubs();
+    if (activeScreen === 'club-detail') renderClubDetail();
     renderEvents();
     renderActivity();
     updateProfileDisplay();
@@ -1145,6 +1224,7 @@
 
     // Clubs search
     $('clubs-search').addEventListener('input', renderClubs);
+    for (const id of ['clubs-university','clubs-faculty','clubs-category']) $(id).addEventListener('change',renderClubs);
     if (window.KanonhaJalali) window.KanonhaJalali.enhance(document);
     if (onlineMode) {
       $('online-events-heading').textContent = 'رویدادهای در حال ثبت‌نام';
@@ -1254,6 +1334,9 @@
       if (btn.dataset.goto)           { closeSheet(); go(btn.dataset.goto); return; }
       if (btn.dataset.filter)         { activeFilter = btn.dataset.filter; renderEvents(); return; }
       if (btn.dataset.join !== undefined)        { join(Number(btn.dataset.join)); return; }
+      if (btn.dataset.reapply !== undefined)     { join(Number(btn.dataset.reapply)); return; }
+      if (btn.dataset.cancelMembership !== undefined) { confirmMembershipCancel(Number(btn.dataset.cancelMembership)); return; }
+      if (btn.dataset.confirmCancel !== undefined) { void onlineCancelMembership(Number(btn.dataset.confirmCancel)); return; }
       if (btn.dataset.register !== undefined)    { register(Number(btn.dataset.register)); return; }
       if (btn.dataset.details !== undefined)     { eventDetails(Number(btn.dataset.details)); return; }
       if (btn.dataset.clubDetails !== undefined) { clubDetails(Number(btn.dataset.clubDetails)); return; }

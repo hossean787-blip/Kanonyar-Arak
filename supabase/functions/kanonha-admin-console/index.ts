@@ -40,7 +40,7 @@ async function identity(req:Request){
 }
 async function overview(){
  const [clubs,events,memberships,registrations,secretaries,profiles,academics,universities,faculties]=await Promise.all([
-  rows("kanonha_clubs?select=id,name,description,category,is_active,created_at&order=name.asc&limit=500"),
+  rows("kanonha_clubs?select=id,name,description,category,university,faculty,logo_path,is_active,created_at&order=name.asc&limit=500"),
   rows("kanonha_events?select=id,club_id,title,starts_at,registration_deadline,location,capacity,registered_count,is_published&order=starts_at.desc&limit=500"),
   rows("kanonha_memberships?select=id,user_id,club_id,status,requested_at,decided_at&order=requested_at.desc&limit=500"),
   rows("kanonha_registrations?select=id,user_id,event_id,status,attended_at,registered_at&order=registered_at.desc&limit=500"),
@@ -102,9 +102,18 @@ async function handle(op:string,d:Record<string,unknown>,actor:string){
   if(op==="manager.student.attach")return await attachManagerStudent(d,actor);
  if(op==="club.create"||op==="club.update"){
   const name=val(d.name,120),description=val(d.description,2000),category=val(d.category,80);
+  const university=val(d.university,120),faculty=val(d.faculty,120);
   if(name.length<2||name.length>120||description.length>2000||category.length<2||category.length>80
+    ||university.length<2||university.length>120||faculty.length>120
     ||!allowedBool(d.is_active))throw new Error("input");
-  const patch={name,description,category,is_active:d.is_active};
+  const universities=await rows("kanonha_universities?select=id&name=eq."+encodeURIComponent(university)+"&limit=1");
+  if(universities.length!==1)throw new Error("input");
+  if(faculty){
+   const faculties=await rows("kanonha_faculties?select=id&university_id=eq."+
+     universities[0].id+"&name=eq."+encodeURIComponent(faculty)+"&limit=1");
+   if(faculties.length!==1)throw new Error("input");
+  }
+  const patch={name,description,category,university,faculty,is_active:d.is_active};
   if(op==="club.create")return mutation("kanonha_clubs","POST",patch);
   if(!uuid(id))throw new Error("input");
   return mutation("kanonha_clubs","PATCH",patch,"?id=eq."+id);
@@ -141,10 +150,6 @@ async function handle(op:string,d:Record<string,unknown>,actor:string){
   if(!uuid(d.user_id)||!uuid(d.club_id))throw new Error("input");
   if(op==="secretary.assign")return mutation("kanonha_secretaries","POST",{user_id:d.user_id,club_id:d.club_id});
   return mutation("kanonha_secretaries","DELETE",null,"?user_id=eq."+d.user_id+"&club_id=eq."+d.club_id);
- }
- if(op==="member.decide"){
-  if(!uuid(id)||!["approved","rejected"].includes(String(d.status)))throw new Error("input");
-  return mutation("kanonha_memberships","PATCH",{status:d.status,decided_by:actor},"?id=eq."+id+"&status=eq.pending");
  }
  if(op==="student.verify"){
   if(!uuid(d.user_id)||!allowedBool(d.verified))throw new Error("input");

@@ -171,7 +171,15 @@
       '<label class="field">دسته‌بندی<input name="category" maxlength="80" required value="' + escape(club.category || 'سایر') + '"></label>' +
       '<label class="field">معرفی کانون<textarea name="description" maxlength="2000">' + escape(club.description || '') + '</textarea></label>' +
       '<button class="secretary-cta" type="submit">ذخیره تغییرات کانون</button>' +
-      '<p class="secretary-danger-note">فعال یا غیرفعال‌کردن کانون و تعیین دبیر فقط توسط مدیر اصلی انجام می‌شود.</p></form>';
+      '<p class="secretary-danger-note">فعال یا غیرفعال‌کردن کانون و تعیین دبیر فقط توسط مدیر اصلی انجام می‌شود.</p></form>' +
+      '<form id="secretary-logo-form" class="secretary-card secretary-form">' +
+      '<h3 class="secretary-card-title">لوگوی اختصاصی کانون</h3>' +
+      (backend.clubLogoUrl(club.id,club.logo_path) ?
+        '<img class="secretary-logo-preview" alt="لوگوی فعلی کانون" src="' +
+        escape(backend.clubLogoUrl(club.id,club.logo_path)) + '">' : '') +
+      '<label class="field">انتخاب لوگو<input type="file" name="logo" required accept="image/png,image/jpeg,image/webp"></label>' +
+      '<p class="secretary-card-meta">تصویر PNG، JPG یا WebP، حداکثر ۲ مگابایت</p>' +
+      '<button class="secretary-cta" type="submit">ثبت لوگوی کانون</button></form>';
   }
   function renderMembers() {
     if (!members.length) return empty('هنوز درخواست عضویت یا عضو ثبت‌شده‌ای برای این کانون وجود ندارد.');
@@ -346,6 +354,20 @@
   });
   root.addEventListener('submit', event => {
     const form = event.target;
+    if (form.id === 'secretary-logo-form') {
+      event.preventDefault();
+      const file = form.querySelector('input[name="logo"]')?.files?.[0];
+      if (!file) { status('ابتدا تصویر لوگو را انتخاب کنید.',true); return; }
+      const club = activeClub;
+      void perform(async () => {
+        await backend.secretaryUploadClubLogo(club,file);
+        if (!hasSession() || club !== activeClub) return;
+        clubCatalog = await backend.clubs();
+        await loadClubData();
+        status('لوگوی کانون ذخیره شد.');
+      });
+      return;
+    }
     if (form.id !== 'secretary-club-form' && form.id !== 'secretary-event-form') return;
     event.preventDefault();
     if(window.KanonhaJalali && !window.KanonhaJalali.validateForm(form)){

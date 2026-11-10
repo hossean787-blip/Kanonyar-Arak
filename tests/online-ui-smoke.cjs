@@ -46,7 +46,7 @@ const doc = {
   addEventListener: (name, cb) => { eventHandlers[name] = cb; }
 };
 let currentUser = null, memberRows = [], eventRows = [], seats = 0;
-const actions = { joins:0, cancellations:0, reapplies:0, registrations:0 };
+const actions = { joins:0, cancellations:0, reapplies:0, registrations:0, eventCancellations:0 };
 const backend = {
   enabled:true,
   get currentUser() { return currentUser; },
@@ -69,6 +69,7 @@ const backend = {
   async reapplyClub(id) { assert.equal(id,clubId); actions.reapplies++; memberRows=[{club_id:id,status:'pending'}]; },
   async cancelClubMembership(id) { assert.equal(id,clubId); actions.cancellations++; memberRows=[]; },
   async registerEvent(id) { assert.equal(id,eventId); actions.registrations++; eventRows=[{event_id:id,status:'confirmed'}]; seats++; },
+  async cancelEvent(id) { assert.equal(id,eventId); actions.eventCancellations++; eventRows=[]; seats--; },
   async saveProfile(name,number) { return {full_name:name,student_number:number}; }
 };
 const window = { KanonhaBackend:backend, addEventListener() {}, location };
@@ -142,6 +143,15 @@ const click = dataset => eventHandlers.click({target:{closest(){return {dataset}
   await delay();
   assert.equal(actions.registrations,1,'duplicate online registration must be disabled');
   assert.ok(!get('activity-tickets').innerHTML.includes('sample-qr'),'online should never show fake QR');
+  app.go('activity');
+  click({eventCancel:'0'});
+  assert.equal(get('sheet-overlay').hidden,false,'event cancellation must require confirmation');
+  click({confirmEventCancel:'0'});
+  click({confirmEventCancel:'0'});
+  await delay(); await delay(); await delay();
+  assert.equal(actions.eventCancellations,1,'double cancellation must be idempotent');
+  assert.equal(app.state.registered.length,0,'cancelled event must disappear immediately');
+  assert.match(get('activity-tickets').innerHTML,/هنوز بلیتی/,'cancelled ticket must be removed');
   app.go('clubs');
   click({clubDetails:'0'});
   assert.equal(app.screen,'club-detail');

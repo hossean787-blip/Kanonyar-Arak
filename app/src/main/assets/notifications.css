@@ -49,3 +49,5 @@
 .notice-inbox-info{font-size:12px;line-height:1.9;color:#6b7598;padding:10px}
 .notice-dialog-open{overscroll-behavior:contain}
 @media(max-width:350px){.notice-actions{grid-template-columns:1fr}.notice-composer,.notice-history{padding:12px}}
+
+.notice-item-image{max-height:172px;object-fit:cover;width:100%;border-radius:12px;border:1px solid #eef0fa;background:#f5f6fc}

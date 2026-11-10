@@ -1,0 +1,42 @@
+name: Kanonha survey time-mode isolated QA
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/src/main/assets/ratings-admin.js'
+      - 'app/src/main/assets/ratings.js'
+      - 'app/src/main/assets/backend.js'
+      - 'app/src/main/assets/survey-report.js'
+      - 'supabase/surveys-v214-kind-specific-windows.sql'
+      - 'tests/ratings-manager-smoke.cjs'
+      - 'tests/ratings-smoke.cjs'
+      - 'tests/backend-smoke.cjs'
+      - 'tests/survey-time-window-smoke.cjs'
+      - 'tests/survey-export-smoke.cjs'
+      - 'tests/survey-image-upload-smoke.cjs'
+      - '.github/workflows/survey-mode-qa.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  survey-qa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check survey JavaScript syntax
+        run: |
+          node --check app/src/main/assets/backend.js
+          node --check app/src/main/assets/ratings.js
+          node --check app/src/main/assets/ratings-admin.js
+          node --check app/src/main/assets/survey-report.js
+      - name: Verify both survey time policies, results and upload regressions
+        run: |
+          node tests/backend-smoke.cjs
+          node tests/survey-time-window-smoke.cjs
+          node tests/ratings-manager-smoke.cjs
+          node tests/ratings-smoke.cjs
+          node tests/survey-image-upload-smoke.cjs
+          node tests/survey-export-smoke.cjs

@@ -177,7 +177,7 @@
       '<h3 class="secretary-card-title">ویرایش مشخصات کانون</h3>' +
       '<label class="field">نام کانون<input name="name" maxlength="120" required value="' + escape(club.name) + '"></label>' +
       '<label class="field">دسته‌بندی<input name="category" maxlength="80" required value="' + escape(club.category || 'سایر') + '"></label>' +
-      '<label class="field">معرفی کانون<textarea name="description" maxlength="2000">' + escape(club.description || '') + '</textarea></label>' +
+      '<label class="field">درباره کانون *<textarea name="description" maxlength="2000" required aria-required="true" placeholder="درباره کانون بنویسید">' + escape(club.description || '') + '</textarea></label>' +
       '<button class="secretary-cta" type="submit">ذخیره تغییرات کانون</button>' +
       '<p class="secretary-danger-note">فعال یا غیرفعال‌کردن کانون و تعیین دبیر فقط توسط مدیر اصلی انجام می‌شود.</p></form>' +
       '<form id="secretary-logo-form" class="secretary-card secretary-form">' +
@@ -185,8 +185,8 @@
       (typeof backend.clubLogoUrl === 'function' && backend.clubLogoUrl(club.id,club.logo_path) ?
         '<img class="secretary-logo-preview" alt="لوگوی فعلی کانون" src="' +
         escape(backend.clubLogoUrl(club.id,club.logo_path)) + '">' : '') +
-      '<label class="field">انتخاب لوگو<input type="file" name="logo" required accept="image/png,image/jpeg,image/webp"></label>' +
-      '<p class="secretary-card-meta">تصویر PNG، JPG یا WebP، حداکثر ۲ مگابایت</p>' +
+      '<label class="field">انتخاب لوگو<input type="file" name="logo" required accept="image/png"></label>' +
+      '<p class="secretary-card-meta">فقط فایل PNG، حداکثر ۲ مگابایت</p>' +
       '<button class="secretary-cta" type="submit">ثبت لوگوی کانون</button></form>';
   }
   function renderMembers() {
@@ -380,6 +380,7 @@
   if(typeof document.addEventListener==='function')document.addEventListener('visibilitychange',()=>{if(document.hidden)stopTicketCamera();});
   async function submitClub(form) {
     const fd = new FormData(form);
+    if (!formValue(fd,'description')) { status('پر کردن بخش درباره کانون الزامی است.',true);return; }
     const result = await backend.secretaryUpdateClub(activeClub, {
       name: formValue(fd, 'name'), description: formValue(fd, 'description'),
       category: formValue(fd, 'category')

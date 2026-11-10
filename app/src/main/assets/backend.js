@@ -572,6 +572,142 @@
       throw new ApiError('ثبت استاد مجاز نیست یا انجام نشد.');
     return rows[0];
   }
+
+  /* Independent multi-survey API (v2): all authorization, one-vote rules,
+     deadline checks and result confidentiality are enforced in Postgres. */
+  function surveyCheckId(id) {
+    requireUuid(id,'شناسه نظرسنجی');
+    return id;
+  }
+  function surveyPayload(fields) {
+    const title=String(fields.title||'').trim();
+    const description=String(fields.description||'').trim();
+    const category=String(fields.category||'');
+    const kind=String(fields.kind||'');
+    const ends_at=String(fields.ends_at||'');
+    if(title.length<4||title.length>120||description.length>500||
+       !['club','professor','faculty'].includes(category)||
+       !['regular','competition'].includes(kind)||
+       !Number.isFinite(Date.parse(ends_at))||Date.parse(ends_at)<=Date.now())
+      throw new ApiError('عنوان، دسته، نوع یا مهلت پایان نظرسنجی معتبر نیست.');
+    return {title,description,category,kind,ends_at:new Date(ends_at).toISOString()};
+  }
+  function surveyItems(items) {
+    if(!Array.isArray(items)||items.length<2||items.length>12)
+      throw new ApiError('برای هر نظرسنجی بین ۲ تا ۱۲ گزینه تعریف کنید.');
+    const options=items.map(v=>String(v||'').trim());
+    if(options.some(v=>v.length<2||v.length>120)||
+       new Set(options.map(v=>v.toLocaleLowerCase('fa-IR'))).size!==options.length)
+      throw new ApiError('گزینه‌ها باید معتبر، متفاوت و حداکثر ۱۲۰ نویسه باشند.');
+    return options;
+  }
+  async function surveyList(includeDrafts=false) {
+    const path=restPath+'kanonha_surveys?select=id,title,description,category,kind,status,ends_at,results_approved,published_at,created_at'
+      +(includeDrafts?'':'&status=eq.published')+'&order=created_at.desc&limit=200';
+    return readRows(await request(path,{auth:includeDrafts}));
+  }
+  async function surveyOptions(ids) {
+    if(!Array.isArray(ids)||!ids.length)return [];
+    ids.forEach(surveyCheckId);
+    const query='&survey_id=in.('+ids.map(encodeURIComponent).join(',')+')';
+    return readRows(await request(restPath+'kanonha_survey_options?select=id,survey_id,title,sort_order'+
+      query+'&order=sort_order.asc&limit=2400'));
+  }
+  async function surveyMyVotes() {
+    mustUser();
+    return readRows(await request(restPath+
+      'kanonha_survey_votes?select=survey_id,option_id,stars&limit=1000',{requireUser:true}));
+  }
+  async function surveyResults(id) {
+    surveyCheckId(id);mustUser();
+    return readRows(await request(restPath+'rpc/kanonha_survey_results',{
+      method:'POST',body:{p_survey_id:id},requireUser:true
+    }));
+  }
+  async function surveyCreate(fields,items) {
+    mustUser();
+    const payload=surveyPayload(fields),options=surveyItems(items);
+    const created=readRows(await request(restPath+'kanonha_surveys?select=id,title,category,kind,status,ends_at',{
+      method:'POST',requireUser:true,headers:{Prefer:'return=representation'},body:payload
+    }))[0];
+    if(!created?.id)throw new ApiError('ساخت پیش‌نویس انجام نشد.');
+    try {
+      await request(restPath+'kanonha_survey_options',{
+        method:'POST',requireUser:true,headers:{Prefer:'return=minimal'},
+        body:options.map((title,sort_order)=>({survey_id:created.id,title,sort_order}))
+      });
+    } catch(error) {
+      // No published poll or vote is affected. Attempt to remove an incomplete draft.
+      try {await request(restPath+'kanonha_surveys?id=eq.'+created.id,{
+        method:'DELETE',requireUser:true
+      });}catch(_){}
+      throw error;
+    }
+    return created;
+  }
+  async function surveyUpdateDraft(id,fields,items) {
+    surveyCheckId(id);mustUser();
+    const payload=surveyPayload(fields),options=surveyItems(items);
+    const rows=readRows(await request(restPath+'kanonha_surveys?id=eq.'+id+
+      '&status=eq.draft&select=id,status',{
+      method:'PATCH',requireUser:true,headers:{Prefer:'return=representation'},body:payload
+    }));
+    if(rows.length!==1)throw new ApiError('فقط پیش‌نویس نظرسنجی قابل ویرایش است.');
+    // All option edits are restricted server-side to the draft state.
+    await request(restPath+'kanonha_survey_options?survey_id=eq.'+id,{
+      method:'DELETE',requireUser:true
+    });
+    await request(restPath+'kanonha_survey_options',{
+      method:'POST',requireUser:true,headers:{Prefer:'return=minimal'},
+      body:options.map((title,sort_order)=>({survey_id:id,title,sort_order}))
+    });
+    return rows[0];
+  }
+  async function surveyPublish(id) {
+    surveyCheckId(id);mustUser();
+    const rows=readRows(await request(restPath+'kanonha_surveys?id=eq.'+id+
+      '&status=eq.draft&select=id,status',{
+      method:'PATCH',requireUser:true,headers:{Prefer:'return=representation'},
+      body:{status:'published'}
+    }));
+    if(rows.length!==1)throw new ApiError('انتشار نظرسنجی انجام نشد.');
+    return rows[0];
+  }
+  async function surveyApproveResults(id) {
+    surveyCheckId(id);mustUser();
+    const rows=readRows(await request(restPath+'kanonha_surveys?id=eq.'+id+
+      '&select=id,results_approved',{
+      method:'PATCH',requireUser:true,headers:{Prefer:'return=representation'},
+      body:{results_approved:true}
+    }));
+    if(rows.length!==1)throw new ApiError('تأیید نتایج انجام نشد.');
+    return rows[0];
+  }
+  async function surveyDeleteDraft(id) {
+    surveyCheckId(id);mustUser();
+    const rows=readRows(await request(restPath+'kanonha_surveys?id=eq.'+id+
+      '&status=eq.draft&select=id',{
+      method:'DELETE',requireUser:true,headers:{Prefer:'return=representation'}
+    }));
+    if(rows.length!==1)throw new ApiError('حذف پیش‌نویس مجاز نیست.');
+    return true;
+  }
+  async function surveyVote(id,optionId,stars) {
+    surveyCheckId(id);surveyCheckId(optionId);mustUser();
+    if(!Number.isInteger(stars)||stars<1||stars>5)
+      throw new ApiError('امتیاز باید بین ۱ تا ۵ ستاره باشد.');
+    try {
+      await request(restPath+'kanonha_survey_votes',{
+        method:'POST',requireUser:true,headers:{Prefer:'return=minimal'},
+        body:{survey_id:id,option_id:optionId,stars}
+      });
+    }catch(error) {
+      if(error?.status===409)throw new ApiError('شما قبلاً در این نظرسنجی رأی داده‌اید.',409);
+      throw error;
+    }
+    return true;
+  }
+
   window.KanonhaBackend = Object.freeze({
     enabled, signUp, signIn, signOut, me, profile, ensureProfile,
     saveProfile, clubs, events, memberships, registrations,
@@ -581,6 +717,8 @@
     studentSignUp,studentSignIn,managerSignUp,isManager,academicDetails,saveAcademicDetails,adminAction,
     academicCatalog,resumeFromBiometric,biometricRefreshToken,
     ratingCatalog,ratingControl,ratingResults,ratingSetControl,ratingMyVotes,ratingSubmit,ratingAddProfessor,
+    surveyList,surveyOptions,surveyMyVotes,surveyResults,surveyCreate,surveyUpdateDraft,
+    surveyPublish,surveyApproveResults,surveyDeleteDraft,surveyVote,
     get currentUser() { return user; }
   });
 })();

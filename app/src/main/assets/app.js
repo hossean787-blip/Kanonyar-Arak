@@ -1541,6 +1541,14 @@
       get state() { return { ...state, joined: [...state.joined], registered: [...state.registered] }; },
       go,
       handleBack,
+      notificationImageFor: (kind,id) => {
+        if(kind==='event')return events.find(e=>e.id===id)?.posterUrl||'';
+        if(kind==='club'){
+          const c=clubs.find(c=>c.id===id);
+          return c?clubImageSrc(c):'';
+        }
+        return '';
+      },
       openNotificationTarget: (kind,id) => {
         if(kind==='event'){
           const i=events.findIndex(e=>e.id===id);

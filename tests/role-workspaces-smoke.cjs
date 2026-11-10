@@ -25,7 +25,7 @@ class Node {
 const elements=new Map(ids.map(id=>[id,new Node(id)]));
 const get=id=>{assert.ok(elements.has(id),'DOM element '+id);return elements.get(id)};
 const callbacks={},location={search:'?native=1',hash:''};
-const pages=['home','clubs','events','activity','profile','workspace'];
+const pages=['home','clubs','events','ratings','activity','profile','workspace'];
 const document={readyState:'complete',getElementById:get,
  querySelectorAll:q=>q==='.screen'?pages.map(id=>get('screen-'+id)):[],
  querySelector:()=>null,addEventListener:(k,fn)=>callbacks[k]=fn,
@@ -73,6 +73,7 @@ const preview=window.KanonhaPreview;
  assert.equal(get('screen-home').hidden,true);
  assert.equal(adminTab,'dashboard');
  assert.match(get('bottom-nav').innerHTML,/manager-users/);
+ assert.match(get('bottom-nav').innerHTML,/data-screen-btn=\"ratings\"/);
  assert.doesNotMatch(get('bottom-nav').innerHTML,/secretary-members/);
  click({screenBtn:'manager-clubs'});assert.equal(adminTab,'clubs');
  click({screenBtn:'manager-users'});assert.equal(adminTab,'students');
@@ -92,6 +93,7 @@ const preview=window.KanonhaPreview;
  assert.equal(get('workspace-secretary-members').textContent,'۹');
  assert.equal(get('workspace-secretary-club').textContent,'کانون پژوهشی');
  assert.match(get('bottom-nav').innerHTML,/secretary-club/);
+ assert.match(get('bottom-nav').innerHTML,/data-screen-btn=\"ratings\"/);
  assert.doesNotMatch(get('bottom-nav').innerHTML,/manager-users/);
  click({workspaceRoute:'secretary-members'});assert.equal(secretaryTab,'members');
  click({workspaceSubtab:'attendance'});assert.equal(secretaryTab,'attendance');

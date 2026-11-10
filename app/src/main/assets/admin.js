@@ -120,13 +120,8 @@ function events(){
  data.events.map(e=>'<article class="secretary-card"><h3 class="secretary-card-title">'+esc(e.title)+'</h3>'+
  '<p class="secretary-card-p">'+esc(club(e.club_id))+' · '+esc(date(e.starts_at))+'</p>'+
  '<p class="secretary-card-meta">ظرفیت: '+Number(e.registered_count||0)+' / '+Number(e.capacity||0)+
- ' · '+(e.approval_status==='approved'?(e.is_published?'تأیید و منتشرشده':'تأییدشده، منتشرنشده'):
-   e.approval_status==='rejected'?'ردشده توسط مدیرکل':'در انتظار تأیید')+
+ ' · '+(e.is_published?'منتشرشده':'پیش‌نویس')+
   '</p><div class="secretary-actions">'+
-  (e.approval_status!=='approved'?
-   action('تأیید و انتشار','data-admin-approve-event',e.id,'class="positive"'):'')+
-  (e.approval_status!=='rejected'&&Number(e.registered_count||0)===0?
-   action('رد رویداد','data-admin-reject-event',e.id,'class="negative"'):'')+
   action('گزارش CSV','data-admin-export-event',e.id)+
  (Number(e.registered_count||0)===0?action('ویرایش','data-admin-edit-event',e.id):'')+
  action('ثبت‌نام‌کنندگان','data-admin-roster',e.id)+
@@ -275,8 +270,6 @@ root.addEventListener('click',ev=>{
  if(d.adminEditClub){tab='clubs';editor={type:'club',id:d.adminEditClub};render();return}
  if(d.adminEditEvent){tab='events';editor={type:'event',id:d.adminEditEvent};render();return}
  if(d.adminEditStudent){tab='students';editor={type:'student',id:d.adminEditStudent};render();return}
- if(d.adminApproveEvent){void perform('event.approve',{id:d.adminApproveEvent});return}
- if(d.adminRejectEvent){void perform('event.reject',{id:d.adminRejectEvent});return}
  if(d.adminExportEvent){
   const eventId=d.adminExportEvent;
   if(busy)return;

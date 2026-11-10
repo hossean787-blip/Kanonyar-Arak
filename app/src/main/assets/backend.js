@@ -710,6 +710,24 @@
     const result=await edgeRequest('kanonha-admin-console',{action,...fields},true);
     return result.result;
   }
+  /* User-specific inbox. Delivery and campaign visibility are checked by RLS. */
+  async function notificationInbox(){
+    mustUser();
+    const rows=await request(restPath+
+      'kanonha_notification_deliveries?select=id,read_at,created_at,campaign:kanonha_notification_campaigns(id,kind,title,body,related_id,version_label,created_at)'+
+      '&order=created_at.desc&limit=80',{requireUser:true});
+    return readRows(rows);
+  }
+  async function notificationRead(deliveryId){
+    const uid=mustUser();
+    requireUuid(deliveryId,'اعلان');
+    const rows=await request(restPath+
+      'kanonha_notification_deliveries?id=eq.'+deliveryId+'&user_id=eq.'+encodeURIComponent(uid)+
+      '&select=id,read_at',{method:'PATCH',requireUser:true,
+      headers:{Prefer:'return=representation'},body:{read_at:new Date().toISOString()}});
+    if(!Array.isArray(rows)||rows.length!==1)throw new ApiError('علامت‌گذاری اعلان انجام نشد.');
+    return rows[0];
+  }
   /* Five-star ratings: identity and one-vote constraint are enforced in Postgres. */
   async function ratingCatalog() {
     const rows=await request(restPath+
@@ -1105,6 +1123,7 @@
     secretaryProfiles, secretaryUpdateClub, secretaryCreateEvent, secretaryUpdateEvent,
     secretaryDecideMembership, secretaryRoster, secretarySetAttendance,
     studentSignUp,studentSignIn,managerSignUp,isManager,academicDetails,saveAcademicDetails,adminAction,
+    notificationInbox,notificationRead,
     academicCatalog,resumeFromBiometric,biometricRefreshToken,
     ratingCatalog,ratingControl,ratingResults,ratingSetControl,ratingMyVotes,ratingSubmit,ratingAddProfessor,
     surveyList,surveyOptions,surveyMyVotes,surveyResults,surveyCreate,surveyUpdateDraft,

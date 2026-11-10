@@ -186,7 +186,7 @@ function reportBlock(s){
   '<div class="survey-report-stat-row"><div><strong>'+nf(eligible)+'</strong><small>واجد شرایط</small></div>'+
   '<div><strong>'+nf(voters)+'</strong><small>رأی ثبت‌شده</small></div>'+
   '<div><strong>'+nf(pct)+'٪</strong><small>مشارکت</small></div></div>'+
-  (winners.length?'<p class="survey-manager-winner">★ '+(winners.length>1?'برندگان مشترک: ':'رتبه اول: ')+
+  (winners.length?'<p class="survey-manager-winner">★ '+(winners.length>1?'رتبه اول مشترک: ':'رتبه اول: ')+
     esc(winners.map(x=>x.title).join('، '))+'</p>':
    '<p class="survey-admin-report-empty">هنوز هیچ گزینه‌ای حداقل '+nf(s.min_rank_votes||5)+' رأی معتبر را ندارد.</p>')+
   '<div class="survey-rank-rows">'+r.map(x=>

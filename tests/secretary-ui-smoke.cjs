@@ -37,7 +37,8 @@ let members=[{id:memberId,user_id:registrantId,club_id:clubId,status:'pending',r
 let events=[{id:eventId,club_id:clubId,title:'رویداد واقعی آزمایشی',starts_at:'2020-02-01T12:00:00Z',
   registration_deadline:'2020-01-31T12:00:00Z',registered_count:1,capacity:10,is_published:true}];
 let roster=[{id:registrationId,user_id:registrantId,event_id:eventId,attended_at:null,registered_at:'2020-01-15T10:00:00Z'}];
-const ops={approvals:0,creates:0,attendances:0,edits:0};
+const ops={approvals:0,creates:0,attendances:0,edits:0,certificates:0};
+const issued=new Set();
 const backend={
   enabled:true,
   get currentUser(){return user},
@@ -51,6 +52,8 @@ const backend={
   async secretaryUpdateEvent(id,data){assert.ok(events.some(x=>x.id===id));ops.edits++;return {id,...data}},
   async secretaryDecideMembership(id,status){assert.equal(id,memberId);assert.equal(status,'approved');ops.approvals++;members=members.map(x=>({...x,status}));return members[0]},
   async secretaryRoster(id){assert.equal(id,eventId);return roster},
+  async secretaryCertificates(id){assert.equal(id,eventId);return [...issued].map(registration_id=>({registration_id}))},
+  async issueCertificate(id){assert.equal(id,registrationId);issued.add(id);ops.certificates++;return {id,certificate_code:id}},
   async secretarySetAttendance(id,present){assert.equal(id,registrationId);ops.attendances++;roster=roster.map(x=>({...x,attended_at:present?'2026-11-08T15:00:00Z':null}));return roster[0]}
 };
 const window={KanonhaBackend:backend};
@@ -107,6 +110,14 @@ function submit(id,fields){
   await flush();await flush();
   assert.equal(ops.attendances,1);
   assert.ok(el.get('secretary-content').innerHTML.includes('حاضر'));
+  assert.ok(el.get('secretary-content').innerHTML.includes('صدور گواهینامه'));
+  click({secretaryCertificate:registrationId});
+  await flush();await flush();
+  assert.equal(ops.certificates,1,'secretary should issue once after attendance');
+  assert.ok(el.get('secretary-content').innerHTML.includes('گواهینامه صادرشده'));
+  click({secretaryCertificate:registrationId});
+  await flush();
+  assert.equal(ops.certificates,1,'issued certificate must be idempotent');
   click({secretaryTab:'club'});
  const editsBefore=ops.edits;
  submit('secretary-club-form',{name:'کانون تازه',description:'  ',category:'علمی'});

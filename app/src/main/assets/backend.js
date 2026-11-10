@@ -425,7 +425,10 @@
       rows.push(...part);
       if(part.length<500)break;
     }
-    const names=await secretaryProfiles(rows.map(r=>r.user_id));
+    const names=[];
+    const userIds=[...new Set(rows.map(r=>r.user_id))];
+    for(let i=0;i<userIds.length;i+=300)
+      names.push(...await secretaryProfiles(userIds.slice(i,i+300)));
     const people=new Map(names.map(p=>[p.user_id,p]));
     return {rows:rows.map(r=>({...r,student:people.get(r.user_id)||null})),
      summary:await eventSummary(eventId),truncated:rows.length>=10000};

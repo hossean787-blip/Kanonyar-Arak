@@ -54,11 +54,12 @@ function submit(id,fields){root.events.submit({target:{id,fields},preventDefault
  assert.ok(get('admin-content').innerHTML.includes('&lt;img'),'Untrusted club HTML must be escaped');
  assert.ok(!get('admin-content').innerHTML.includes('<img src=x onerror'),'XSS must be prevented');
  click({adminAction:'new-club'});
- submit('admin-club-form',{name:'کانون تازه',category:'علمی',description:'شرح کانون',is_active:'1'});
+ submit('admin-club-form',{name:'کانون تازه',category:'علمی',description:'شرح کانون',university:'دانشگاه نمونه',faculty:'دانشکده هنر',is_active:'1'});
  await wait();await wait();assert.ok(ops.some(o=>o.action==='club.create'&&o.data.is_active===true));
  click({adminTab:'members'});
+ assert.ok(get('admin-content').innerHTML.includes('فقط توسط دبیر'));
  click({adminMember:memberId,status:'approved'});await wait();await wait();
- assert.ok(ops.some(o=>o.action==='member.decide'&&o.data.status==='approved'));
+ assert.ok(!ops.some(o=>o.action==='member.decide'),'Manager must not decide membership');
  click({adminTab:'secretaries'});
  submit('admin-secretary-form',{user_id:userId,club_id:clubId});await wait();await wait();
  assert.ok(ops.some(o=>o.action==='secretary.assign'));
@@ -69,5 +70,5 @@ function submit(id,fields){root.events.submit({target:{id,fields},preventDefault
  user=null;panel.clear();
  assert.equal(root.hidden,true);
  assert.equal(get('home-management').hidden,true,'Logout must hide manager action');
- console.log('PASS manager role gating, home CTA, clubs, member approvals, secretary assignment, verification, XSS and logout');
+ console.log('PASS manager role gating, home CTA, clubs, secretary-only member decisions, secretary assignment, verification, XSS and logout');
 })().catch(e=>{console.error(e);process.exitCode=1});

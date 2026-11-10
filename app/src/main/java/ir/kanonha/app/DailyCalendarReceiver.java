@@ -11,7 +11,7 @@ import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.graphics.drawable.Icon;
 import android.widget.RemoteViews;
-import android.icu.util.PersianCalendar;
+import android.icu.util.ULocale;
 import java.util.Calendar;
 public final class DailyCalendarReceiver extends BroadcastReceiver {
  private static final String ACTION="ir.kanonha.app.DAILY_DATE";
@@ -19,7 +19,8 @@ public final class DailyCalendarReceiver extends BroadcastReceiver {
  private static final String[] WEEKDAYS={"یکشنبه","دوشنبه","سه‌شنبه","چهارشنبه","پنجشنبه","جمعه","شنبه"};
  private static final String[] MONTHS={"فروردین","اردیبهشت","خرداد","تیر","مرداد","شهریور","مهر","آبان","آذر","دی","بهمن","اسفند"};
  private static String fa(int number){String s=Integer.toString(number),o="";for(char c:s.toCharArray())o+=(char)('۰'+c-'0');return o;}
- public static String today(){PersianCalendar c=new PersianCalendar();return WEEKDAYS[Calendar.getInstance().get(Calendar.DAY_OF_WEEK)-1]+"، "+fa(c.get(PersianCalendar.DAY_OF_MONTH))+" "+MONTHS[c.get(PersianCalendar.MONTH)]+" "+fa(c.get(PersianCalendar.YEAR));}
+ private static android.icu.util.Calendar persian(){return android.icu.util.Calendar.getInstance(new ULocale("fa_IR@calendar=persian"));}
+ public static String today(){android.icu.util.Calendar c=persian();return WEEKDAYS[Calendar.getInstance().get(Calendar.DAY_OF_WEEK)-1]+"، "+fa(c.get(android.icu.util.Calendar.DAY_OF_MONTH))+" "+MONTHS[c.get(android.icu.util.Calendar.MONTH)]+" "+fa(c.get(android.icu.util.Calendar.YEAR));}
  public static void schedule(Context context){
   AlarmManager mgr=(AlarmManager)context.getSystemService(Context.ALARM_SERVICE);
   if(mgr==null)return;
@@ -39,8 +40,8 @@ public final class DailyCalendarReceiver extends BroadcastReceiver {
   show(context);
  }
  private static Icon dateIcon(){
-  PersianCalendar calendar=new PersianCalendar();
-  String text=fa(calendar.get(PersianCalendar.DAY_OF_MONTH));
+  android.icu.util.Calendar calendar=persian();
+  String text=fa(calendar.get(android.icu.util.Calendar.DAY_OF_MONTH));
   Bitmap bitmap=Bitmap.createBitmap(96,96,Bitmap.Config.ARGB_8888);
   Canvas canvas=new Canvas(bitmap);
   Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -58,7 +59,7 @@ public final class DailyCalendarReceiver extends BroadcastReceiver {
   PendingIntent open=PendingIntent.getActivity(context,0,new Intent(context,MainActivity.class),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
   Notification.Builder b=Build.VERSION.SDK_INT>=26?new Notification.Builder(context,"calendar_persistent_v2"):new Notification.Builder(context);
   RemoteViews view=new RemoteViews(context.getPackageName(),R.layout.notification_jalali);
-  view.setTextViewText(R.id.calendar_day_badge,fa(new PersianCalendar().get(PersianCalendar.DAY_OF_MONTH)));
+  view.setTextViewText(R.id.calendar_day_badge,fa(persian().get(android.icu.util.Calendar.DAY_OF_MONTH)));
   view.setTextViewText(R.id.calendar_date,today());
   b.setSmallIcon(dateIcon())
       .setContentTitle("تقویم دانشجویی")

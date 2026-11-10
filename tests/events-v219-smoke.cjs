@@ -164,7 +164,7 @@ function testSecurityWiring(){
  assert.doesNotMatch(manager,/data-admin-reject-event/);
  assert.match(manager,/data-admin-export-event/);
  assert.match(secretary,/name="poster"/);
- assert.match(secretary,/name="event_date" type="date"/);
+ assert.match(secretary,/name="event_date" type="date" data-jalali-future="true"/);
  assert.match(secretary,/name="event_time" type="time"/);
  assert.match(secretary,/confirmAction\('secretary-event'\)/);
  assert.match(secretary,/data-secretary-export-excel/);

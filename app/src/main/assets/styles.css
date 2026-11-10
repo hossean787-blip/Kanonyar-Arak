@@ -2312,3 +2312,9 @@ button:focus-visible,input:focus-visible,select:focus-visible {outline-color:#39
   .survey-admin-form{grid-template-columns:1fr}
 }
 @media(prefers-reduced-motion:reduce){.survey-choice,.survey-stars button{transition:none!important}}
+
+/* 0.9.16: the original navigation grid was fixed to five columns.
+   Enforce six equal, non-overflowing slots for every persona including Surveys. */
+.bottom-nav{grid-template-columns:repeat(6,minmax(0,1fr))!important}
+.bottom-nav button{width:100%;max-width:100%;min-width:0;box-sizing:border-box}
+.bottom-nav button .nav-art{max-width:100%}

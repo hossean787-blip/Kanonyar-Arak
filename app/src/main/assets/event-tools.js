@@ -42,5 +42,22 @@
     colorDark:'#142927',colorLight:'#ffffff',correctLevel:window.QRCode.CorrectLevel.M});
   return true;
  }
- window.KanonhaEventTools=Object.freeze({exportEventCsv,renderQr});
+ function qrPng(token){
+  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(token)))return '';
+  if(!window.QRCode||!document?.createElement||!document.body?.appendChild)return '';
+  const box=document.createElement('div');
+  box.style.cssText='position:absolute;left:-99999px;top:-99999px;opacity:0';
+  document.body.appendChild(box);
+  try{
+   new window.QRCode(box,{text:'KANONHA1:'+token,width:210,height:210,
+     colorDark:'#242b65',colorLight:'#ffffff',correctLevel:window.QRCode.CorrectLevel.M});
+   const canvas=box.querySelector('canvas');
+   if(canvas&&typeof canvas.toDataURL==='function')return canvas.toDataURL('image/png');
+   const img=box.querySelector('img');
+   if(img&&typeof img.src==='string'&&img.src.startsWith('data:image/png;base64,'))return img.src;
+   return '';
+  }catch(_){return ''}
+  finally{box.remove();}
+ }
+ window.KanonhaEventTools=Object.freeze({exportEventCsv,renderQr,qrPng});
 })();

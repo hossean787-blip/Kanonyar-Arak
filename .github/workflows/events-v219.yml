@@ -1,0 +1,66 @@
+name: Kanonha 0.9.21 event subsystem verified QA
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/events-v219.yml'
+      - 'app/src/main/assets/app.js'
+      - 'app/src/main/assets/backend.js'
+      - 'app/src/main/assets/admin.js'
+      - 'app/src/main/assets/secretary.js'
+      - 'app/src/main/assets/activity-ui.js'
+      - 'app/src/main/assets/event-tools.js'
+      - 'app/src/main/assets/index.html'
+      - 'app/src/main/assets/vendor/**'
+      - 'app/src/main/java/ir/kanonha/app/EventReminderReceiver.java'
+      - 'app/src/main/java/ir/kanonha/app/MainActivity.java'
+      - 'app/src/main/AndroidManifest.xml'
+      - 'app/build.gradle.kts'
+      - 'supabase/events-v219*.sql'
+      - 'supabase/functions/kanonha-admin-console/index.ts'
+      - 'tests/events-v219*'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  event-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11'
+      - name: Event code syntax and security regression
+        run: |
+          set -e
+          node --check app/src/main/assets/event-tools.js
+          node --check app/src/main/assets/vendor/jsQR.js
+          node --check app/src/main/assets/vendor/qrcode.js
+          node --check app/src/main/assets/backend.js
+          node --check app/src/main/assets/secretary.js
+          node --check app/src/main/assets/admin.js
+          node --check app/src/main/assets/app.js
+          node --check tests/events-v219-smoke.cjs
+          node tests/events-v219-smoke.cjs
+          node tests/activity-smoke.cjs
+      - name: Compile Android app with camera and event receiver
+        run: gradle :app:assembleDebug --no-daemon
+      - name: Verify test APK structure and preserved package identity
+        run: |
+          set -eu
+          APK=app/build/outputs/apk/debug/app-debug.apk
+          test -s "$APK"
+          unzip -t "$APK" >/dev/null
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -q "package: name='ir.kanonha.app.test'"
+          grep -q 'versionCode = 36' app/build.gradle.kts
+          echo 'PASS event subsystem syntax, security contract, integration and debug APK'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Kanonha-0.9.21-EVENTS-DEBUG-QA
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error

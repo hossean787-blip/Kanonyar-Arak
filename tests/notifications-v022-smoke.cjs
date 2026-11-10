@@ -32,7 +32,7 @@ const liveTest=async()=>{
    sel==='.home-notice-new'?badge:null;
  },addEventListener(name,fn){if(name==='click')bannerClick=fn}};
  let onReady;
- const document={hidden:false,getElementById:id=>id==='notice-btn'?banner:null,
+ const document={hidden:false,body:{classList:{add(){},remove(){}}},getElementById:id=>id==='notice-btn'?banner:null,
   addEventListener(name,fn){if(name==='DOMContentLoaded')onReady=fn;}};
  const inboxRows=[{id:'some-id',read_at:null,created_at:new Date().toISOString(),
   campaign:{id:'abc',kind:'event',title:'برنامه فرهنگی',body:'برای ثبت‌نام وارد شوید'}}];

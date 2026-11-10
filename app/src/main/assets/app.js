@@ -902,7 +902,16 @@
     if (container === 'profile') updateProfileDisplay();
     if (screen === 'ratings' && window.KanonhaRatings) void window.KanonhaRatings.open();
     renderNav();
-    if (screen === 'activity') renderActivity();
+    if (screen === 'activity') {
+      renderActivity();
+      // Fetch new attendance/certificates whenever the student re-enters this screen.
+      if (previousScreen !== 'activity' && onlineMode && onlineBackend.currentUser) {
+        void onlineRefreshPersonal().catch(error => {
+          if (activeScreen === 'activity' && onlineBackend.currentUser)
+            onlineMessage('به‌روزرسانی فعالیت‌ها ناموفق بود: ' + onlineError(error), true);
+        });
+      }
+    }
     if (screen === 'club-detail') renderClubDetail();
     if (scroll) $('main').scrollTop = 0;
     try { history.replaceState(null, '', `#${screen}`); } catch (_) {}

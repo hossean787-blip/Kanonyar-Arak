@@ -1,4 +1,4 @@
-name: Kanonha 0.9.20 club member sync QA
+name: Kanonha 0.9.21 event lifecycle QA
 on:
   push:
     branches: [main]
@@ -25,6 +25,10 @@ jobs:
       - name: Validate offline UI and SVG assets
         run: |
           node --check app/src/main/assets/activity-ui.js
+          node --check app/src/main/assets/event-tools.js
+          node --check app/src/main/assets/vendor/qrcode.js
+          node --check app/src/main/assets/vendor/jsQR.js
+          node --check tests/events-v219-smoke.cjs
           node --check tests/activity-smoke.cjs
           node --check app/src/main/assets/app.js
           node --check app/src/main/assets/student-calendar.js
@@ -112,6 +116,7 @@ jobs:
           node tests/backend-smoke.cjs
           node tests/online-ui-smoke.cjs
           node tests/activity-smoke.cjs
+          node tests/events-v219-smoke.cjs
           node tests/survey-export-smoke.cjs
           node tests/ratings-smoke.cjs
           node tests/ratings-manager-smoke.cjs
@@ -150,16 +155,16 @@ jobs:
           ! find app/src -type f -name '*.keystore' | grep -q .
           ! find app/src -type f -name '*.p12' | grep -q .
           grep -q 'applicationId = "ir.kanonha.app"' app/build.gradle.kts
-          grep -q 'versionCode = 35' app/build.gradle.kts
+          grep -q 'versionCode = 36' app/build.gradle.kts
           grep -q 'android:allowBackup="false"' app/src/main/AndroidManifest.xml
           echo 'Release output validated; unsigned candidate requires secure external signing'
       - uses: actions/upload-artifact@v4
         with:
-          name: kanonha-0.9.20-release-unsigned
+          name: kanonha-0.9.21-events-release-unsigned
           path: app/build/outputs/apk/release/app-release-unsigned.apk
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
-          name: kanonha-0.9.20-debug-validation
+          name: kanonha-0.9.21-events-debug-validation
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error

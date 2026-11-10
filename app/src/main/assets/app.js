@@ -444,6 +444,7 @@
     state.academic = academic;
     renderAll();
     onlineRenderAuth();
+    window.KanonhaNotifications?.refresh?.();
     try{window.AndroidEventReminders?.sync?.(JSON.stringify(
       events.filter(e=>eventIds.has(e.id)&&e.startsAtMs>Date.now())
         .map(e=>({id:e.id,title:e.title,startsAt:e.startsAtMs}))
@@ -685,6 +686,7 @@
     ++onlinePublicSequence;
     if (window.KanonhaSecretaryPanel) window.KanonhaSecretaryPanel.clear();
     if (window.KanonhaAdminPanel) window.KanonhaAdminPanel.clear();
+    window.KanonhaNotifications?.clear?.();
     managerUsersTab = 'students'; secretaryMembersTab = 'members';
     try { await onlineBackend.signOut({preserveBiometric:preserve}); }
     catch (_) { /* local tokens still cleared by adapter */ }
@@ -1611,6 +1613,28 @@
       get state() { return { ...state, joined: [...state.joined], registered: [...state.registered] }; },
       go,
       handleBack,
+      notificationImageFor: (kind,id) => {
+        if(kind==='event')return events.find(e=>e.id===id)?.posterUrl||'';
+        if(kind==='club'){
+          const c=clubs.find(c=>c.id===id);
+          return c?clubImageSrc(c):'';
+        }
+        return '';
+      },
+      openNotificationTarget: (kind,id) => {
+        if(kind==='event'){
+          const i=events.findIndex(e=>e.id===id);
+          if(i>=0){go('events');eventDetails(i);return true;}
+          go('events');return false;
+        }
+        if(kind==='club'){
+          const i=clubs.findIndex(c=>c.id===id);
+          if(i>=0){clubDetails(i);return true;}
+          go('clubs');return false;
+        }
+        if(kind==='update'){go('profile');action('about');return true;}
+        go('home');return true;
+      },
       reset: () => action('reset')
     };
   }

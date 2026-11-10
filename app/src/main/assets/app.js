@@ -386,7 +386,8 @@
           title: String(e.title || ''), date: Number.isFinite(start) ? (window.KanonhaJalali
             ? window.KanonhaJalali.formatDate(new Date(start),true)
             : new Date(start).toLocaleString('fa-IR-u-ca-persian')) : 'زمان نامشخص',
-          location: String(e.location || ''), capacity: free, poster: 'poster-books.svg',
+          location: String(e.location || ''), description: String(e.description || ''),
+          deadlineMs:close, capacity: free, poster: 'poster-books.svg',
           posterUrl: onlineBackend.eventPosterUrl?.(e.club_id,e.id,e.poster_path)||'assets/poster-books.svg',
           startsAtMs:start,
           category, club: clubs.findIndex(c => c.id === e.club_id),
@@ -431,7 +432,13 @@
     state.rejected = clubs.map((c, i) => memberMap.get(c.id) === 'rejected' ? i : -1).filter(i => i >= 0);
     state.registered = events.map((e, i) => eventIds.has(e.id) ? i : -1).filter(i => i >= 0);
     state.attended = events.map((e,i)=>attendedIds.has(e.id)?i:-1).filter(i=>i>=0);
-    studentProfileReady = Boolean(profile);
+    studentProfileReady = Boolean(profile &&
+      /^[0-9]{6,20}$/.test(String(profile.student_number||'')) &&
+      String(profile.full_name||'').trim().length>=2 && academic &&
+      academic.birth_date && String(academic.university||'').trim().length>=2 &&
+      String(academic.faculty||'').trim().length>=2 &&
+      String(academic.major||'').trim().length>=2 &&
+      /^09[0-9]{9}$/.test(String(academic.mobile||'')));
     state.name = profile ? profile.full_name : state.isManager ? 'مدیرکل کانون‌ها' : 'اطلاعات تکمیل نشده';
     state.number = profile ? profile.student_number : 'ثبت نشده';
     state.academic = academic;
@@ -549,7 +556,7 @@
       notify('برای ثبت اطلاعات ابتدا وارد حساب شوید.');
       return false;
     }
-    if (!/^[0-9]{6,20}$/.test(state.number)) {
+    if (!studentProfileReady) {
       go('profile');
       notify('ابتدا پرونده دانشجویی را تکمیل کنید.');
       action(state.isManager ? 'link-student' : 'edit');
@@ -600,17 +607,30 @@
       ' مطمئن هستید؟</p><button type="button" class="pill-btn sheet-action" data-confirm-cancel="' +
       i + '">بله، تأیید می‌کنم</button>');
   }
+  const eventRegistrationWorking = new Set();
   async function onlineRegister(i) {
     if (!events[i] || !onlineRequireProfile()) return;
+    const selected=events[i],eventId=selected.id;
+    if (eventRegistrationWorking.has(eventId)) return;
     if (state.registered.includes(i)) { notify('قبلاً در این رویداد ثبت‌نام کرده‌اید.'); return; }
-    if (!events[i].registrationOpen) { notify('ثبت‌نام این رویداد باز نیست.'); return; }
+    if (!selected.registrationOpen || Number(selected.deadlineMs)<=Date.now()) {
+      notify('مهلت ثبت‌نام این رویداد تمام شده است.'); return;
+    }
+    eventRegistrationWorking.add(eventId);
     try {
-      await onlineBackend.registerEvent(events[i].id);
+      if (!window.KanonhaBiometric?.confirmAction)
+        throw new Error('ثبت نهایی نیازمند تأیید اثر انگشت یا چهره در نسخه اندروید است.');
+      const userId=onlineBackend.currentUser?.id;
+      await window.KanonhaBiometric.confirmAction('student-registration');
+      if (!userId || onlineBackend.currentUser?.id!==userId || !studentProfileReady)
+        throw new Error('نشست یا مشخصات کاربری تغییر کرده است؛ ثبت‌نام را دوباره انجام دهید.');
+      await onlineBackend.registerEvent(eventId);
       await onlineRefreshPublic();
       await onlineRefreshPersonal();
       closeSheet();
-      notify('ثبت‌نام رویداد تأیید شد؛ بلیت در فعالیت‌های من آماده است.');
+      notify('ثبت‌نام قطعی شد و بلیت QR در فعالیت‌های من آماده است.');
     } catch (error) { notify(onlineError(error)); }
+    finally {eventRegistrationWorking.delete(eventId);}
   }
   function findActivityClub(id){
     return activityMembers.find(m=>m.club_id===id);

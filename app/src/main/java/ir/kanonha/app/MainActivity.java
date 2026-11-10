@@ -24,6 +24,10 @@ public final class MainActivity extends FragmentActivity {
 
  @Override public void onCreate(Bundle b) {
   super.onCreate(b);
+  DailyCalendarReceiver.schedule(this);
+  if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+   requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 103);
+  }
 
   // Android 15/16 enforce edge-to-edge for target SDK 35+.
   // Keep the web content between the real status/navigation bars on all API levels.

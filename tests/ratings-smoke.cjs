@@ -14,6 +14,13 @@ const controlSchema=read('supabase/ratings-manager-control-v110.sql');
 for(const id of ['screen-ratings','ratings-list','ratings-leader-list','admin-ratings-content'])
   if(id!=='admin-ratings-content')assert.ok(html.includes('id="'+id+'"'));
 assert.ok(html.includes('data-admin-tab="ratings"'));
+assert.doesNotMatch(html,/صدای دانشجو/);
+assert.match(html,/<h1 id="title-ratings">نظرسنجی<\/h1>/);
+assert.doesNotMatch(html,/ratings-home-entry/);
+const navJs=read('app/src/main/assets/app.js');
+assert.match(navJs,/\{ id: 'ratings',\s+label: 'نظرسنجی'/);
+assert.ok(fs.existsSync(path.join(root,'app/src/main/assets/assets/nav-ratings.svg')));
+
 assert.ok(!html.includes('id="ratings-professor-form"'),'manager-only professor form must not be on student page');
 for(const category of ['club','professor','faculty'])
   assert.ok(html.includes('data-ratings-tab="'+category+'"'));

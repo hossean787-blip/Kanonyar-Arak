@@ -113,7 +113,11 @@
       if (requestId !== seq || !hasSession()) return;
       assigned = [...new Set(roles.map(x => x.club_id).filter(validId))];
       if (!assigned.length) { root.hidden = true; return; }
-      const [catalog, academics] = await Promise.all([backend.clubs(), backend.academicCatalog()]);
+      // A temporary catalog outage must not hide membership and event management.
+      const [catalog, academics] = await Promise.all([
+        backend.clubs(),
+        backend.academicCatalog().catch(() => ({universities: [], faculties: []}))
+      ]);
       if (requestId !== seq || !hasSession()) return;
       clubCatalog = catalog.filter(x => x && validId(x.id));
       directory = {
@@ -195,6 +199,8 @@
       '<div class="secretary-stat"><strong>' + events.length + '</strong><span>رویدادها</span></div></div>' +
       '<form id="secretary-club-form" class="secretary-card secretary-form">' +
       '<h3 class="secretary-card-title">ویرایش مشخصات کانون</h3>' +
+      (directory.universities.length ? '' :
+        '<p class="secretary-danger-note">فهرست دانشگاه‌ها در دسترس نیست؛ برای ویرایش مشخصات مجدداً تازه‌سازی کنید.</p>') +
       '<label class="field">نام کانون<input name="name" maxlength="120" required value="' + escape(club.name) + '"></label>' +
       '<label class="field">دسته‌بندی<input name="category" maxlength="80" required value="' + escape(club.category || 'سایر') + '"></label>' +
       '<label class="field">دانشگاه *<select name="university" data-secretary-university required aria-required="true">' +

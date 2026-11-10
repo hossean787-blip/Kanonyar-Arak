@@ -137,7 +137,7 @@ function testSecurityWiring(){
  assert.match(sql,/kanonha-event-posters/);
  assert.match(sql,/status='confirmed'/);
  assert.match(sql,/registered_count=registered_count-1/);
- assert.match(sql,/row level/i);
+ assert.match(sql,/create policy kanonha_student_cancel_event/);
  assert.match(edge,/event\.approve/);
  assert.match(edge,/event\.reject/);
  assert.match(edge,/event\.report/);

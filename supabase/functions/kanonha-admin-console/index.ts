@@ -87,6 +87,37 @@ const allowedBool=(b:unknown)=>typeof b==="boolean";
 async function handle(op:string,d:Record<string,unknown>,actor:string){
  const id=val(d.id,40);
  if(op==="overview")return await overview();
+ if(op==="notification.preview"||op==="notification.send"){
+  const audience=val(d.audience,30),university=val(d.university,120);
+  const club_id=d.club_id==null||d.club_id===""?null:val(d.club_id,40);
+  const faculties=Array.isArray(d.faculties)?d.faculties:[];
+  if(!["all","students","secretaries","university","faculties","club_members"].includes(audience)
+     ||(club_id!==null&&!uuid(club_id))
+     ||faculties.length>30||faculties.some(f=>typeof f!=="string"||f.trim().length<2||f.trim().length>120)
+     ||(["university","faculties"].includes(audience)&&university.length<2)
+     ||(audience==="faculties"&&faculties.length===0)
+     ||(audience==="club_members"&&!club_id))throw new Error("input");
+  const target={p_audience:audience,p_university:university||null,
+    p_faculties:[...new Set(faculties.map(f=>String(f).trim()))],p_club_id:club_id};
+  if(op==="notification.preview")
+    return await api("/rest/v1/rpc/kanonha_notification_preview","POST",target);
+  const kind=val(d.kind,20),title=val(d.title,120),body=val(d.body,1000);
+  const related_id=d.related_id==null||d.related_id===""?null:val(d.related_id,40);
+  const version_label=val(d.version_label,40);
+  const request_key=val(d.request_key,40);
+  if(!uuid(request_key)||!["event","club","update","general"].includes(kind)
+    ||title.length<2||title.length>120||body.length<2||body.length>1000
+    ||(related_id!==null&&!uuid(related_id))
+    ||(["event","club"].includes(kind)&&!related_id)
+    ||(kind==="update"&&!version_label))throw new Error("input");
+  return await api("/rest/v1/rpc/kanonha_notification_publish","POST",{
+    ...target,p_request_key:request_key,p_kind:kind,p_title:title,p_body:body,
+    p_actor:actor,p_related_id:related_id,p_version_label:version_label||null
+  });
+ }
+ if(op==="notification.history")
+  return await rows("kanonha_notification_campaigns?select=id,kind,title,body,audience,recipient_count,created_at,target_university,target_faculties,version_label&order=created_at.desc&limit=60");
+
  if(op==="university.create"){
   const name=val(d.name,120);
   if(name.length<2||name.length>120)throw new Error("input");

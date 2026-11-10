@@ -45,8 +45,14 @@ public final class DailyCalendarReceiver extends BroadcastReceiver {
   Bitmap bitmap=Bitmap.createBitmap(96,96,Bitmap.Config.ARGB_8888);
   Canvas canvas=new Canvas(bitmap);
   Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG);
-  paint.setColor(Color.WHITE);paint.setTypeface(Typeface.create(Typeface.DEFAULT,Typeface.BOLD));
-  paint.setTextAlign(Paint.Align.CENTER);paint.setTextSize(57f);
+  // Android fixes the status-icon slot size; use almost all of it for the Persian day.
+  paint.setColor(Color.WHITE);
+  paint.setTypeface(Typeface.create(Typeface.DEFAULT,Typeface.BOLD));
+  paint.setFakeBoldText(true);
+  paint.setTextAlign(Paint.Align.CENTER);
+  paint.setTextSize(84f);
+  float width=paint.measureText(text);
+  if(width>89f)paint.setTextSize(84f*89f/width);
   Paint.FontMetrics fm=paint.getFontMetrics();
   canvas.drawText(text,48f,48f-(fm.ascent+fm.descent)/2f,paint);
   return Icon.createWithBitmap(bitmap);
@@ -62,7 +68,7 @@ public final class DailyCalendarReceiver extends BroadcastReceiver {
   view.setTextViewText(R.id.calendar_day_badge,fa(persian().get(android.icu.util.Calendar.DAY_OF_MONTH)));
   view.setTextViewText(R.id.calendar_date,today());
   b.setSmallIcon(dateIcon())
-      .setContentTitle("تقویم دانشجویی")
+      .setContentTitle(today())
       .setContentText(today())
       .setCustomContentView(view)
       .setCustomBigContentView(view)

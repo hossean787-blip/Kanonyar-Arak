@@ -83,7 +83,7 @@ const backend = {
   async cancelEvent(id) { assert.equal(id,eventId); actions.eventCancellations++; eventRows=[]; seats--; },
   async saveProfile(name,number) { return {full_name:name,student_number:number}; }
 };
-const window = { KanonhaBackend:backend, KanonhaBiometric:{confirmAction:async()=>true}, addEventListener() {}, location };
+const window = { KanonhaBackend:backend, KanonhaBiometric:{confirmAction:async()=>true,setHandlers(){},enrolled(){return false;},available(){return false;},present(){return true;},ownedBy(){return false;}}, addEventListener() {}, location };
 const previousDemo = JSON.stringify({joined:[0],registered:[0],name:'حساب نمایشی قدیمی',number:'111111'});
 const storage = new Map([['kanonha-ui-v3', previousDemo]]);
 const ctx = {

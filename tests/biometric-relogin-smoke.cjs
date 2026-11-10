@@ -9,7 +9,7 @@ const app=read('app/src/main/assets/app.js');
 const vault=read('app/src/main/java/ir/kanonha/app/BiometricVault.java');
 const gradle=read('app/build.gradle.kts');
 
-assert.match(gradle,/versionCode = 38/);
+assert.match(gradle,/versionCode = 39/);
 assert.match(gradle,/applicationId = "ir\.kanonha\.app"/);
 assert.match(app,/async function onlineLogout\(\{forgetBiometric=false\}=\{\}\)/);
 assert.match(app,/preserveBiometric:preserve/);

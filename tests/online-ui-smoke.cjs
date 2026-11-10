@@ -80,6 +80,8 @@ const ctx = {
   history:{replaceState(_a,_b,h){location.hash=h;}},FormData:class {constructor(form){this.data=form.fields;}get(k){return this.data[k];}},
   requestAnimationFrame:fn=>fn(),setTimeout:()=>1,clearTimeout() {},console
 };
+const activityCode = fs.readFileSync(path.join(base, 'app/src/main/assets/activity-ui.js'), 'utf8');
+vm.runInNewContext(activityCode,ctx,{filename:'activity-ui.js',timeout:3000});
 vm.runInNewContext(code,ctx,{filename:'app.js',timeout:3000});
 const app = window.KanonhaPreview;
 const delay = () => new Promise(r=>setImmediate(r));

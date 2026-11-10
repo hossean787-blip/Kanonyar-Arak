@@ -20,6 +20,7 @@
  let currentCategory='all',life='active',polls=[],options=[],votes=new Map(),results=new Map();
  let chosen=new Map(),stars=new Map(),loading=false,sending=false,seq=0,message='',error=false;
  const uid=()=>api?.currentUser?.id||null;
+ const manager=()=>Boolean(window.KanonhaAdminPanel?.hasAccess?.());
  const isEnded=s=>s.kind==='competition'&&Boolean(s.ends_at)&&Date.now()>=new Date(s.ends_at).getTime();
  const canShow=s=>['published','paused','archived'].includes(s.status)&&
    (s.kind==='regular' || (isEnded(s)&&s.results_approved===true));
@@ -37,7 +38,7 @@
    $('ratings-category-heading').textContent=categories[currentCategory];
  }
  function renderCard(s){
-   const ended=isEnded(s),active=isLive(s),already=votes.get(s.id);
+   const ended=isEnded(s),active=isLive(s),already=votes.get(s.id),isManager=manager();
    const reveal=canShow(s)&&Boolean(uid()),visible=resultMap(s.id);
    const choices=options.filter(o=>o.survey_id===s.id).sort((a,b)=>a.sort_order-b.sort_order);
    const contest=s.kind==='competition';
@@ -55,7 +56,7 @@
      const isMyVote=already?.option_id===o.id;
      return '<div class="survey-choice'+(picked?' selected':'')+(isMyVote?' my-vote':'')+'">'+
        '<button type="button" data-survey-select="'+esc(o.id)+'" data-survey-id="'+esc(s.id)+'"'+
-       ((!active||already||!uid()||sending)?' disabled':'')+
+       ((!active||already||!uid()||isManager||sending)?' disabled':'')+
        ' aria-pressed="'+String(picked)+'" aria-label="انتخاب '+esc(o.title)+'">'+
        '<span class="survey-choice-mark" aria-hidden="true">'+(isMyVote?'✓':picked?'●':'○')+'</span>'+
        '<strong>'+esc(o.title)+'</strong>'+(isMyVote?'<small>رأی شما</small>':'')+'</button>'+
@@ -67,6 +68,7 @@
    let action='';
    if(already) action='<p class="survey-voted-message">✓ رأی قطعی شما: '+esc(optionName(already.option_id))+
      ' • '+n(already.stars)+' از ۵ ستاره</p>';
+   else if(active&&isManager)action='<p class="survey-login">مدیرکل برگزارکننده نظرسنجی است و حق ثبت رأی ندارد.</p>';
    else if(active&&uid()){
      action='<div class="survey-vote-form"><span class="survey-vote-title">امتیاز شما به گزینه انتخاب‌شده</span>'+
        '<div class="survey-stars" role="group" aria-label="انتخاب امتیاز از یک تا پنج">'+
@@ -77,7 +79,10 @@
        '<button type="button" class="survey-submit" data-survey-submit="'+esc(s.id)+'"'+
        (!selected||!score||sending?' disabled':'')+'>ثبت رأی قطعی</button></div>';
    } else if(active)action='<p class="survey-login">برای شرکت در رأی‌گیری، ابتدا وارد حساب دانشجویی شوید.</p>';
-   else action='<p class="survey-closed">زمان رأی‌گیری این نظرسنجی به پایان رسیده است.</p>';
+   else action='<p class="survey-closed">'+(s.status==='paused'?'رأی‌گیری موقتاً متوقف شده است.':
+     s.status==='archived'?'این نظرسنجی بایگانی شده است.':
+     contest&&!ended?'زمان شروع رأی‌گیری هنوز فرا نرسیده است.':
+     'زمان رأی‌گیری این نظرسنجی به پایان رسیده است.')+'</p>';
    const secrecy=contest&&!reveal
     ?'<div class="survey-privacy-lock">🔒 '+(ended?'در انتظار تأیید و انتشار نتایج توسط مدیرکل':'آمار مسابقه تا روز پایان مخفی است')+'</div>'
     :!contest&&!uid()?'<div class="survey-privacy-lock">برای مشاهده آمار وارد حساب شوید.</div>'
@@ -99,6 +104,7 @@
      '<div class="survey-card-title"><span class="survey-card-icon">'+(icons[s.category]||'★')+'</span>'+
      '<div><span class="survey-card-category">'+esc(categories[s.category])+'</span>'+
      '<h3>'+esc(s.title)+'</h3></div></div>'+
+     '<p class="survey-creator">✦ ایجاد و انتشار: مدیرکل • حق رأی: دانشجو</p>'+
      (s.description?'<p class="survey-description">'+esc(s.description)+'</p>':'')+
      (contest?'<div class="survey-deadline"><span>◷ پایان رأی‌گیری</span><strong>'+esc(date(s.ends_at))+'</strong></div>':
        '<div class="survey-deadline"><span>◉ بازه رأی‌گیری</span><strong>بدون محدودیت زمانی</strong></div>')+ 
@@ -180,7 +186,7 @@
    }finally{if(token===seq){loading=false;sending=false;render();}}
  }
  async function vote(surveyId){
-   if(sending||!valid(surveyId)||!uid())return;
+   if(sending||!valid(surveyId)||!uid()||manager())return;
    const poll=polls.find(s=>s.id===surveyId),choice=chosen.get(surveyId),score=stars.get(surveyId);
    if(!poll||!isLive(poll)||votes.has(surveyId)||!valid(choice)||
       !options.some(o=>o.id===choice&&o.survey_id===surveyId)||!Number.isInteger(score)||score<1||score>5)return;

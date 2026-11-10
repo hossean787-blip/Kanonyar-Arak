@@ -8,8 +8,10 @@ on:
       - 'app/src/main/assets/backend.js'
       - 'app/src/main/assets/survey-report.js'
       - 'supabase/surveys-v214-kind-specific-windows.sql'
+      - 'supabase/surveys-v215-student-vote-role-guard.sql'
       - 'tests/ratings-manager-smoke.cjs'
       - 'tests/ratings-smoke.cjs'
+      - 'tests/survey-role-authorization-smoke.cjs'
       - 'tests/backend-smoke.cjs'
       - 'tests/survey-time-window-smoke.cjs'
       - 'tests/survey-export-smoke.cjs'
@@ -38,5 +40,6 @@ jobs:
           node tests/survey-time-window-smoke.cjs
           node tests/ratings-manager-smoke.cjs
           node tests/ratings-smoke.cjs
+          node tests/survey-role-authorization-smoke.cjs
           node tests/survey-image-upload-smoke.cjs
           node tests/survey-export-smoke.cjs

@@ -66,7 +66,7 @@ const options=polls.flatMap((s,i)=>[
  {survey_id:s.id,id:opt(i*2+1),title:'گزینه اول '+i,sort_order:0},
  {survey_id:s.id,id:opt(i*2+2),title:'گزینه دوم '+i,sort_order:1}
 ]);
-let current={id:uid},requested=[],votes=[],writes=[],synced=[];
+let current={id:uid},requested=[],votes=[],writes=[],synced=[],managerMode=false;
 const api={
  enabled:true,get currentUser(){return current;},
  surveyList:async()=>polls,
@@ -85,7 +85,7 @@ const api={
  }
 };
 const window={KanonhaBackend:api,AndroidSurveyNotices:{sync:s=>synced.push(s)},
-  KanonhaAdminPanel:{hasAccess:()=>false}};
+  KanonhaAdminPanel:{hasAccess:()=>managerMode}};
 const ctx={window,document,console,Promise,Date,Intl,TextEncoder,btoa,Blob,URL,setTimeout};
 vm.runInNewContext(reports,ctx,{timeout:3000});
 vm.runInNewContext(student,ctx,{timeout:3000});
@@ -98,6 +98,7 @@ function click(q,data){
  await window.KanonhaRatings.open();
  let view=el('ratings-list').innerHTML;
  assert.match(view,/بدون محدودیت زمانی/,'regular survey has no deadline');
+ assert.match(view,/ایجاد و انتشار: مدیرکل • حق رأی: دانشجو/);
  assert.doesNotMatch(view,/زمان نامشخص/);
  assert.match(view,/survey-cover-image/,'student cover must display');
  assert.match(view,/kanonha-survey-covers/);
@@ -129,6 +130,16 @@ function click(q,data){
  assert.equal(writes.length,1,'repeat vote blocked');
  assert.match(el('ratings-list').innerHTML,/رأی قطعی شما/);
 
+ // An admin can access reports but cannot select or cast a vote.
+ managerMode=true;requested=[];
+ await window.KanonhaRatings.open();
+ assert.match(el('ratings-list').innerHTML,/مدیرکل برگزارکننده نظرسنجی است و حق ثبت رأی ندارد/);
+ click('[data-survey-select]',{surveyId:ids[1],surveySelect:opt(3)});
+ click('[data-survey-star]',{surveyId:ids[1],surveyStar:'5'});
+ click('[data-survey-submit]',{surveySubmit:ids[1]});
+ await sleep();
+ assert.equal(writes.length,1,'a manager cannot vote even through a synthetic click');
+ managerMode=false;
  current=null;requested=[];
  await window.KanonhaRatings.open();
  assert.equal(requested.length,0,'guest cannot fetch aggregates');

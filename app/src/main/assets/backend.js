@@ -474,10 +474,15 @@
     const name = String(input && input.name || '').trim();
     const description = String(input && input.description || '').trim();
     const category = String(input && input.category || '').trim();
+    const university = String(input && input.university || '').trim();
+    const faculty = String(input && input.faculty || '').trim();
     if (name.length < 2 || name.length > 120) throw new ApiError('نام کانون باید بین ۲ و ۱۲۰ نویسه باشد.');
     if (!description || description.length > 2000) throw new ApiError('پر کردن بخش درباره کانون الزامی است (حداکثر ۲۰۰۰ نویسه).');
     if (!category || category.length > 80) throw new ApiError('دسته‌بندی کانون معتبر نیست.');
-    return { name, description, category };
+    if (university.length < 2 || university.length > 120 ||
+        faculty.length < 2 || faculty.length > 120)
+      throw new ApiError('انتخاب دانشگاه و دانشکده از فهرست الزامی است.');
+    return { name, description, category, university, faculty };
   }
   function checkEventFields(input, editing = false) {
     const title = String(input && input.title || '').trim();

@@ -113,29 +113,35 @@
         </div>
       </section>
 
-      <!-- نظرسنجی: یک رأی پنج‌ستاره‌ای برای هر مورد -->
+      <!-- نظرسنجی‌های مستقل؛ رأی‌ها و نتایج بر اساس سطح دسترسی از سرور دریافت می‌شوند -->
       <section class="screen padded-screen ratings-screen" id="screen-ratings" data-screen="ratings" aria-labelledby="title-ratings" hidden>
         <header class="ratings-hero">
           <div class="ratings-hero-badge" aria-hidden="true">★</div>
           <div class="ratings-hero-copy">
-            <span class="ratings-eyebrow">امتیازدهی دانشجویی • ۵ ستاره</span>
+            <span class="ratings-eyebrow">نظرسنجی دانشجویی</span>
             <h1 id="title-ratings">نظرسنجی</h1>
-            <p>کانون‌ها، استادان و دانشکده‌ها؛ هر رأی فقط یک‌بار و نتایج با تأیید مدیرکل.</p>
+            <p>بهترین‌ها با رأی شما مشخص می‌شوند؛ هر نظرسنجی یک رأی قطعی.</p>
           </div>
         </header>
-        <div class="ratings-tabs" role="tablist" aria-label="دسته‌بندی نظرسنجی">
-          <button type="button" class="active" data-ratings-tab="club" role="tab" aria-selected="true">کانون‌ها</button>
+        <div class="surveys-summary" aria-label="آمار نظرسنجی‌ها">
+          <div><strong id="ratings-active-count">۰</strong><span>فعال</span></div>
+          <div><strong id="ratings-finished-count">۰</strong><span>پایان‌یافته</span></div>
+          <div><strong id="ratings-contest-count">۰</strong><span>مسابقه‌ای</span></div>
+        </div>
+        <div class="ratings-tabs" role="tablist" aria-label="دسته‌بندی نظرسنجی‌ها">
+          <button type="button" class="active" data-ratings-tab="all" role="tab" aria-selected="true">همه</button>
+          <button type="button" data-ratings-tab="club" role="tab" aria-selected="false">کانون‌ها</button>
           <button type="button" data-ratings-tab="professor" role="tab" aria-selected="false">اساتید</button>
           <button type="button" data-ratings-tab="faculty" role="tab" aria-selected="false">دانشکده‌ها</button>
         </div>
-        <div class="ratings-headline"><h2 id="ratings-category-heading">امتیاز کانون‌ها</h2><span class="ratings-scale">از ۵ ستاره</span></div>
-        <section class="ratings-leaders" aria-labelledby="ratings-leaders-title">
-          <div class="ratings-leader-heading"><span>✦</span><h3 id="ratings-leaders-title">برترین‌ها</h3></div>
-          <div id="ratings-leader-list" aria-live="polite"></div>
-        </section>
-        <p id="ratings-notice" class="ratings-notice" role="status" aria-live="polite">در حال دریافت امتیازها…</p>
-        <div class="ratings-list" id="ratings-list" aria-live="polite"></div>
-        <p class="ratings-privacy">هر دانشجو به هر مورد فقط یک‌بار امتیاز می‌دهد. رأی‌ها قابل تغییر نیستند. فقط مدیرکل نظرسنجی را برگزار می‌کند و نتایج پس از تأیید او منتشر می‌شوند.</p>
+        <div class="ratings-headline">
+          <div><span class="surveys-eyebrow">فرصت مشارکت</span><h2 id="ratings-category-heading">همه نظرسنجی‌ها</h2></div>
+          <button type="button" class="surveys-refresh" id="ratings-refresh" aria-label="به‌روزرسانی نظرسنجی‌ها">↻</button>
+        </div>
+        <button type="button" id="ratings-admin-open" class="surveys-admin-link" hidden>مدیریت نظرسنجی‌ها در پنل مدیرکل ‹</button>
+        <p id="ratings-notice" class="ratings-notice" role="status" aria-live="polite">در حال دریافت نظرسنجی‌ها…</p>
+        <div class="ratings-list surveys-list" id="ratings-list" aria-live="polite"></div>
+        <p class="ratings-privacy">در هر نظرسنجی فقط یک‌بار می‌توانید به یک گزینه از ۱ تا ۵ ستاره بدهید. در نوع معمولی نتایج پس از انتشار نظرسنجی نمایان‌اند؛ در نوع مسابقه‌ای آمار تا پایان مهلت و تأیید مدیرکل محرمانه است.</p>
       </section>
 
       <!-- ==================== صفحه کانون‌ها ==================== -->

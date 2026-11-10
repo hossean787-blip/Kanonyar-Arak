@@ -34,6 +34,56 @@
   window.AndroidSurveyExports.saveCsv(safeName,btoa(binary));
   return true;
  }
+ function eventReportRows(report){
+  if(!report||!report.event||!Array.isArray(report.rows)||report.truncated)return null;
+  const e=report.event;
+  const out=[
+   ['رویداد',e.title||''],['تاریخ برگزاری',e.starts_at||''],
+   ['محل برگزاری',e.location||''],['ظرفیت',String(e.capacity??'')],
+   ['ثبت‌نام قطعی',String(report.registered??report.rows.length)],
+   ['حضور ثبت‌شده',String(report.attended??report.rows.filter(r=>r.attended_at).length)],
+   [],['ردیف','نام دانشجو','شماره دانشجویی','زمان ثبت‌نام','وضعیت حضور','زمان حضور']
+  ];
+  report.rows.forEach((r,i)=>out.push([
+   String(i+1),r.student?.full_name||'نامشخص',r.student?.student_number||'',
+   r.registered_at||'',r.attended_at?'حاضر':'ثبت نشده',r.attended_at||''
+  ]));
+  return out;
+ }
+ function exportEventExcel(report,scope='secretary'){
+  const rows=eventReportRows(report),bridge=window.AndroidEventExcel;
+  if(!rows||!bridge||typeof bridge.saveExcel!=='function')return false;
+  const file='Kanonha-Event-'+scope+'-'+String(report.event.id||'event').slice(0,36)+'.xlsx';
+  const json=JSON.stringify(rows);
+  if(json.length>1900000)return false;
+  bridge.saveExcel(file,json);
+  return true;
+ }
+ const htmlEsc=s=>String(s??'').replace(/[&<>"']/g,c=>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ function exportEventPdf(report,scope='secretary'){
+  const rows=eventReportRows(report),bridge=window.AndroidSurveyExports;
+  if(!rows||!bridge||typeof bridge.printHtmlNamed!=='function')return false;
+  const e=report.event;
+  const meta=rows.slice(0,6).map(row=>'<div class="meta"><strong>'+htmlEsc(row[0])+
+    ':</strong> '+htmlEsc(row[1])+'</div>').join('');
+  const body=rows.slice(8).map(row=>'<tr>'+row.map(cell=>
+    '<td>'+htmlEsc(cell)+'</td>').join('')+'</tr>').join('');
+  const html='<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8">'+
+   '<style>@page{size:A4 landscape;margin:12mm}*{box-sizing:border-box}'+
+   'body{direction:rtl;font-family:Tahoma,Arial,sans-serif;color:#242b65;background:#fff}'+
+   'h1{text-align:center;font-size:22px;margin:4px 0 16px}.details{display:flex;flex-wrap:wrap;gap:5px 22px;margin-bottom:18px}'+
+   '.meta{font-size:12px;padding:4px}table{width:100%;border-collapse:collapse;font-size:10px}'+
+   'th,td{border:1px solid #d5d9ea;padding:7px 4px;text-align:right;overflow-wrap:anywhere}'+
+   'th{background:#eaeefb}tr:nth-child(even){background:#f8f9fd}'+
+   'thead{display:table-header-group}</style></head><body><h1>گزارش شرکت‌کنندگان رویداد</h1>'+
+   '<section class="details">'+meta+'</section><table><thead><tr>'+
+   rows[7].map(cell=>'<th>'+htmlEsc(cell)+'</th>').join('')+
+   '</tr></thead><tbody>'+body+'</tbody></table></body></html>';
+  if(html.length>1450000)return false;
+  bridge.printHtmlNamed('Kanonha-Event-'+scope+'-'+String(e.id||'event').slice(0,36),html);
+  return true;
+ }
  function renderQr(container,token){
   if(!container||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(token)))return false;
   if(typeof window.QRCode!=='function')return false;
@@ -59,5 +109,5 @@
   }catch(_){return ''}
   finally{box.remove();}
  }
- window.KanonhaEventTools=Object.freeze({exportEventCsv,renderQr,qrPng});
+ window.KanonhaEventTools=Object.freeze({exportEventCsv,exportEventExcel,exportEventPdf,renderQr,qrPng});
 })();

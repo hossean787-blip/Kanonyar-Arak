@@ -32,6 +32,7 @@ public final class MainActivity extends FragmentActivity {
  private android.webkit.PermissionRequest pendingCameraPermission;
  private BiometricVault biometric;
  private SurveyExportBridge surveyExports;
+ private EventExcelBridge eventExcel;
 
  @Override public void onCreate(Bundle b) {
   super.onCreate(b);
@@ -86,6 +87,8 @@ public final class MainActivity extends FragmentActivity {
   web.addJavascriptInterface(biometric.new Bridge(), "AndroidBiometric");
   surveyExports=new SurveyExportBridge(this);
   web.addJavascriptInterface(surveyExports, "AndroidSurveyExports");
+  eventExcel=new EventExcelBridge(this,web);
+  web.addJavascriptInterface(eventExcel,"AndroidEventExcel");
   web.addJavascriptInterface(new SurveyNoticeReceiver.Bridge(this), "AndroidSurveyNotices");
   web.addJavascriptInterface(new EventReminderReceiver.Bridge(this), "AndroidEventReminders");
   web.setWebViewClient(new WebViewClient() {
@@ -166,6 +169,7 @@ public final class MainActivity extends FragmentActivity {
    finishLogoPicker(validLogoUri(uri,pendingPngOnly)?uri:null);
    return;
   }
+  if(eventExcel!=null&&eventExcel.handleResult(requestCode,resultCode,data))return;
   if(surveyExports!=null)surveyExports.handleResult(requestCode,resultCode,data);
  }
  private void finishLogoPicker(Uri uri){
@@ -205,6 +209,7 @@ public final class MainActivity extends FragmentActivity {
   if(pendingCameraPermission!=null){pendingCameraPermission.deny();pendingCameraPermission=null;}
   if (biometric != null) { biometric.destroy(); biometric = null; }
   if (surveyExports != null) { surveyExports.destroy(); surveyExports = null; }
+  if (eventExcel != null) { eventExcel.destroy(); eventExcel = null; }
   if (web != null) { web.destroy(); web = null; }
   super.onDestroy();
  }

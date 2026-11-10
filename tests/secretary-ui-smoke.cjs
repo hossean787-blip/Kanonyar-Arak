@@ -54,7 +54,7 @@ const backend={
   async secretarySetAttendance(id,present){assert.equal(id,registrationId);ops.attendances++;roster=roster.map(x=>({...x,attended_at:present?'2026-11-08T15:00:00Z':null}));return roster[0]}
 };
 const window={KanonhaBackend:backend};
-const document={getElementById(id){return el.get(id)||null}};
+const document={hidden:false,getElementById(id){return el.get(id)||null},addEventListener(){}};
 class FormDataMock{constructor(form){this.fields=form.fields;}get(name){return this.fields[name]??null}}
 vm.runInNewContext(script,{window,document,Date,FormData:FormDataMock},{filename:'secretary.js',timeout:3000});
 const panel=window.KanonhaSecretaryPanel;

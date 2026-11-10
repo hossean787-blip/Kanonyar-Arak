@@ -248,7 +248,7 @@
   }
   async function registrations() {
     const user_id = mustUser();
-    const rows = await request(restPath + 'kanonha_registrations?select=id,event_id,status,ticket_token,attended_at&user_id=eq.' + encodeURIComponent(user_id), { requireUser: true });
+    const rows = await request(restPath + 'kanonha_registrations?select=id,event_id,status,attended_at&user_id=eq.' + encodeURIComponent(user_id), { requireUser: true });
     return Array.isArray(rows) ? rows : [];
   }
   async function joinClub(clubId) {
@@ -394,16 +394,38 @@
       posterRevision.set(eventId,Date.now());return path;
     }finally{URL.revokeObjectURL(source);}
   }
-  async function cancelEvent(eventId){
-    requireUuid(eventId,'رویداد');const userId=mustUser();
-    const rows=await request(restPath+'kanonha_registrations?event_id=eq.'+encodeURIComponent(eventId)+
-      '&user_id=eq.'+encodeURIComponent(userId)+'&select=id',{
-      method:'DELETE',requireUser:true,headers:{Prefer:'return=representation'}
-    });
-    if(!Array.isArray(rows)||rows.length!==1)
-      throw new ApiError('لغو ثبت‌نام مجاز نیست یا رویداد آغاز شده است.',409);
-    return true;
+  async function myEventHistory(){
+    mustUser();
+    return readRows(await request(restPath+'rpc/kanonha_my_event_history',{
+      method:'POST',requireUser:true,body:{}
+    }));
   }
+  async function myClubMemberships(){
+    mustUser();
+    return readRows(await request(restPath+'rpc/kanonha_my_club_memberships',{
+      method:'POST',requireUser:true,body:{}
+    }));
+  }
+  async function myCertificates(){
+    const userId=mustUser();
+    return readRows(await request(restPath+'kanonha_certificates?select=id,registration_id,event_id,student_name,student_number,event_title,club_name,event_starts_at,event_location,issued_at,certificate_code'
+       +'&user_id=eq.'+encodeURIComponent(userId)+'&order=issued_at.desc',{requireUser:true}));
+  }
+  async function secretaryCertificates(eventId){
+    requireUuid(eventId,'رویداد');mustUser();
+    return readRows(await request(restPath+'kanonha_certificates?select=id,registration_id,event_id,certificate_code'
+      +'&event_id=eq.'+encodeURIComponent(eventId),{requireUser:true}));
+  }
+  async function issueCertificate(registrationId){
+    requireUuid(registrationId,'ثبت‌نام');mustUser();
+    const result=await request(restPath+'rpc/kanonha_issue_certificate',{
+      method:'POST',requireUser:true,body:{p_registration_id:registrationId}
+    });
+    const row=readRows(result)[0];
+    if(!row||!uuid(row.id))throw new ApiError('صدور گواهینامه تأیید نشد.');
+    return row;
+  }
+
   async function checkInTicket(value,eventId){
     mustUser();
     requireUuid(eventId,'رویداد');
@@ -1069,7 +1091,8 @@
     enabled, signUp, signIn, signOut, me, profile, ensureProfile,
     saveProfile, clubs, events, memberships, registrations,
     joinClub, reapplyClub, cancelClubMembership, clubLogoUrl, secretaryUploadClubLogo,
-    registerEvent, cancelEvent, eventPosterUrl, uploadEventPoster, checkInTicket,
+    registerEvent, myEventHistory, myClubMemberships, myCertificates,
+    secretaryCertificates, issueCertificate, eventPosterUrl, uploadEventPoster, checkInTicket,
     eventSummary, secretaryEventExport, secretaryClubs, secretaryEvents, secretaryMemberships,
     secretaryProfiles, secretaryUpdateClub, secretaryCreateEvent, secretaryUpdateEvent,
     secretaryDecideMembership, secretaryRoster, secretarySetAttendance,

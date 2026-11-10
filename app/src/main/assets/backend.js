@@ -782,7 +782,7 @@
     return options;
   }
   async function surveyList(includeDrafts=false) {
-    const path=restPath+'kanonha_surveys?select=id,title,description,category,kind,status,starts_at,ends_at,results_approved,published_at,created_at,min_rank_votes,audience_university_id,audience_faculty_id,copied_from'
+    const path=restPath+'kanonha_surveys?select=id,title,description,category,kind,status,starts_at,ends_at,results_approved,published_at,created_at,min_rank_votes,audience_university_id,audience_faculty_id,copied_from,cover_path'
       +(includeDrafts?'':'&status=in.(published,paused,archived)')+'&order=created_at.desc&limit=200';
     return readRows(await request(path,{auth:includeDrafts}));
   }
@@ -938,6 +938,99 @@
       throw new ApiError('شناسه نظرسنجی ذخیره‌شده دریافت نشد.');
     return response;
   }
+  // Public media is restricted to the exact file belonging to the survey UUID.
+  const surveyCoverRevision=new Map();
+  function surveyCoverUrl(surveyId,coverPath){
+    if(!enabled||!uuid(surveyId)||coverPath!==surveyId+'/cover.webp')return '';
+    return url+'/storage/v1/object/public/kanonha-survey-covers/'+coverPath+
+      '?v='+(surveyCoverRevision.get(surveyId)||1);
+  }
+  function surveyCoverValidateFile(file){
+    if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||
+       !Number.isFinite(file.size)||file.size<1||file.size>2097152)
+      throw new ApiError('عکس نظرسنجی باید PNG، JPG یا WebP و حداکثر ۲ مگابایت باشد.');
+    return true;
+  }
+  async function surveyUploadCover(surveyId,file){
+    surveyCheckId(surveyId);mustUser();surveyCoverValidateFile(file);
+    if(typeof Image!=='function'||typeof document==='undefined'||typeof URL==='undefined'||
+       typeof URL.createObjectURL!=='function')
+      throw new ApiError('بارگذاری عکس در این دستگاه پشتیبانی نمی‌شود.');
+    const objectUrl=URL.createObjectURL(file);
+    try {
+      const bitmap=await new Promise((resolve,reject)=>{
+        const img=new Image();
+        img.onload=()=>resolve(img);
+        img.onerror=()=>reject(new ApiError('فایل عکس نظرسنجی قابل خواندن نیست.'));
+        img.src=objectUrl;
+      });
+      if(!bitmap.naturalWidth||!bitmap.naturalHeight)
+        throw new ApiError('اندازه تصویر معتبر نیست.');
+      const ratio=Math.min(1,1200/Math.max(bitmap.naturalWidth,bitmap.naturalHeight));
+      const canvas=document.createElement('canvas');
+      canvas.width=Math.max(1,Math.round(bitmap.naturalWidth*ratio));
+      canvas.height=Math.max(1,Math.round(bitmap.naturalHeight*ratio));
+      const ctx=canvas.getContext('2d');
+      if(!ctx)throw new ApiError('پردازش عکس در این دستگاه ممکن نیست.');
+      ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);
+      const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/webp',0.84));
+      if(!blob||blob.type!=='image/webp'||blob.size<1||blob.size>2097152)
+        throw new ApiError('فشرده‌سازی عکس ناموفق بود.');
+      await refreshIfNeeded();
+      const path=surveyId+'/cover.webp';
+      const controller=new AbortController();
+      const timeout=setTimeout(()=>controller.abort(),20000);
+      try {
+        let response;
+        try {
+          response=await fetch(url+'/storage/v1/object/kanonha-survey-covers/'+path,{
+            method:'POST',signal:controller.signal,body:blob,
+            headers:{apikey:key,Authorization:'Bearer '+session.access_token,
+              'Content-Type':'image/webp','x-upsert':'true'}
+          });
+        }catch(error){
+          throw new ApiError(error?.name==='AbortError'?'زمان بارگذاری عکس به پایان رسید.':
+            'ارتباط بارگذاری عکس برقرار نشد.');
+        }
+        if(!response.ok)
+          throw new ApiError(response.status===403?
+            'فقط مدیرکل می‌تواند عکس پیش‌نویس نظرسنجی را تغییر دهد.':
+            'بارگذاری عکس نظرسنجی انجام نشد.',response.status);
+      }finally{clearTimeout(timeout);}
+      const rows=readRows(await request(restPath+'kanonha_surveys?id=eq.'+
+        encodeURIComponent(surveyId)+'&status=eq.draft&select=id,cover_path',{
+        method:'PATCH',requireUser:true,headers:{Prefer:'return=representation'},
+        body:{cover_path:path}
+      }));
+      if(rows.length!==1)
+        throw new ApiError('عکس ارسال شد اما اتصال آن به پیش‌نویس انجام نشد.');
+      surveyCoverRevision.set(surveyId,Date.now());
+      return path;
+    }finally{URL.revokeObjectURL(objectUrl);}
+  }
+  async function surveyRemoveCover(surveyId){
+    surveyCheckId(surveyId);mustUser();
+    // Unlink first: never leave students with a link to a deleted object.
+    const rows=readRows(await request(restPath+'kanonha_surveys?id=eq.'+
+      encodeURIComponent(surveyId)+'&status=eq.draft&select=id,cover_path',{
+      method:'PATCH',requireUser:true,headers:{Prefer:'return=representation'},
+      body:{cover_path:null}
+    }));
+    if(rows.length!==1)throw new ApiError('حذف عکس فقط برای پیش‌نویس مجاز است.');
+    await refreshIfNeeded();
+    const path=surveyId+'/cover.webp';
+    let response;
+    try {
+      response=await fetch(url+'/storage/v1/object/kanonha-survey-covers/'+path,{
+        method:'DELETE',headers:{apikey:key,Authorization:'Bearer '+session.access_token}
+      });
+    }catch(_){throw new ApiError('عکس از فرم جدا شد ولی حذف فایل از فضای ذخیره‌سازی انجام نشد.');}
+    if(!response.ok&&response.status!==404)
+      throw new ApiError('عکس از فرم جدا شد ولی حذف فایل از فضای ذخیره‌سازی انجام نشد.',response.status);
+    surveyCoverRevision.delete(surveyId);
+    return true;
+  }
+
   async function surveyDuplicate(id) {
     surveyCheckId(id);mustUser();
     const response=await request(restPath+'rpc/kanonha_survey_duplicate',{
@@ -986,6 +1079,7 @@
     surveyList,surveyOptions,surveyMyVotes,surveyResults,surveyCreate,surveyUpdateDraft,
     surveyPublish,surveyApproveResults,surveyDeleteDraft,surveyVote,
     surveyCatalog,surveySaveV21,surveyDuplicate,surveyChangeStatus,surveyParticipation,surveyAudit,
+    surveyCoverUrl,surveyCoverValidateFile,surveyUploadCover,surveyRemoveCover,
     get currentUser() { return user; }
   });
 })();

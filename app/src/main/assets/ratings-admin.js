@@ -37,9 +37,18 @@ const emptyForm=()=>({
 let seq=0,busy=false,feedback='',isError=false,confirmation=null,editing=null;
 let polls=[],options=[],audits=[],academics={universities:[],faculties:[]},catalogs={};
 let formState=emptyForm(),formPreview=false,filter='all',reportId=null;
+let pendingCoverFile=null,pendingCoverPreview='';
+function setCoverFile(file){
+  if(pendingCoverPreview&&typeof URL!=='undefined'&&URL.revokeObjectURL)
+    URL.revokeObjectURL(pendingCoverPreview);
+  pendingCoverFile=file||null;pendingCoverPreview='';
+  if(pendingCoverFile&&typeof URL!=='undefined'&&URL.createObjectURL)
+    pendingCoverPreview=URL.createObjectURL(pendingCoverFile);
+}
 let reportRows=new Map(),participations=new Map(),showAudit=false;
 
 function clear(){
+ setCoverFile(null);
  ++seq;busy=false;feedback='';isError=false;confirmation=null;editing=null;
  polls=[];options=[];audits=[];academics={universities:[],faculties:[]};catalogs={};
  formState=emptyForm();formPreview=false;filter='all';reportId=null;
@@ -99,6 +108,21 @@ function formPreviewBlock(){
   '<div>'+choiceNames.map((x,i)=>'<span>'+nf(i+1)+'. '+esc(x)+'</span>').join('')+'</div>'+
   '<p>حداقل رأی برای رتبه رسمی: '+nf(formState.min_rank_votes)+'</p></section>';
 }
+function coverFormControls(){
+ const current=editing?polls.find(s=>s.id===editing):null;
+ const url=current?.cover_path?api.surveyCoverUrl(current.id,current.cover_path):'';
+ const image=pendingCoverPreview||url;
+ return '<div class="survey-admin-wide survey-photo-field">'+
+  '<div class="survey-photo-title"><strong>عکس نظرسنجی (اختیاری)</strong>'+
+  '<small>PNG، JPG یا WebP • حداکثر ۲ مگابایت</small></div>'+
+  '<label class="survey-photo-input">انتخاب عکس از گالری'+
+  '<input type="file" name="cover_file" accept="image/png,image/jpeg,image/webp"></label>'+
+  (image?'<img class="survey-photo-preview" alt="پیش‌نمایش عکس نظرسنجی" src="'+esc(image)+'">':
+     '<div class="survey-photo-empty">✦ برای این نظرسنجی هنوز عکسی انتخاب نشده است.</div>')+
+  (pendingCoverFile?'<p class="survey-photo-selection">عکس انتخاب‌شده: '+esc(pendingCoverFile.name||'تصویر')+'</p>':'')+
+  (editing&&current?.cover_path?'<button type="button" class="survey-photo-remove" data-surveys-action="remove-cover" data-survey-id="'+esc(editing)+'">حذف عکس فعلی</button>':'')+
+  '</div>';
+}
 function managerForm(){
  const catOptions=Object.entries(categories).map(([key,label])=>'<option value="'+key+'"'+
    (key===formState.category?' selected':'')+'>'+label+'</option>').join('');
@@ -125,6 +149,7 @@ function managerForm(){
     esc(formState.min_rank_votes)+'"></label>'+
   '<label>توضیحات<textarea name="description" maxlength="500" rows="2" placeholder="هدف نظرسنجی">'+
     esc(formState.description)+'</textarea></label>'+
+  coverFormControls()+
   audienceControls()+
   '<div class="survey-admin-wide survey-option-title"><strong>انتخاب گزینه‌ها از فهرست واقعی</strong>'+
    '<span id="survey-choice-count">'+nf(formState.sources.length)+' انتخاب</span></div>'+
@@ -231,6 +256,7 @@ function card(s){
   '<header class="survey-admin-item-head"><div><span class="survey-kind '+(isContest?'contest':'regular')+'">'+
      esc(types[s.kind])+'</span><span class="survey-admin-category">'+esc(categories[s.category])+'</span></div>'+
   '<span class="survey-state '+(isActive?'active':isScheduled?'scheduled':'')+'">'+esc(state(s))+'</span></header>'+
+  (s.cover_path&&api.surveyCoverUrl(s.id,s.cover_path)?'<img class="survey-manager-cover" src="'+esc(api.surveyCoverUrl(s.id,s.cover_path))+'" alt="عکس نظرسنجی">':'')+
   '<h4>'+esc(s.title)+'</h4>'+(s.description?'<p>'+esc(s.description)+'</p>':'')+
   '<div class="survey-admin-item-details"><span>شروع: '+esc(fmtDate(s.starts_at))+
   '</span><span>پایان: '+esc(fmtDate(s.ends_at))+'</span></div>'+
@@ -308,6 +334,7 @@ async function load(){
 }
 function mount(){clear();if(authorized()){render();void load();}}
 function showEdit(id){
+ setCoverFile(null);
  const record=polls.find(x=>x.id===id&&x.status==='draft');if(!record)return;
  editing=id;
  formState={title:record.title,description:record.description||'',category:record.category,
@@ -319,6 +346,9 @@ function showEdit(id){
 }
 async function submit(form){
  if(!authorized()||busy)return;
+ const selected=new FormData(form).get('cover_file');
+ const coverFile=pendingCoverFile||(selected&&typeof selected.size==='number'&&selected.name?selected:null);
+ if(coverFile){try{api.surveyCoverValidateFile(coverFile);}catch(e){notice(String(e?.message||e),true);return;}}
  if(window.KanonhaJalali&&!window.KanonhaJalali.validateForm(form)){
   notice('تاریخ و ساعت شمسی شروع و پایان را کامل انتخاب کنید.',true);return;
  }
@@ -335,12 +365,32 @@ async function submit(form){
    notice('۱ تا ۱۲ گزینه معتبر از فهرست همان دسته انتخاب کنید.',true);return;
  }
  busy=true;render();
+ let savedId=null;
  try{
-  await api.surveySaveV21(editing,fields,formState.sources);
+  savedId=await api.surveySaveV21(editing,fields,formState.sources);
+  if(coverFile)await api.surveyUploadCover(savedId,coverFile);
+  setCoverFile(null);
   editing=null;formState=emptyForm();formPreview=false;confirmation=null;
-  feedback='پیش‌نویس و گزینه‌های واقعی، در یک تراکنش امن ذخیره شدند.';isError=false;
   await load();
- }catch(e){busy=false;notice('ثبت ناموفق: '+String(e?.message||'خطا').slice(0,120),true);}
+  feedback='پیش‌نویس'+(coverFile?' و عکس آن':'')+' با موفقیت ثبت شد.';isError=false;render();
+ }catch(e){
+  busy=false;
+  if(savedId){
+    setCoverFile(null);editing=savedId;
+    await load();
+    feedback='پیش‌نویس ذخیره شد، اما عکس بارگذاری نشد: '+String(e?.message||'خطا').slice(0,120);
+    isError=true;render();
+  }else notice('ثبت ناموفق: '+String(e?.message||'خطا').slice(0,120),true);
+ }
+}
+async function removeCover(id){
+ if(!authorized()||busy||!editing||editing!==id)return;
+ busy=true;render();
+ try{
+  await api.surveyRemoveCover(id);
+  await load();showEdit(id);
+  feedback='عکس پیش‌نویس حذف شد.';isError=false;render();
+ }catch(e){busy=false;notice('حذف عکس انجام نشد: '+String(e?.message||e).slice(0,120),true);}
 }
 async function change(action,id){
  if(!authorized()||busy)return;
@@ -415,8 +465,9 @@ function init(){
   const action=btn.dataset.surveysAction,id=btn.dataset.surveyId;
   if(action==='reload'){void load();return;}
   if(action==='audit'){showAudit=!showAudit;render();return;}
-  if(action==='cancel-edit'){editing=null;formState=emptyForm();formPreview=false;render();return;}
+  if(action==='cancel-edit'){setCoverFile(null);editing=null;formState=emptyForm();formPreview=false;render();return;}
   if(action==='edit'){showEdit(id);return;}
+  if(action==='remove-cover'){void removeCover(id);return;}
   if(action==='preview-form'){
     const form=$('survey-manager-form');saveFromForm(form);formPreview=!formPreview;render();return;
   }
@@ -442,6 +493,11 @@ function init(){
  root.addEventListener('change',e=>{
   if(!authorized()||busy||!area())return;
   const field=e.target?.name;
+  if(field==='cover_file'){
+    const file=e.target.files?.[0]||null;
+    if(file){try{api.surveyCoverValidateFile(file);}catch(e){setCoverFile(null);notice(String(e?.message||e),true);return;}}
+    setCoverFile(file);render();return;
+  }
   if(!['category','kind','university_id','faculty_id','sources'].includes(field))return;
   const form=$('survey-manager-form');if(!form)return;
   const prev=formState.category;

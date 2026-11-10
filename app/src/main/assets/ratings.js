@@ -94,6 +94,8 @@
      '<div class="survey-card-top"><span class="survey-kind '+(contest?'contest':'regular')+'">'+
        (contest?'♛':'✧')+' '+type+'</span>'+
        '<span class="survey-state'+(active?' active':'')+'">'+state+'</span></div>'+
+     (s.cover_path&&api.surveyCoverUrl(s.id,s.cover_path)?
+        '<img class="survey-cover-image" src="'+esc(api.surveyCoverUrl(s.id,s.cover_path))+'" alt="تصویر نظرسنجی '+esc(s.title)+'" loading="lazy">':'')+
      '<div class="survey-card-title"><span class="survey-card-icon">'+(icons[s.category]||'★')+'</span>'+
      '<div><span class="survey-card-category">'+esc(categories[s.category])+'</span>'+
      '<h3>'+esc(s.title)+'</h3></div></div>'+

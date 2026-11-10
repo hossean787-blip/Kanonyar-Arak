@@ -53,7 +53,8 @@ const past=new Date(Date.now()-86400000).toISOString();
 const start=new Date(Date.now()-2*3600000).toISOString();
 const polls=[
  {id:ids[0],title:'<script>bad</script>',category:'club',status:'published',
-   kind:'regular',starts_at:start,ends_at:future,min_rank_votes:5},
+   kind:'regular',starts_at:start,ends_at:future,min_rank_votes:5,
+   cover_path:ids[0]+'/cover.webp'},
  {id:ids[1],title:'مسابقه در حال اجرا',category:'professor',status:'published',
    kind:'competition',starts_at:start,ends_at:future,results_approved:false,min_rank_votes:5},
  {id:ids[2],title:'مسابقه منتظر اعلام',category:'faculty',status:'published',
@@ -71,6 +72,7 @@ const api={
  surveyList:async()=>polls,
  surveyOptions:async()=>options,
  surveyMyVotes:async()=>votes,
+ surveyCoverUrl:(id,path)=>path===id+'/cover.webp'?'https://kanonha-test.supabase.co/storage/v1/object/public/kanonha-survey-covers/'+path:'',
  surveyResults:async id=>{
   requested.push(id);
   if(id===ids[1]||id===ids[2])throw Error('Private contest results leaked');
@@ -95,6 +97,8 @@ function click(q,data){
 (async()=>{
  await window.KanonhaRatings.open();
  let view=el('ratings-list').innerHTML;
+ assert.match(view,/survey-cover-image/,'student cover must display');
+ assert.match(view,/kanonha-survey-covers/);
  assert.match(view,/&lt;script&gt;bad&lt;\/script&gt;/,'XSS escaping');
  assert.ok(!view.includes('<script>bad</script>'));
  assert.deepEqual(requested,[ids[0],ids[3]],'only ordinary and approved-ended contest aggregations requested');

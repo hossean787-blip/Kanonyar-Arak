@@ -8,6 +8,11 @@ const reports=read('app/src/main/assets/survey-report.js');
 const backend=read('app/src/main/assets/backend.js');
 const schema=read('supabase/surveys-v210-finalization.sql');
 const pausing=read('supabase/surveys-v211-pausing.sql');
+const imageSchema=read('supabase/surveys-v213-cover-image.sql');
+assert.match(imageSchema,/kanonha-survey-covers/);
+assert.match(imageSchema,/allowed_mime_types/);
+assert.match(imageSchema,/kanonha_survey_cover_insert/);
+assert.match(imageSchema,/s.status='draft'/);
 const singleSql=read('supabase/surveys-v212-single-option.sql');
 assert.match(singleSql,/v_count not between 1 and 12/);
 assert.match(singleSql,/survey_requires_at_least_one_option/);
@@ -69,6 +74,23 @@ const api={
    title:catalog.find(x=>x.source_id===sourceId).title,sort_order:i
   })));
   return newId;
+ },
+ surveyCoverUrl:(id,path)=>path===id+'/cover.webp'?'https://kanonha-test.supabase.co/storage/v1/object/public/kanonha-survey-covers/'+path:'',
+ surveyCoverValidateFile:file=>{
+   if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size<1||file.size>2097152)throw Error('bad image');
+   return true;
+ },
+ surveyUploadCover:async(id,file)=>{
+   if(!allowed)throw Error('forbidden');
+   operations.push({action:'image',id,file});
+   const p=polls.find(p=>p.id===id);p.cover_path=id+'/cover.webp';
+   return p.cover_path;
+ },
+ surveyRemoveCover:async id=>{
+   if(!allowed)throw Error('forbidden');
+   operations.push({action:'remove_image',id});
+   const p=polls.find(p=>p.id===id);p.cover_path=null;
+   return true;
  },
  surveyPublish:async id=>{
   if(!allowed)throw Error('forbidden');
@@ -151,6 +173,7 @@ function submit(fields){
  assert.match(v,/name="faculty_id"/);
  assert.match(v,/name="min_rank_votes"/);
  assert.match(v,/type="checkbox" name="sources"/);
+ assert.match(v,/name="cover_file"/,'manager photo upload input must exist');
  assert.match(v,/&lt;script&gt;bad&lt;\/script&gt;/);
  assert.match(v,/تأیید/);
  assert.equal(operations.length,0,'mount must not mutate backend');
@@ -210,12 +233,18 @@ function submit(fields){
   submit(makeForm([]));await delay();
   assert.equal(operations.length,5,'zero options must not save');
   assert.match(el('admin-ratings-content').innerHTML,/۱ تا ۱۲ گزینه/);
-  submit(makeForm([ids.faculty1]));await delay();
+  const file={name:'photo.png',type:'image/png',size:22000};
+  submit({...makeForm([ids.faculty1]),cover_file:file});await delay();
   assert.equal(operations[5].action,'save','a single-option poll must save');
   assert.deepEqual(operations[5].sources,[ids.faculty1]);
+  assert.equal(operations[6].action,'image','cover upload follows draft save');
+  assert.equal(operations[6].id,ids.single);
+  assert.equal(operations[6].file,file);
+  assert.match(el('admin-ratings-content').innerHTML,/survey-manager-cover/);
   assert.ok(polls.some(p=>p.id===ids.single&&p.status==='draft'));
   click('publish-ask',ids.single);
   click('publish-confirm',ids.single);await delay();
   assert.equal(polls.find(p=>p.id===ids.single).status,'published','single-option poll must publish');
+  assert.equal(polls.find(p=>p.id===ids.single).cover_path,ids.single+'/cover.webp');
  console.log('PASS: single-option save/publish, zero-option rejection, manager Jalali/form controls, 2-click publish/approval/pause, ranking, Excel/PDF bridges and role guard');
 })().catch(e=>{console.error(e);process.exitCode=1});

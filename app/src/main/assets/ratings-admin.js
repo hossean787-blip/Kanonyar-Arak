@@ -1,163 +1,210 @@
-/* Kanonha: survey operations are exclusive to the verified global manager.
- * Server RLS and the guarded report RPC remain the source of truth.
- */
+/* Manager-only survey authoring and approval; RLS independently validates all writes. */
 (() => {
-  'use strict';
-  const api=window.KanonhaBackend;
-  const $=id=>document.getElementById(id);
-  const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>
-    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const fmt=v=>Number(v||0).toLocaleString('fa-IR');
-  const categoryLabel={club:'کانون‌ها',professor:'اساتید',faculty:'دانشکده‌ها'};
-  let seq=0,busy=false,control=null,targets=[],results=[],confirmPublish=false,feedback='',error=false;
-  const authorized=()=>Boolean(window.KanonhaAdminPanel&&window.KanonhaAdminPanel.hasAccess());
-  const area=()=>$('admin-ratings-content');
-  function clear(){
-    ++seq;busy=false;control=null;targets=[];results=[];
-    confirmPublish=false;feedback='';error=false;
-  }
-  function warn(message,isError=false){feedback=message;error=isError;render();}
-  function rows(){
-    const map=new Map(results.map(r=>[r.target_id,r]));
-    return targets.map(t=>({...t,count:Number(map.get(t.id)?.rating_count||0),
-      sum:Number(map.get(t.id)?.rating_sum||0)}));
-  }
-  const avg=t=>t.count?t.sum/t.count:0;
-  function group(category){
-    const items=rows().filter(t=>t.category===category).sort((a,b)=>
-      avg(b)-avg(a)||b.count-a.count||a.title.localeCompare(b.title,'fa'));
-    const votes=items.reduce((v,t)=>v+t.count,0);
-    return '<section class="ratings-admin-group"><div class="ratings-admin-group-title"><h4>'+
-      categoryLabel[category]+'</h4><span>'+fmt(items.length)+' مورد • '+fmt(votes)+' رأی</span></div>'+
-      (!items.length?'<p class="ratings-admin-empty">موردی ثبت نشده است.</p>':
-      items.map((t,i)=>'<div class="ratings-admin-item"><div><strong>'+esc(t.title)+'</strong>'+
-      (t.subtitle?'<small>'+esc(t.subtitle)+'</small>':'')+'</div>'+
-      '<div class="ratings-admin-item-score">'+
-      '<strong>'+(t.count?avg(t).toFixed(2).replace('.','٫'):'—')+' ★</strong>'+
-      '<small>'+fmt(t.count)+' رأی'+(t.count<5?' • رتبه موقت':'')+'</small></div>'+
-      '</div>').join(''))+'</section>';
-  }
-  function render(){
-    const el=area();if(!el||!authorized())return;
-    if(!control){
-      el.innerHTML='<div class="secretary-card ratings-admin-loading">در حال دریافت تنظیمات امن نظرسنجی…</div>';
-      return;
-    }
-    const open=control.voting_open,published=control.results_published;
-    const status=open?'در حال رأی‌گیری':published?'نتایج منتشرشده':'بسته؛ نتایج محرمانه';
-    const statusClass=open?'open':published?'published':'closed';
-    el.innerHTML='<div class="ratings-admin-header"><div class="ratings-admin-header-badge">★</div>'+
-      '<div><h3>مدیریت نظرسنجی دانشجویی</h3>'+
-      '<p>مدیریت هر سه دسته فقط با حساب مدیرکل مجاز است.</p></div></div>'+
-      '<div class="ratings-admin-status '+statusClass+'"><span>وضعیت فعلی</span><strong>'+status+'</strong></div>'+
-      '<div class="ratings-admin-actions">'+
-      (open?
-        '<button type="button" class="negative" data-ratings-admin-action="close"'+(busy?' disabled':'')+'>پایان رأی‌گیری</button>':
-        !published?
-        '<button type="button" class="positive" data-ratings-admin-action="start"'+(busy?' disabled':'')+'>شروع / ادامه رأی‌گیری</button>':'')+
-      (!open&&!published?
-        '<button type="button" class="ratings-publish-btn" data-ratings-admin-action="'+
-        (confirmPublish?'publish-confirm':'publish-ask')+'"'+(busy?' disabled':'')+'>'+
-        (confirmPublish?'تأیید نهایی و انتشار نتایج':'تأیید و انتشار نتایج')+'</button>':'')+
-      (published?'<button type="button" data-ratings-admin-action="unpublish"'+
-        (busy?' disabled':'')+'>لغو انتشار نتایج</button>':'')+
-      '<button type="button" data-ratings-admin-action="reload"'+(busy?' disabled':'')+'>بروزرسانی آمار</button></div>'+
-      (confirmPublish&&!open&&!published?
-        '<p class="ratings-publish-warning">با تأیید بعدی، میانگین ستاره‌ها و برترین‌های هر سه دسته برای دانشجویان منتشر می‌شوند. مطمئن هستید؟</p>':'')+
-      '<p class="ratings-admin-feedback'+(error?' error':'')+'" role="status">'+
-      esc(feedback||'نتایج تا زمانی که شما تأیید نکنید برای دانشجویان قابل مشاهده نیستند.')+'</p>'+
-      '<h3 class="ratings-admin-section-title">پیش‌نمایش محرمانه نتایج</h3>'+
-      '<p class="ratings-admin-help">این آمار را فقط مدیرکل پیش از انتشار می‌بیند. رتبه رسمی هر مورد حداقل ۵ رأی لازم دارد.</p>'+
-      group('club')+group('professor')+group('faculty')+
-      '<section class="ratings-admin-professor"><h3>افزودن استاد به نظرسنجی</h3>'+
-      '<p>پیش از شروع رأی‌گیری، نام استادان واقعی را وارد کنید.</p>'+
-      '<form id="ratings-admin-professor-form" class="secretary-form">'+
-      '<label class="field">نام و نام خانوادگی استاد<input name="title" minlength="2" maxlength="120" autocomplete="off" required placeholder="نام استاد"></label>'+
-      '<label class="field">دانشکده یا گروه آموزشی<input name="subtitle" maxlength="120" autocomplete="off" placeholder="نام دانشکده (اختیاری)"></label>'+
-      '<button class="positive" type="submit"'+(busy||open||published?' disabled':'')+'>افزودن استاد</button>'+
-      (open||published?'<small>برای تغییر فهرست استادان، رأی‌گیری باید بسته و نتایج منتشرنشده باشند.</small>':'')+
-      '</form></section>'+
-      '<p class="ratings-admin-footnote">هر دانشجو برای هر مورد فقط یک رأی تغییرناپذیر دارد. شروع دوباره رأی‌گیری، رأی‌های قبلی را پاک نمی‌کند.</p>';
-  }
-  async function load(){
-    if(!authorized())return;
-    const current=++seq;
-    busy=true;error=false;feedback='';
-    try{
-      const response=await Promise.all([api.ratingControl(),api.ratingCatalog(),api.ratingResults()]);
-      if(current!==seq||!authorized())return;
-      control=response[0];targets=response[1];results=response[2];
-      feedback='وضعیت و آمار از سرور دریافت شد.';
-    }catch(e){
-      if(current!==seq)return;
-      control=control||{voting_open:false,results_published:false};
-      error=true;feedback='دریافت وضعیت نظرسنجی ناموفق بود: '+String(e?.message||'خطای ارتباط').slice(0,130);
-    }finally{
-      if(current===seq){busy=false;render();}
-    }
-  }
-  function mount(){
-    clear();
-    if(!authorized())return;
-    render();void load();
-  }
-  async function change(fields){
-    if(busy||!authorized())return;
-    busy=true;render();
-    try{
-      const updated=await api.ratingSetControl(fields);
-      control={voting_open:updated.voting_open,results_published:updated.results_published};
-      confirmPublish=false;
-      await load();
-      warn('تغییر وضعیت نظرسنجی توسط سرور تأیید شد.');
-      if(window.KanonhaRatings&&window.KanonhaRatings.invalidate)
-        window.KanonhaRatings.invalidate();
-    }catch(e){
-      busy=false;confirmPublish=false;
-      warn('ثبت تغییر انجام نشد: '+String(e?.message||'دسترسی مجاز نیست').slice(0,120),true);
-    }
-  }
-  async function addProfessor(form){
-    if(busy||!authorized()||!control||control.voting_open||control.results_published)return;
-    const title=String(form.elements.title?.value||'').trim();
-    const subtitle=String(form.elements.subtitle?.value||'').trim();
-    if(title.length<2||title.length>120||subtitle.length>120){
-      warn('نام استاد معتبر نیست.',true);return;
-    }
-    busy=true;render();
-    try{
-      await api.ratingAddProfessor(title,subtitle);
-      await load();
-      warn('استاد به فهرست نظرسنجی اضافه شد.');
-    }catch(e){
-      busy=false;warn('افزودن استاد ناموفق بود: '+String(e?.message||'خطا').slice(0,120),true);
-    }
-  }
-  function init(){
-    const root=$('admin-content');if(!root)return;
-    root.addEventListener('click',ev=>{
-      const button=ev.target.closest('[data-ratings-admin-action]');
-      if(!button||!authorized()||!area()||busy)return;
-      const action=button.dataset.ratingsAdminAction;
-      if(action==='reload'){confirmPublish=false;void load();return;}
-      if(action==='start'&&!control.voting_open&&!control.results_published)
-        return void change({voting_open:true,results_published:false});
-      if(action==='close'&&control.voting_open)
-        return void change({voting_open:false});
-      if(action==='publish-ask'&&!control.voting_open&&!control.results_published){
-        confirmPublish=true;render();return;
-      }
-      if(action==='publish-confirm'&&confirmPublish&&!control.voting_open&&!control.results_published)
-        return void change({voting_open:false,results_published:true});
-      if(action==='unpublish'&&control.results_published)
-        return void change({results_published:false});
-    });
-    root.addEventListener('submit',ev=>{
-      if(ev.target.id!=='ratings-admin-professor-form')return;
-      ev.preventDefault();void addProfessor(ev.target);
-    });
-  }
-  window.KanonhaRatingManagement=Object.freeze({mount,clear});
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);
-  else init();
+ 'use strict';
+ const api=window.KanonhaBackend,$=id=>document.getElementById(id);
+ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const fmt=n=>Number(n||0).toLocaleString('fa-IR');
+ const categoryNames={club:'کانون‌ها',professor:'اساتید',faculty:'دانشکده‌ها'};
+ const kindNames={regular:'معمولی',competition:'مسابقه‌ای'};
+ const area=()=>$('admin-ratings-content');
+ const authorized=()=>Boolean(window.KanonhaAdminPanel?.hasAccess?.());
+ const ended=s=>Date.now()>=new Date(s.ends_at).getTime();
+ const localDate=value=>{
+   const d=value?new Date(value):new Date(Date.now()+7*86400000);
+   if(!Number.isFinite(d.getTime()))return '';
+   return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16);
+ };
+ const displayDate=value=>{
+   const date=new Date(value);
+   try{return new Intl.DateTimeFormat('fa-IR-u-ca-persian',
+    {year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'}).format(date);}
+   catch(_){return date.toLocaleString('fa-IR');}
+ };
+ let seq=0,busy=false,polls=[],options=[],results=new Map(),editing=null;
+ let confirmation=null,feedback='',error=false;
+ function clear(){
+   seq++;busy=false;polls=[];options=[];results=new Map();
+   editing=null;confirmation=null;feedback='';error=false;
+ }
+ function say(msg,isError=false){feedback=msg;error=isError;render();}
+ function report(id){return new Map((results.get(id)||[]).map(r=>[r.option_id,r]));}
+ function stats(){
+   return '<div class="survey-admin-stats">'+
+    '<div><strong>'+fmt(polls.length)+'</strong><span>کل نظرسنجی‌ها</span></div>'+
+    '<div><strong>'+fmt(polls.filter(p=>p.status==='published'&&!ended(p)).length)+'</strong><span>در حال رأی‌گیری</span></div>'+
+    '<div><strong>'+fmt(polls.filter(p=>p.status==='draft').length)+'</strong><span>پیش‌نویس</span></div></div>';
+ }
+ function form(){
+   const record=polls.find(s=>s.id===editing),fields=record||{
+     title:'',description:'',category:'club',kind:'regular',ends_at:null
+   };
+   const items=record?options.filter(x=>x.survey_id===record.id).sort((a,b)=>a.sort_order-b.sort_order):[];
+   const categories=Object.entries(categoryNames).map(([key,label])=>
+     '<option value="'+key+'"'+(key===fields.category?' selected':'')+'>'+label+'</option>').join('');
+   const kinds=Object.entries(kindNames).map(([key,label])=>
+     '<option value="'+key+'"'+(key===fields.kind?' selected':'')+'>'+label+'</option>').join('');
+   return '<section class="survey-admin-editor"><div class="survey-admin-editor-title">'+
+     '<div><span>✦ مدیریت محتوا</span><h4>'+(record?'ویرایش پیش‌نویس':'ساخت نظرسنجی جدید')+'</h4></div>'+
+     (record?'<button type="button" data-surveys-action="cancel">انصراف</button>':'')+'</div>'+
+     '<p class="survey-admin-editor-hint">نوع رأی‌گیری را پیش از انتشار تعیین کنید. پس از انتشار، عنوان، نوع، گزینه‌ها و تاریخ پایان قفل می‌شوند.</p>'+
+     '<form id="survey-manager-form" class="survey-admin-form">'+
+     '<label>عنوان نظرسنجی<input name="title" required minlength="4" maxlength="120" placeholder="مثلاً بهترین کانون فرهنگی ترم جاری" value="'+esc(fields.title)+'"></label>'+
+     '<label>دسته‌بندی<select name="category" required>'+categories+'</select></label>'+
+     '<label>نوع انتشار نتایج<select name="kind" required>'+kinds+'</select></label>'+
+     '<p class="survey-admin-mode-help">معمولی: نتیجه از زمان انتشار برای دانشجویان قابل مشاهده است. مسابقه‌ای: هیچ آمار یا رتبه‌ای تا پایان مهلت و تأیید مدیرکل نمایش داده نمی‌شود.</p>'+
+     '<label>تاریخ و ساعت پایان<input name="ends_at" type="datetime-local" required value="'+esc(localDate(fields.ends_at))+'"></label>'+
+     '<label>توضیحات<input name="description" maxlength="500" placeholder="توضیح کوتاه برای دانشجویان" value="'+esc(fields.description)+'"></label>'+
+     '<label class="survey-admin-wide">گزینه‌های نظرسنجی؛ هر خط یک گزینه'+
+     '<textarea name="options" required rows="5" placeholder="کانون نمونه یک&#10;کانون نمونه دو&#10;کانون نمونه سه">'+
+     esc(items.map(x=>x.title).join('\n'))+'</textarea></label>'+
+     '<p class="survey-admin-form-help">بین ۲ تا ۱۲ گزینه منحصربه‌فرد وارد کنید. هر دانشجو در هر نظرسنجی فقط به یکی از گزینه‌ها ۱ تا ۵ ستاره می‌دهد.</p>'+
+     '<button type="submit" class="survey-admin-save"'+(busy?' disabled':'')+'>'+
+     (record?'ذخیره تغییرات پیش‌نویس':'ثبت پیش‌نویس نظرسنجی')+'</button>'+
+     '</form></section>';
+ }
+ function card(s){
+   const draft=s.status==='draft',isEnded=ended(s),contest=s.kind==='competition';
+   const opts=options.filter(o=>o.survey_id===s.id).sort((a,b)=>a.sort_order-b.sort_order);
+   const scores=report(s.id),total=Array.from(scores.values()).reduce((v,x)=>v+Number(x.rating_count||0),0);
+   const state=draft?'پیش‌نویس':!isEnded?'در حال رأی‌گیری':'پایان‌یافته';
+   const approved=s.results_approved===true;
+   const kindNote=contest?'نتایج مسابقه محرمانه تا پایان مهلت':'نتایج معمولی به‌صورت زنده نمایش داده می‌شود';
+   const canApprove=contest&&!draft&&isEnded&&!approved;
+   const listing=opts.map(o=>{
+      const row=scores.get(o.id),votes=Number(row?.rating_count||0);
+      const avg=votes?Number(row.rating_sum)/votes:0;
+      return '<div class="survey-admin-option"><span>'+esc(o.title)+'</span><strong>'+
+       (votes?avg.toFixed(2).replace('.', '٫'):'—')+' ★</strong><small>'+fmt(votes)+' رأی</small></div>';
+   }).join('');
+   return '<article class="survey-admin-item"><header class="survey-admin-item-head">'+
+    '<div><span class="survey-kind '+(contest?'contest':'regular')+'">'+
+    kindNames[s.kind]+'</span><span class="survey-admin-category">'+categoryNames[s.category]+'</span></div>'+
+    '<span class="survey-state '+(draft?'draft':isEnded?'':'active')+'">'+state+'</span></header>'+
+    '<h4>'+esc(s.title)+'</h4>'+(s.description?'<p>'+esc(s.description)+'</p>':'')+
+    '<div class="survey-admin-item-details"><span>◷ '+esc(displayDate(s.ends_at))+'</span>'+
+    '<span>'+fmt(opts.length)+' گزینه</span></div>'+
+    '<p class="survey-admin-item-note">'+kindNote+'</p>'+
+    '<div class="survey-admin-option-list">'+listing+'</div>'+
+    (contest&&isEnded?'<p class="survey-admin-approval">'+
+      (approved?'✓ نتایج مسابقه با تأیید مدیرکل منتشر شده‌اند.':'🔒 نتایج هنوز منتشر نشده‌اند.')+'</p>':'')+
+    '<div class="survey-admin-buttons">'+
+    (draft?
+      '<button type="button" data-surveys-action="edit" data-survey-id="'+s.id+'">ویرایش</button>'+
+      '<button class="publish" type="button" data-surveys-action="'+
+        (confirmation===s.id+':publish'?'publish-confirm':'publish-ask')+
+        '" data-survey-id="'+s.id+'">'+
+        (confirmation===s.id+':publish'?'تأیید نهایی انتشار':'انتشار و آغاز رأی‌گیری')+'</button>'+
+      '<button class="delete" type="button" data-surveys-action="'+
+        (confirmation===s.id+':delete'?'delete-confirm':'delete-ask')+
+        '" data-survey-id="'+s.id+'">'+
+        (confirmation===s.id+':delete'?'تأیید حذف پیش‌نویس':'حذف')+'</button>':'')+
+    (canApprove?'<button class="publish" type="button" data-surveys-action="'+
+       (confirmation===s.id+':approve'?'approve-confirm':'approve-ask')+
+       '" data-survey-id="'+s.id+'">'+
+       (confirmation===s.id+':approve'?'تأیید قطعی انتشار نتایج':'تأیید و اعلام نتایج مسابقه')+'</button>':'')+
+    '</div>'+
+    (confirmation&&confirmation.startsWith(s.id+':')?
+     '<p class="survey-admin-confirm">برای ثبت این اقدام یک‌بار دیگر روی دکمه تأیید بزنید.</p>':'')+
+    '</article>';
+ }
+ function render(){
+   const el=area();if(!el||!authorized())return;
+   el.innerHTML='<div class="survey-admin-heading"><div><h3>مدیریت نظرسنجی‌ها</h3>'+
+    '<p>ساخت، انتشار و کنترل نتایج؛ فقط مدیرکل</p></div>'+
+    '<button type="button" data-surveys-action="reload" aria-label="بارگذاری دوباره نظرسنجی‌ها">↻</button></div>'+
+    stats()+
+    '<p class="survey-admin-feedback'+(error?' error':'')+'" role="status">'+
+      esc(feedback||'پیش‌نویس‌ها فقط برای مدیرکل قابل مشاهده‌اند.')+'</p>'+
+    form()+
+    '<div class="survey-admin-library-heading"><h4>نظرسنجی‌های ثبت‌شده</h4><span>'+fmt(polls.length)+' مورد</span></div>'+
+    (polls.length?'<div class="survey-admin-library">'+polls.map(card).join('')+'</div>':
+      '<div class="surveys-empty">هنوز نظرسنجی ایجاد نشده است.</div>');
+ }
+ async function load(){
+   if(!authorized())return;
+   const token=++seq;busy=true;render();
+   try{
+     const fetched=await api.surveyList(true);
+     const fetchedOptions=await api.surveyOptions(fetched.map(s=>s.id));
+     const fetchedResults=await Promise.all(fetched.map(async s=>[s.id,await api.surveyResults(s.id)]));
+     if(token!==seq||!authorized())return;
+     polls=fetched;options=fetchedOptions;results=new Map(fetchedResults);
+     feedback=feedback||'اطلاعات نظرسنجی‌ها از سرور دریافت شد.';error=false;
+   }catch(e){
+     if(token!==seq)return;
+     feedback='دریافت اطلاعات نظرسنجی‌ها ناموفق بود: '+String(e?.message||'خطا').slice(0,110);
+     error=true;
+   }finally{if(token===seq){busy=false;render();}}
+ }
+ function mount(){clear();if(authorized()){render();void load();}}
+ async function submit(form){
+   if(busy||!authorized())return;
+   const fd=new FormData(form);
+   const fields={
+     title:String(fd.get('title')||'').trim(),
+     category:String(fd.get('category')||''),
+     kind:String(fd.get('kind')||''),
+     description:String(fd.get('description')||'').trim(),
+     ends_at:''
+   };
+   const rawDate=String(fd.get('ends_at')||'');
+   const millis=Date.parse(rawDate);
+   if(!Number.isFinite(millis)||millis<=Date.now()){
+     say('زمان پایان باید در آینده باشد.',true);return;
+   }
+   fields.ends_at=new Date(millis).toISOString();
+   const items=String(fd.get('options')||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+   if(items.length<2||items.length>12||new Set(items.map(x=>x.toLowerCase())).size!==items.length){
+     say('بین ۲ تا ۱۲ گزینه متفاوت وارد کنید.',true);return;
+   }
+   busy=true;render();
+   try{
+     if(editing)await api.surveyUpdateDraft(editing,fields,items);
+     else await api.surveyCreate(fields,items);
+     editing=null;confirmation=null;feedback='پیش‌نویس و گزینه‌های نظرسنجی ذخیره شدند.';error=false;
+     await load();
+   }catch(e){busy=false;say('ثبت نظرسنجی انجام نشد: '+String(e?.message||'خطا').slice(0,110),true);}
+ }
+ async function change(action,id){
+   if(busy||!authorized()||!polls.some(p=>p.id===id))return;
+   busy=true;confirmation=null;render();
+   try{
+     if(action==='publish')await api.surveyPublish(id);
+     else if(action==='approve')await api.surveyApproveResults(id);
+     else if(action==='delete')await api.surveyDeleteDraft(id);
+     else return;
+     feedback=action==='publish'?'نظرسنجی منتشر شد؛ نوع آن دیگر قابل تغییر نیست.':
+       action==='approve'?'نتایج مسابقه پس از تأیید شما برای دانشجویان آزاد شد.':
+       'پیش‌نویس حذف شد.';
+     error=false;
+     await load();
+     if(window.KanonhaRatings?.open)void window.KanonhaRatings.open();
+   }catch(e){
+     busy=false;say('انجام عملیات مجاز نشد: '+String(e?.message||'خطا').slice(0,120),true);
+   }
+ }
+ function init(){
+   const root=$('admin-content');if(!root)return;
+   root.addEventListener('click',e=>{
+     const button=e.target.closest('[data-surveys-action]');
+     if(!button||!authorized()||busy||!area())return;
+     const action=button.dataset.surveysAction,id=button.dataset.surveyId;
+     if(action==='reload'){confirmation=null;void load();return;}
+     if(action==='cancel'){editing=null;confirmation=null;render();return;}
+     if(action==='edit'&&polls.some(p=>p.id===id&&p.status==='draft')){
+       editing=id;confirmation=null;render();return;
+     }
+     if(['publish-ask','approve-ask','delete-ask'].includes(action)&&polls.some(p=>p.id===id)){
+       confirmation=id+':'+action.split('-')[0];render();return;
+     }
+     if(action.endsWith('-confirm')&&id&&confirmation===id+':'+action.split('-')[0])
+       void change(action.split('-')[0],id);
+   });
+   root.addEventListener('submit',e=>{
+     if(e.target.id!=='survey-manager-form'||!authorized())return;
+     e.preventDefault();void submit(e.target);
+   });
+ }
+ window.KanonhaRatingManagement=Object.freeze({mount,clear});
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();

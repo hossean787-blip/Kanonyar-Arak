@@ -437,6 +437,7 @@
     state.academic = academic;
     renderAll();
     onlineRenderAuth();
+    window.KanonhaNotifications?.refresh?.();
     try{window.AndroidEventReminders?.sync?.(JSON.stringify(
       events.filter(e=>eventIds.has(e.id)&&e.startsAtMs>Date.now())
         .map(e=>({id:e.id,title:e.title,startsAt:e.startsAtMs}))
@@ -659,6 +660,7 @@
     ++onlinePublicSequence;
     if (window.KanonhaSecretaryPanel) window.KanonhaSecretaryPanel.clear();
     if (window.KanonhaAdminPanel) window.KanonhaAdminPanel.clear();
+    window.KanonhaNotifications?.clear?.();
     managerUsersTab = 'students'; secretaryMembersTab = 'members';
     try { await onlineBackend.signOut({preserveBiometric:preserve}); }
     catch (_) { /* local tokens still cleared by adapter */ }

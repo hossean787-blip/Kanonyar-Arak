@@ -17,6 +17,7 @@
     { id: 'home',     label: 'خانه',          icon: 'home'          },
     { id: 'clubs',    label: 'کانون‌ها',       icon: 'users'         },
     { id: 'events',   label: 'رویدادها',       icon: 'calendar'      },
+    { id: 'ratings',  label: 'نظرسنجی',       art: 'ratings'         },
     { id: 'activity', label: 'فعالیت‌های من', icon: 'check-square'  },
     { id: 'profile',  label: 'حساب کاربری',   icon: 'user'          }
   ];
@@ -25,12 +26,14 @@
     {id:'manager-clubs', label:'کانون‌ها', art:'clubs'},
     {id:'manager-users', label:'کاربران', art:'activity'},
     {id:'manager-events', label:'رویدادها', art:'events'},
+    {id:'ratings', label:'نظرسنجی', art:'ratings'},
     {id:'manager-account', label:'حساب', art:'profile'}
   ];
   const secretaryNavItems = [
     {id:'secretary-home', label:'خانه', art:'home'},
     {id:'secretary-club', label:'کانون من', art:'clubs'},
     {id:'secretary-events', label:'رویدادها', art:'events'},
+    {id:'ratings', label:'نظرسنجی', art:'ratings'},
     {id:'secretary-members', label:'اعضا', art:'activity'},
     {id:'secretary-account', label:'حساب', art:'profile'}
   ];
@@ -753,7 +756,7 @@
 
   /* ——— Navigation ——— */
   function go(screen, { scroll = true } = {}) {
-    if (!routeNavItems().some(x => x.id === screen) && screen !== 'ratings') return;
+    if (!routeNavItems().some(x => x.id === screen)) return;
     activeScreen = screen;
     const container = screen.endsWith('-account') ? 'profile' :
       screen.startsWith('manager-') || screen.startsWith('secretary-') ? 'workspace' : screen;
@@ -1338,7 +1341,7 @@
 
     // Handle hash navigation
     const requested = location.hash.replace('#', '');
-    go(routeNavItems().some(x => x.id === requested) || requested === 'ratings' ? requested : onlineMode ? 'profile' : 'home');
+    go(routeNavItems().some(x => x.id === requested) ? requested : onlineMode ? 'profile' : 'home');
     if (onlineMode) {
       void onlineRefreshPublic();
       // Directory is public read-only and cached in memory for signup/profile forms.
@@ -1347,7 +1350,7 @@
 
     window.addEventListener('hashchange', () => {
       const id = location.hash.slice(1);
-      if ((routeNavItems().some(x => x.id === id) || id === 'ratings') && id !== activeScreen) go(id);
+      if (routeNavItems().some(x => x.id === id) && id !== activeScreen) go(id);
     });
   }
 

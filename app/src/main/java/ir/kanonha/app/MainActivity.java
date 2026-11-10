@@ -21,6 +21,7 @@ import androidx.webkit.WebViewAssetLoader;
 public final class MainActivity extends FragmentActivity {
  private WebView web;
  private BiometricVault biometric;
+ private SurveyExportBridge surveyExports;
 
  @Override public void onCreate(Bundle b) {
   super.onCreate(b);
@@ -72,6 +73,9 @@ public final class MainActivity extends FragmentActivity {
   s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
   biometric = new BiometricVault(this, web);
   web.addJavascriptInterface(biometric.new Bridge(), "AndroidBiometric");
+  surveyExports=new SurveyExportBridge(this);
+  web.addJavascriptInterface(surveyExports, "AndroidSurveyExports");
+  web.addJavascriptInterface(new SurveyNoticeReceiver.Bridge(this), "AndroidSurveyNotices");
   web.setWebViewClient(new WebViewClient() {
    @Override public WebResourceResponse shouldInterceptRequest(WebView v, WebResourceRequest r) {
     return loader.shouldInterceptRequest(r.getUrl());
@@ -91,6 +95,10 @@ public final class MainActivity extends FragmentActivity {
    DailyCalendarReceiver.show(this);
   }
  }
+ @Override protected void onActivityResult(int requestCode,int resultCode,android.content.Intent data){
+  super.onActivityResult(requestCode,resultCode,data);
+  if(surveyExports!=null)surveyExports.handleResult(requestCode,resultCode,data);
+ }
  @Override public void onBackPressed() {
   if (web == null) { super.onBackPressed(); return; }
   web.evaluateJavascript("window.KanonhaPreview ? window.KanonhaPreview.handleBack() : false", value -> {
@@ -99,6 +107,7 @@ public final class MainActivity extends FragmentActivity {
  }
  @Override protected void onDestroy() {
   if (biometric != null) { biometric.destroy(); biometric = null; }
+  if (surveyExports != null) { surveyExports.destroy(); surveyExports = null; }
   if (web != null) { web.destroy(); web = null; }
   super.onDestroy();
  }

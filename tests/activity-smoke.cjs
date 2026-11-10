@@ -51,7 +51,7 @@ const data={
  memberDetails:[
   {club_id:'club-0',club_name:malicious,status:'approved',is_active:true},
   {club_id:'club-1',club_name:'کانون نمونه',status:'pending',is_active:true},
-  {club_id:'club-2',club_name:'کانون قدیمی',status:'rejected',is_active:false}
+  {club_id:'club-2',club_name:'کانون قدیمی',status:'rejected',is_active:true}
  ],
  historyRows:[
   {registration_id:regA,event_id:'event-a',event_title:malicious,event_starts_at:iso(now+day),

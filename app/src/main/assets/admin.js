@@ -70,7 +70,7 @@ function clubForm(){
  clubUniversityOptions(c.university||'')+'</select></label>'+
  '<label class="field">دانشکده<select name="faculty" data-admin-club-faculty>'+
  clubFacultyOptions(c.university||'',c.faculty||'')+'</select></label>'+
- '<label class="field">معرفی کانون<textarea name="description" maxlength="2000">'+esc(c.description||'')+'</textarea></label>'+
+ '<label class="field">درباره کانون *<textarea name="description" maxlength="2000" required aria-required="true" placeholder="درباره کانون بنویسید">'+esc(c.description||'')+'</textarea></label>'+
  '<label class="field admin-check"><input type="checkbox" name="is_active" value="1"'+(c.is_active?' checked':'')+'> فعال و قابل مشاهده برای دانشجویان</label>'+
  '<div class="secretary-actions"><button class="positive" type="submit">ذخیره کانون</button>'+
  action('انصراف','data-admin-action','cancel')+'</div></form>';
@@ -341,6 +341,7 @@ root.addEventListener('submit',ev=>{
      university:v(fd,'university'),faculty:v(fd,'faculty'),major:v(fd,'major'),mobile:v(fd,'mobile')});return;
  }
  if(f.id==='admin-club-form'){
+  if(!v(fd,'description')){msg('پر کردن بخش درباره کانون الزامی است.',true);return}
    void perform(editor?.id?'club.update':'club.create',{id:editor?.id,name:v(fd,'name'),
     description:v(fd,'description'),category:v(fd,'category'),
     university:v(fd,'university'),faculty:v(fd,'faculty'),

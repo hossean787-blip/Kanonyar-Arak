@@ -3,6 +3,16 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const backendCode = fs.readFileSync('app/src/main/assets/backend.js','utf8');
+const native = fs.readFileSync('app/src/main/java/ir/kanonha/app/MainActivity.java','utf8');
+const manifest = fs.readFileSync('app/src/main/AndroidManifest.xml','utf8');
+for(const required of ['onShowFileChooser','ACTION_OPEN_DOCUMENT','CATEGORY_OPENABLE',
+ 'EXTRA_MIME_TYPES','FLAG_GRANT_READ_URI_PERMISSION','CLUB_LOGO_PICK_REQUEST',
+ 'pendingLogoFiles','finishLogoPicker','validLogoUri','image/webp','OpenableColumns.SIZE'])
+ assert.ok(native.includes(required),'native image picker missing '+required);
+assert.match(native,/setAllowFileAccess\(false\)/,'raw files must remain inaccessible');
+assert.match(native,/setAllowContentAccess\(true\)/,'SAF content URIs must be readable');
+assert.doesNotMatch(manifest,/READ_EXTERNAL_STORAGE|MANAGE_EXTERNAL_STORAGE|READ_MEDIA_IMAGES/,
+ 'Do not request broad file/gallery access permissions');
 const clubId = '3200f2ae-5c14-4c85-8cba-0ac96875cb82';
 const otherClubId = '3a2d54f5-cea9-4b81-b8d1-7544e2d2cce3';
 const userId = '92fa1ff3-a431-4238-ab28-f2bcfd13bf9e';

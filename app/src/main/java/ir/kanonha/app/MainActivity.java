@@ -4,6 +4,12 @@ import android.os.Bundle;
 import android.graphics.Color;
 import android.os.Build;
 import android.net.Uri;
+import android.content.Intent;
+import android.database.Cursor;
+import android.provider.OpenableColumns;
+import android.webkit.WebChromeClient;
+import android.webkit.ValueCallback;
+import android.widget.Toast;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.webkit.WebView;
@@ -20,6 +26,8 @@ import androidx.webkit.WebViewAssetLoader;
 
 public final class MainActivity extends FragmentActivity {
  private WebView web;
+ private static final int CLUB_LOGO_PICK_REQUEST=61420;
+ private ValueCallback<Uri[]> pendingLogoFiles;
  private BiometricVault biometric;
  private SurveyExportBridge surveyExports;
 
@@ -67,7 +75,8 @@ public final class MainActivity extends FragmentActivity {
   s.setJavaScriptEnabled(true);
   s.setDomStorageEnabled(true);
   s.setAllowFileAccess(false);
-  s.setAllowContentAccess(false);
+  // Required only for user-approved SAF content:// images; file:// remains disabled.
+  s.setAllowContentAccess(true);
   s.setAllowFileAccessFromFileURLs(false);
   s.setAllowUniversalAccessFromFileURLs(false);
   s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
@@ -85,6 +94,27 @@ public final class MainActivity extends FragmentActivity {
     return !"appassets.androidplatform.net".equals(u.getHost());
    }
   });
+  web.setWebChromeClient(new WebChromeClient(){
+   @Override public boolean onShowFileChooser(WebView view,ValueCallback<Uri[]> callback,FileChooserParams params){
+    // This app supports a single student club logo; never expose generic file access or camera.
+    if(pendingLogoFiles!=null)finishLogoPicker(null);
+    pendingLogoFiles=callback;
+    if(params!=null&&params.getMode()!=FileChooserParams.MODE_OPEN){
+     finishLogoPicker(null);return true;
+    }
+    Intent pick=new Intent(Intent.ACTION_OPEN_DOCUMENT);
+    pick.addCategory(Intent.CATEGORY_OPENABLE);
+    pick.setType("image/*");
+    pick.putExtra(Intent.EXTRA_MIME_TYPES,new String[]{"image/png","image/jpeg","image/webp"});
+    pick.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+    try{startActivityForResult(pick,CLUB_LOGO_PICK_REQUEST);}
+    catch(RuntimeException e){
+     finishLogoPicker(null);
+     Toast.makeText(MainActivity.this,"انتخاب تصویر در این دستگاه ممکن نیست.",Toast.LENGTH_SHORT).show();
+    }
+    return true;
+   }
+  });
   web.loadUrl("https://appassets.androidplatform.net/assets/index.html?native=1");
  }
 
@@ -97,8 +127,37 @@ public final class MainActivity extends FragmentActivity {
  }
  @Override protected void onActivityResult(int requestCode,int resultCode,android.content.Intent data){
   super.onActivityResult(requestCode,resultCode,data);
+  if(requestCode==CLUB_LOGO_PICK_REQUEST){
+   Uri uri=resultCode==android.app.Activity.RESULT_OK&&data!=null?data.getData():null;
+   finishLogoPicker(validLogoUri(uri)?uri:null);
+   return;
+  }
   if(surveyExports!=null)surveyExports.handleResult(requestCode,resultCode,data);
  }
+ private void finishLogoPicker(Uri uri){
+  ValueCallback<Uri[]> callback=pendingLogoFiles;
+  pendingLogoFiles=null;
+  if(callback!=null)callback.onReceiveValue(uri==null?null:new Uri[]{uri});
+ }
+ private boolean validLogoUri(Uri uri){
+  if(uri==null||!"content".equals(uri.getScheme()))return false;
+  try{
+   String mime=getContentResolver().getType(uri);
+   if(!"image/png".equals(mime)&&!"image/jpeg".equals(mime)&&!"image/webp".equals(mime))
+    return false;
+   try(Cursor cursor=getContentResolver().query(uri,new String[]{OpenableColumns.SIZE},null,null,null)){
+    if(cursor!=null&&cursor.moveToFirst()){
+     int index=cursor.getColumnIndex(OpenableColumns.SIZE);
+     if(index>=0&&!cursor.isNull(index)){
+      long size=cursor.getLong(index);
+      if(size<1||size>2_097_152L)return false;
+     }
+    }
+   }
+   return true;
+  }catch(RuntimeException e){return false;}
+ }
+
  @Override public void onBackPressed() {
   if (web == null) { super.onBackPressed(); return; }
   web.evaluateJavascript("window.KanonhaPreview ? window.KanonhaPreview.handleBack() : false", value -> {
@@ -106,6 +165,7 @@ public final class MainActivity extends FragmentActivity {
   });
  }
  @Override protected void onDestroy() {
+  finishLogoPicker(null);
   if (biometric != null) { biometric.destroy(); biometric = null; }
   if (surveyExports != null) { surveyExports.destroy(); surveyExports = null; }
   if (web != null) { web.destroy(); web = null; }

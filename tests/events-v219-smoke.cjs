@@ -86,6 +86,7 @@ async function testFlows(){
  assert.match(publicCall.url,/approval_status=eq.approved/);
  assert.equal(publicCall.headers.Authorization,undefined);
  assert.equal((await api.myEventHistory())[0].ticket_token,ticket);
+ await api.registrations();
  assert.doesNotMatch(calls.find(x=>x.url.includes('kanonha_registrations?select=id,event_id')).url,/ticket_token/);
  assert.equal((await api.myCertificates()).length,0);
  assert.equal((await api.myClubMemberships()).length,0);

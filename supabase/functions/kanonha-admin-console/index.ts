@@ -103,7 +103,7 @@ async function handle(op:string,d:Record<string,unknown>,actor:string){
  if(op==="club.create"||op==="club.update"){
   const name=val(d.name,120),description=val(d.description,2000),category=val(d.category,80);
   const university=val(d.university,120),faculty=val(d.faculty,120);
-  if(name.length<2||name.length>120||description.length>2000||category.length<2||category.length>80
+  if(name.length<2||name.length>120||!description||description.length>2000||category.length<2||category.length>80
     ||university.length<2||university.length>120||faculty.length>120
     ||!allowedBool(d.is_active))throw new Error("input");
   const universities=await rows("kanonha_universities?select=id&name=eq."+encodeURIComponent(university)+"&limit=1");

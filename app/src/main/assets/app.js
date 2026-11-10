@@ -556,7 +556,7 @@
       notify('برای ثبت اطلاعات ابتدا وارد حساب شوید.');
       return false;
     }
-    if (!studentProfileReady) {
+    if (!/^[0-9]{6,20}$/.test(state.number)) {
       go('profile');
       notify('ابتدا پرونده دانشجویی را تکمیل کنید.');
       action(state.isManager ? 'link-student' : 'edit');
@@ -610,6 +610,12 @@
   const eventRegistrationWorking = new Set();
   async function onlineRegister(i) {
     if (!events[i] || !onlineRequireProfile()) return;
+    if (!studentProfileReady) {
+      go('profile');
+      notify('برای ثبت‌نام رویداد، تمام مشخصات فردی و تحصیلی از جمله تاریخ تولد و تلفن همراه باید تکمیل باشد.');
+      action(state.isManager ? 'link-student' : 'edit');
+      return;
+    }
     const selected=events[i],eventId=selected.id;
     if (eventRegistrationWorking.has(eventId)) return;
     if (state.registered.includes(i)) { notify('قبلاً در این رویداد ثبت‌نام کرده‌اید.'); return; }

@@ -1539,6 +1539,20 @@
       get state() { return { ...state, joined: [...state.joined], registered: [...state.registered] }; },
       go,
       handleBack,
+      openNotificationTarget: (kind,id) => {
+        if(kind==='event'){
+          const i=events.findIndex(e=>e.id===id);
+          if(i>=0){go('events');eventDetails(i);return true;}
+          go('events');return false;
+        }
+        if(kind==='club'){
+          const i=clubs.findIndex(c=>c.id===id);
+          if(i>=0){clubDetails(i);return true;}
+          go('clubs');return false;
+        }
+        if(kind==='update'){go('profile');action('about');return true;}
+        go('home');return true;
+      },
       reset: () => action('reset')
     };
   }

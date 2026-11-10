@@ -84,7 +84,20 @@ jobs:
           for name in ('ic_launcher.xml','ic_launcher_round.xml'):
               ET.parse(app_root/'res'/'mipmap-anydpi-v26'/name)
           ET.parse(app_root/'res'/'drawable'/'ic_kanonha_foreground.xml')
-          print('UI integrity and all SVGs valid')
+          receiver=(app_root/'java'/'ir'/'kanonha'/'app'/'DailyCalendarReceiver.java').read_text(encoding='utf-8')
+          assert 'setOngoing(true)' in receiver
+          assert 'setOnlyAlertOnce(true)' in receiver
+          assert 'setCustomContentView(view)' in receiver
+          assert 'setSmallIcon(dateIcon())' in receiver
+          assert 'R.layout.notification_jalali' in receiver
+          assert 'set(Calendar.HOUR_OF_DAY,0)' in receiver
+          assert 'POST_NOTIFICATIONS' in manifest
+          assert 'RECEIVE_BOOT_COMPLETED' in manifest
+          assert 'BOOT_COMPLETED' in manifest
+          assert 'WEEKDAYS' in receiver
+          assert 'setContentText(today())' in receiver
+          assert 'setAutoCancel(true)' not in receiver
+          print('UI, persistent Persian calendar, and SVG assets valid')
           PY
       - name: Smoke-test navigation, offline state and Android Back bridge
         run: node tests/ui-smoke.cjs

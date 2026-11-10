@@ -74,7 +74,7 @@
       const row=scores.get(o.id),votes=Number(row?.rating_count||0);
       const avg=votes?Number(row.rating_sum)/votes:0;
       return '<div class="survey-admin-option"><span>'+esc(o.title)+'</span><strong>'+
-       (votes?avg.toFixed(2).replace('.', '٫'):'—')+' ★</strong><small>'+fmt(votes)+' رأی</small></div>';
+       (votes?avg.toLocaleString('fa-IR',{minimumFractionDigits:2,maximumFractionDigits:2}):'—')+' ★</strong><small>'+fmt(votes)+' رأی</small></div>';
    }).join('');
    return '<article class="survey-admin-item"><header class="survey-admin-item-head">'+
     '<div><span class="survey-kind '+(contest?'contest':'regular')+'">'+

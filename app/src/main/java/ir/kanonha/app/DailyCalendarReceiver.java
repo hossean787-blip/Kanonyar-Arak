@@ -10,14 +10,16 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.graphics.drawable.Icon;
+import android.widget.RemoteViews;
 import android.icu.util.PersianCalendar;
 import java.util.Calendar;
 public final class DailyCalendarReceiver extends BroadcastReceiver {
  private static final String ACTION="ir.kanonha.app.DAILY_DATE";
  private static final int ID=1405;
+ private static final String[] WEEKDAYS={"یکشنبه","دوشنبه","سه‌شنبه","چهارشنبه","پنجشنبه","جمعه","شنبه"};
  private static final String[] MONTHS={"فروردین","اردیبهشت","خرداد","تیر","مرداد","شهریور","مهر","آبان","آذر","دی","بهمن","اسفند"};
  private static String fa(int number){String s=Integer.toString(number),o="";for(char c:s.toCharArray())o+=(char)('۰'+c-'0');return o;}
- public static String today(){PersianCalendar c=new PersianCalendar();return fa(c.get(PersianCalendar.DAY_OF_MONTH))+" "+MONTHS[c.get(PersianCalendar.MONTH)]+" "+fa(c.get(PersianCalendar.YEAR));}
+ public static String today(){PersianCalendar c=new PersianCalendar();return WEEKDAYS[Calendar.getInstance().get(Calendar.DAY_OF_WEEK)-1]+"، "+fa(c.get(PersianCalendar.DAY_OF_MONTH))+" "+MONTHS[c.get(PersianCalendar.MONTH)]+" "+fa(c.get(PersianCalendar.YEAR));}
  public static void schedule(Context context){
   AlarmManager mgr=(AlarmManager)context.getSystemService(Context.ALARM_SERVICE);
   if(mgr==null)return;
@@ -55,6 +57,19 @@ public final class DailyCalendarReceiver extends BroadcastReceiver {
   if(Build.VERSION.SDK_INT>=26)manager.createNotificationChannel(new NotificationChannel("calendar_persistent_v2","تاریخ شمسی همیشگی",NotificationManager.IMPORTANCE_LOW));
   PendingIntent open=PendingIntent.getActivity(context,0,new Intent(context,MainActivity.class),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
   Notification.Builder b=Build.VERSION.SDK_INT>=26?new Notification.Builder(context,"calendar_persistent_v2"):new Notification.Builder(context);
-  manager.notify(ID,b.setSmallIcon(dateIcon()).setContentTitle("تقویم دانشجویی").setContentText(today()).setOngoing(true).setOnlyAlertOnce(true).setShowWhen(false).setContentIntent(open).build());
+  RemoteViews view=new RemoteViews(context.getPackageName(),R.layout.notification_jalali);
+  view.setTextViewText(R.id.calendar_day_badge,fa(new PersianCalendar().get(PersianCalendar.DAY_OF_MONTH)));
+  view.setTextViewText(R.id.calendar_date,today());
+  b.setSmallIcon(dateIcon())
+      .setContentTitle("تقویم دانشجویی")
+      .setContentText(today())
+      .setCustomContentView(view)
+      .setCustomBigContentView(view)
+      .setStyle(new Notification.DecoratedCustomViewStyle())
+      .setOngoing(true)
+      .setOnlyAlertOnce(true)
+      .setShowWhen(false)
+      .setContentIntent(open);
+  manager.notify(ID,b.build());
  }
 }

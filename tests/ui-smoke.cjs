@@ -26,7 +26,7 @@ for (const page of pages) {
 assert.match(manifest, /android:label="\$\{appLabel\}"/);
 const gradle = fs.readFileSync(path.join(root, 'app/build.gradle.kts'), 'utf8');
 assert.match(gradle, /applicationIdSuffix = "\.test"/, 'Debug app must install next to the original');
-assert.match(css,/grid-template-columns:repeat\\(6,minmax\\(0,1fr\\)\\)/, 'six navigation items must fit in six grid columns');
+assert.match(css,/grid-template-columns:repeat\(6,minmax\(0,1fr\)\)/, 'six navigation items must fit in six grid columns');
 
 assert.match(gradle, /manifestPlaceholders\["appLabel"\] = "کانون‌ها آزمایشی"/);
 assert.match(html, /<title>کانون‌ها \| اپ مستقل دانشجویی<\/title>/);

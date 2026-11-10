@@ -17,7 +17,9 @@ const activityNative=file('app/src/main/java/ir/kanonha/app/MainActivity.java');
 const manifest=file('app/src/main/AndroidManifest.xml');
 const sql=file('supabase/events-v219.sql')+
  file('supabase/events-v219-rls-fix.sql')+
- file('supabase/events-v219-scoped-checkin.sql');
+ file('supabase/events-v219-scoped-checkin.sql')+
+ file('supabase/activity-certificates-v0923.sql')+
+ file('supabase/activity-membership-history-v0924.sql');
 const edge=file('supabase/functions/kanonha-admin-console/index.ts');
 const userId='fefea2f1-ef77-4b8f-b38f-fd1c40d35900';
 const clubId='aa11aa11-4a11-4a11-8a11-aa11aa11aa11';
@@ -44,7 +46,16 @@ async function fetchMock(url,request){
   return ok([{result:'checked_in',attendee:'دانشجوی نمونه'}]);
  if(url.includes('/rest/v1/rpc/kanonha_event_summary'))
   return ok([{registrations:1,attendees:0,capacity:10}]);
- if(url.includes('/rest/v1/kanonha_registrations?')&&method==='DELETE')return ok([{id:ticket}]);
+ if(url.includes('/rest/v1/rpc/kanonha_my_event_history'))return ok([{
+    registration_id:ticket,event_id:eventId,event_title:'کارگاه تست',
+    event_starts_at:'2035-05-01T10:00:00Z',event_location:'سالن',club_name:'کانون',
+    status:'confirmed',attended_at:null,ticket_expires_at:'2035-05-08T10:00:00Z',ticket_token:ticket
+ }]);
+ if(url.includes('/rest/v1/rpc/kanonha_my_club_memberships'))return ok([]);
+ if(url.includes('/rest/v1/rpc/kanonha_issue_certificate'))return ok([{
+   id:ticket,certificate_code:ticket,issued_at:'2035-05-02T10:00:00Z'
+ }]);
+ if(url.includes('/rest/v1/kanonha_certificates?'))return ok([]);
  if(url.includes('/rest/v1/kanonha_registrations?')&&url.includes('select=id,user_id,event_id'))
   return ok([{id:ticket,user_id:userId,event_id:eventId,status:'confirmed',
    registered_at:'2035-05-01T01:00:00Z',attended_at:null}]);
@@ -67,23 +78,22 @@ const testApi=async()=>{
  assert.deepEqual(await api.registrations().then(rows=>rows.map(r=>r.ticket_token)),[],'protected without login');
 };
 async function testFlows(){
- await assert.rejects(()=>api.cancelEvent(eventId),/وارد حساب/);
+ await assert.rejects(()=>api.myEventHistory(),/وارد حساب/);
  await api.signIn('example@example.test','good-password');
  const evs=await api.events();
  assert.equal(evs[0].id,eventId);
  const publicCall=calls.find(x=>x.url.includes('kanonha_events?select='));
  assert.match(publicCall.url,/approval_status=eq.approved/);
  assert.equal(publicCall.headers.Authorization,undefined);
- assert.equal((await api.registrations())[0].ticket_token,ticket);
- assert.match(calls.find(x=>x.url.includes('kanonha_registrations?select=id,event_id')).url,/ticket_token/);
+ assert.equal((await api.myEventHistory())[0].ticket_token,ticket);
+ assert.doesNotMatch(calls.find(x=>x.url.includes('kanonha_registrations?select=id,event_id')).url,/ticket_token/);
+ assert.equal((await api.myCertificates()).length,0);
+ assert.equal((await api.myClubMemberships()).length,0);
+ assert.equal((await api.issueCertificate(ticket)).id,ticket);
  assert.match(api.eventPosterUrl(clubId,eventId,clubId+'/'+eventId+'.webp'),/kanonha-event-posters/);
  assert.equal(api.eventPosterUrl(clubId,eventId,'other/path.webp'),'');
- await api.cancelEvent(eventId);
- const deletion=calls.find(x=>x.method==='DELETE'&&x.url.includes('kanonha_registrations'));
- assert.match(deletion.url,/event_id=eq/);
- assert.match(deletion.url,/user_id=eq/);
- assert.equal(deletion.headers.Authorization,'Bearer test-access');
- await assert.rejects(()=>api.cancelEvent('bad'),/معتبر/);
+ assert.equal(typeof api.cancelEvent,'undefined','event cancellation is no longer exported');
+ assert.ok(!calls.some(c=>c.method==='DELETE'&&c.url.includes('kanonha_registrations')));
  await assert.rejects(()=>api.checkInTicket(ticket,'bad'),/رویداد/);
  await assert.rejects(()=>api.checkInTicket('malformed',eventId),/بلیت/);
  assert.equal((await api.checkInTicket('KANONHA1:'+ticket,eventId)).result,'checked_in');
@@ -138,7 +148,9 @@ function testSecurityWiring(){
  assert.match(sql,/kanonha-event-posters/);
  assert.match(sql,/status='confirmed'/);
  assert.match(sql,/registered_count=registered_count-1/);
- assert.match(sql,/create policy kanonha_student_cancel_event/);
+ assert.match(sql,/drop policy if exists kanonha_student_cancel_event/);
+ assert.match(sql,/revoke delete on public\.kanonha_registrations/);
+ assert.match(sql,/revoke select \(ticket_token\)/);
  assert.match(edge,/event\.approve/);
  assert.match(edge,/event\.reject/);
  assert.match(edge,/event\.report/);
@@ -153,7 +165,8 @@ function testSecurityWiring(){
  assert.match(secretary,/backend\.checkInTicket\(raw,ticketEvent\)/);
  assert.match(secretary,/secretary-export/);
  assert.match(student,/AndroidEventReminders/);
- assert.match(student,/onlineBackend\.cancelEvent/);
+ assert.doesNotMatch(student,/onlineBackend\.cancelEvent/);
+ assert.match(student,/activityCertificates/);
  assert.match(activity,/data-ticket-qr/);
  assert.match(html,/vendor\/qrcode\.js/);
  assert.match(html,/vendor\/jsQR\.js/);
@@ -174,5 +187,5 @@ function testSecurityWiring(){
 }
 (async()=>{
  await testFlows();testQrCsv();testSecurityWiring();
- console.log('PASS: 7 event features, approval role, poster, QR encode/decode, event scoped check-in, cancellation, offline reminders and UTF8 CSV');
+ console.log('PASS: event approvals, QR, immutable registrations, private activity history, certificates, reminders and UTF8 CSV');
 })().catch(e=>{console.error(e);process.exitCode=1});

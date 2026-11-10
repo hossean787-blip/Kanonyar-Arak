@@ -76,7 +76,14 @@ public final class SurveyExportBridge {
  }
 
  @JavascriptInterface public void printHtml(String html){
+  printHtmlNamed("Kanonha-Survey-Report",html);
+ }
+ @JavascriptInterface public void printHtmlNamed(String fileName,String html){
   if(html==null||html.length()>1_500_000||!html.startsWith("<!doctype html>"))return;
+  String safeName=fileName==null?"Kanonha-Document":fileName.replaceAll("[^a-zA-Z0-9_.-]","_");
+  if(safeName.length()<3)safeName="Kanonha-Document";
+  if(safeName.length()>96)safeName=safeName.substring(0,96);
+  final String title=safeName;
   activity.runOnUiThread(()->{
    if(printView!=null){printView.destroy();printView=null;}
    WebView report=new WebView(activity);
@@ -99,7 +106,7 @@ public final class SurveyExportBridge {
       PrintAttributes attributes=new PrintAttributes.Builder()
         .setMediaSize(PrintAttributes.MediaSize.ISO_A4)
         .setColorMode(PrintAttributes.COLOR_MODE_COLOR).build();
-      printer.print("Kanonha-Survey-Report",v.createPrintDocumentAdapter("Kanonha Survey"),attributes);
+      printer.print(title,v.createPrintDocumentAdapter(title),attributes);
      }catch(Exception e){
       Toast.makeText(activity,"چاپ PDF در این گوشی در دسترس نیست.",Toast.LENGTH_SHORT).show();
      }

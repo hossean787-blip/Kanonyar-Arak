@@ -2494,3 +2494,9 @@ button:focus-visible,input:focus-visible,select:focus-visible {outline-color:#39
  .survey-admin-form-actions{grid-template-columns:1fr}
  .survey-rank-rows>div{grid-template-columns:1.4fr 1fr}
 }
+
+/* Explicit refresh for secretary membership queue. */
+.secretary-refresh-row{display:flex;justify-content:flex-end;margin:12px 0 8px}
+.secretary-refresh-button{border:1px solid #8dd2aa;border-radius:12px;background:#edfff3;color:#20734c;font:inherit;font-weight:700;padding:9px 16px;cursor:pointer;transition:background .15s ease,transform .15s ease}
+.secretary-refresh-button:active{transform:scale(.98)}
+.secretary-refresh-button:focus-visible{outline:3px solid #50c878;outline-offset:2px}

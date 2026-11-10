@@ -31,7 +31,7 @@ const document={readyState:'complete',getElementById:get,
  querySelector:()=>null,addEventListener:(k,fn)=>callbacks[k]=fn,
  body:{classList:{add(){}}},activeElement:{isConnected:true,focus(){}}};
 const uid='10e0d003-8c4f-4d1a-b87a-cc349cc53001';
-let user=null,managerAllowed=true,secretaryAllowed=true,adminTab='',secretaryTab='',managerCalls=0,secretaryCalls=0;
+let user=null,managerAllowed=true,secretaryAllowed=true,adminTab='',secretaryTab='',managerCalls=0,secretaryCalls=0,memberReloads=0;
 const api={enabled:true,get currentUser(){return user},
  async signIn(){user={id:uid};return user},async studentSignIn(){user={id:uid};return user},
  async isManager(){return managerAllowed},async signOut(){user=null},
@@ -49,6 +49,7 @@ window.KanonhaAdminPanel={
 };
 window.KanonhaSecretaryPanel={
  async refresh(){secretaryCalls++;get('secretary-panel').hidden=!secretaryAllowed},
+ async refreshData(){memberReloads++;return true},
  clear(){get('secretary-panel').hidden=true},
  hasAssignments(){return !!user&&secretaryAllowed},
  showTab(tab){secretaryTab=tab;return true},
@@ -96,6 +97,8 @@ const preview=window.KanonhaPreview;
  assert.match(get('bottom-nav').innerHTML,/data-screen-btn=\"ratings\"/);
  assert.doesNotMatch(get('bottom-nav').innerHTML,/manager-users/);
  click({workspaceRoute:'secretary-members'});assert.equal(secretaryTab,'members');
+ await wait();await wait();
+ assert.ok(memberReloads>=2,'role switch and member route should both fetch the live queue');
  click({workspaceSubtab:'attendance'});assert.equal(secretaryTab,'attendance');
  click({screenBtn:'secretary-events'});assert.equal(secretaryTab,'events');
  click({screenBtn:'secretary-club'});assert.equal(secretaryTab,'club');
@@ -107,6 +110,8 @@ const preview=window.KanonhaPreview;
  assert.doesNotMatch(get('bottom-nav').innerHTML,/secretary-members/);
  preview.go('manager-users');assert.equal(preview.screen,'home','student cannot navigate to manager');
  click({roleSwitch:'secretary'});
+ await wait();await wait();
+ assert.ok(memberReloads>=3,'re-enter secretary role must fetch the live queue');
  secretaryAllowed=false;
  click({},'role-refresh');await wait();await wait();
  assert.equal(get('role-option-secretary').hidden,true,'revoked secretary still offered');

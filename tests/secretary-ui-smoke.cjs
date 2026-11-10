@@ -75,6 +75,15 @@ function submit(id,fields){
   assert.ok(el.get('secretary-club-select').innerHTML.includes('&lt;img'),'club title must be escaped');
   assert.ok(!el.get('secretary-content').innerHTML.includes('<img src=x onerror'),'untrusted club name');
   click({secretaryTab:'members'});
+ const initialPending=panel.summary().pending;
+ members=[];
+ await panel.refreshData();
+ assert.match(el.get('secretary-content').innerHTML,/هنوز درخواست عضویت/);
+ members=[{id:memberId,user_id:registrantId,club_id:clubId,status:'pending',requested_at:'2026-11-01T10:00:00Z'}];
+ click({secretaryRefresh:''});
+ await flush();await flush();
+ assert.equal(panel.summary().pending,initialPending,'refresh button must load latest pending queue');
+ assert.ok(el.get('secretary-content').innerHTML.includes('تأیید عضویت'));
   assert.ok(el.get('secretary-content').innerHTML.includes('&lt;svg'),'applicant name must be escaped');
   assert.ok(!el.get('secretary-content').innerHTML.includes('<svg onload'),'XSS applicant payload');
   click({secretaryDecide:memberId,secretaryStatus:'approved'});

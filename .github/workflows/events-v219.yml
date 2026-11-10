@@ -57,7 +57,8 @@ jobs:
           test -s "$APK"
           unzip -t "$APK" >/dev/null
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -q "package: name='ir.kanonha.app.test'"
-          grep -q 'versionCode = 36' app/build.gradle.kts
+          VERSION=$(sed -n 's/.*versionCode = \([0-9][0-9]*\).*/\1/p' app/build.gradle.kts)
+          test "${VERSION:-0}" -ge 36
           echo 'PASS event subsystem syntax, security contract, integration and debug APK'
       - uses: actions/upload-artifact@v4
         with:

@@ -48,11 +48,17 @@ const api=window.KanonhaBackend;
   assert.equal((await api.secretaryEvents(clubId))[0].id,eventId);
   assert.equal((await api.secretaryMemberships(clubId))[0].id,memberId);
   assert.equal((await api.secretaryProfiles([secretaryId,secretaryId])).length,1);
-  await api.secretaryUpdateClub(clubId,{name:'کانون تست',description:'توضیحات',category:'علمی'});
+  await api.secretaryUpdateClub(clubId,{name:'کانون تست',description:'توضیحات',category:'علمی',
+    university:'دانشگاه نمونه',faculty:'علوم انسانی'});
   const clubPatch=calls.findLast(x=>x.method==='PATCH'&&x.url.includes('kanonha_clubs'));
-  assert.deepEqual(Object.keys(clubPatch.body).sort(),['category','description','name']);
+  assert.deepEqual(Object.keys(clubPatch.body).sort(),['category','description','faculty','name','university']);
+  assert.equal(clubPatch.body.university,'دانشگاه نمونه');
+  assert.equal(clubPatch.body.faculty,'علوم انسانی');
   assert.equal(clubPatch.headers.Authorization,'Bearer sample-token');
-  await assert.rejects(()=>api.secretaryUpdateClub(clubId,{name:'کانون تست',description:'   ',category:'علمی'}),/درباره کانون/);
+  await assert.rejects(()=>api.secretaryUpdateClub(clubId,{name:'کانون تست',description:'   ',category:'علمی',
+    university:'دانشگاه نمونه',faculty:'علوم انسانی'}),/درباره کانون/);
+  await assert.rejects(()=>api.secretaryUpdateClub(clubId,{name:'کانون تست',description:'توضیحات',category:'علمی',
+    university:'دانشگاه نمونه',faculty:''}),/دانشگاه و دانشکده/);
   const future={title:'کارگاه پژوهشی',location:'سالن اصلی',starts_at:'2035-05-12T10:00:00Z',registration_deadline:'2035-05-11T10:00:00Z',capacity:30,is_published:false};
   await api.secretaryCreateEvent(clubId,future);
   const inserted=calls.findLast(x=>x.url.endsWith('kanonha_events'));

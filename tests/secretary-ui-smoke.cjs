@@ -16,6 +16,7 @@ const registrantId='10e0d003-8c4f-4d1a-b87a-cc349cc53004';
 const registrationId='10e0d003-8c4f-4d1a-b87a-cc349cc53041';
 const fakeClub='<img src=x onerror=alert(1)>کانون پژوهشی';
 const fakeName='<svg onload=alert(2)>دانشجو';
+const uniA='10e0d003-8c4f-4d1a-b87a-cc349cc530a1',uniB='10e0d003-8c4f-4d1a-b87a-cc349cc530b1';
 class Element {
   constructor(id) {
     this.id=id;this.hidden=id==='secretary-panel';this.innerHTML='';this.textContent='';this.style={};
@@ -39,16 +40,22 @@ let events=[{id:eventId,club_id:clubId,title:'رویداد واقعی آزمای
 let roster=[{id:registrationId,user_id:registrantId,event_id:eventId,attended_at:null,registered_at:'2020-01-15T10:00:00Z'}];
 const ops={approvals:0,creates:0,attendances:0,edits:0,autoCertificates:0};
 const issued=new Set();
+let lastClubEdit=null;
 let certificateLookupFails=false;
 const backend={
   enabled:true,
   get currentUser(){return user},
   async secretaryClubs(){return secretaryEnabled ? [{club_id:clubId}] : []},
-  async clubs(){return [{id:clubId,name:fakeClub,description:'آزمون امنیت',category:'علمی'}]},
+  async clubs(){return [{id:clubId,name:fakeClub,description:'آزمون امنیت',category:'علمی',
+    university:'دانشگاه اول',faculty:'علوم انسانی'}]},
+  async academicCatalog(){return {
+    universities:[{id:uniA,name:'دانشگاه اول'},{id:uniB,name:'دانشگاه دوم'}],
+    faculties:[{university_id:uniA,name:'علوم انسانی'},{university_id:uniA,name:'هنر'},{university_id:uniB,name:'مهندسی'}]
+  }},
   async secretaryEvents(id){assert.equal(id,clubId);return events},
   async secretaryMemberships(id){assert.equal(id,clubId);return members},
   async secretaryProfiles(ids){return profileRows.filter(x=>ids.includes(x.user_id))},
-  async secretaryUpdateClub(id,data){assert.equal(id,clubId);ops.edits++;return {id,...data}},
+  async secretaryUpdateClub(id,data){assert.equal(id,clubId);lastClubEdit=data;ops.edits++;return {id,...data}},
   async secretaryCreateEvent(id,data){assert.equal(id,clubId);ops.creates++;const record={id:'20e0d003-8c4f-4d1a-b87a-cc349cc53031',club_id:id,registered_count:0,...data};events=[...events,record];return record},
   async secretaryUpdateEvent(id,data){assert.ok(events.some(x=>x.id===id));ops.edits++;events=events.map(e=>e.id===id?{...e,...data}:e);return {id,...data}},
   async uploadEventPoster(club,event,file){assert.equal(club,clubId);assert.ok(file&&file.size>0);events=events.map(e=>e.id===event?{...e,poster_path:club+'/'+event+'.webp'}:e);return club+'/'+event+'.webp'},
@@ -133,14 +140,29 @@ function submit(id,fields){
   assert.match(el.get('secretary-message').textContent,/فهرست حضور بارگذاری شد/);
   certificateLookupFails=false;
   click({secretaryTab:'club'});
+  assert.match(el.get('secretary-content').innerHTML,/name="university" data-secretary-university required/);
+  assert.match(el.get('secretary-content').innerHTML,/name="faculty" data-secretary-faculty required/);
+  const selectFaculty={innerHTML:'',value:'علوم انسانی',disabled:false};
+  root.listeners.change({target:{dataset:{secretaryUniversity:''},value:'دانشگاه دوم',
+    closest(){return {querySelector(){return selectFaculty}}}}});
+  assert.match(selectFaculty.innerHTML,/مهندسی/);
+  assert.doesNotMatch(selectFaculty.innerHTML,/علوم انسانی/);
+  assert.equal(selectFaculty.value,'','changing university resets selected faculty');
  const editsBefore=ops.edits;
  submit('secretary-club-form',{name:'کانون تازه',description:'  ',category:'علمی'});
  await flush();await flush();
  assert.equal(ops.edits,editsBefore,'blank about field must not submit');
  assert.match(el.get('secretary-message').textContent,/درباره کانون/);
-  submit('secretary-club-form',{name:'کانون ثبت شده',description:'توضیحات نو',category:'پژوهشی'});
+  submit('secretary-club-form',{name:'کانون ثبت شده',description:'توضیحات نو',category:'پژوهشی',
+    university:'دانشگاه اول',faculty:'مهندسی'});
   await flush();await flush();
-  assert.equal(ops.edits,2);
+  assert.equal(ops.edits,editsBefore,'faculty from a different university must be rejected');
+  submit('secretary-club-form',{name:'کانون ثبت شده',description:'توضیحات نو',category:'پژوهشی',
+    university:'دانشگاه دوم',faculty:'مهندسی'});
+  await flush();await flush();
+  assert.equal(ops.edits,editsBefore+1);
+  assert.equal(lastClubEdit.university,'دانشگاه دوم');
+  assert.equal(lastClubEdit.faculty,'مهندسی');
   user=null;panel.clear();
   assert.equal(root.hidden,true,'logout must hide all privileged content');
   user={id:secretaryId};secretaryEnabled=false;

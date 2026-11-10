@@ -19,9 +19,9 @@ for (const page of pages) {
   assert.ok(html.includes('data-screen="' + page + '"'), 'missing navigation target: ' + page);
   assert.ok(fs.existsSync(path.join(base, 'assets/assets/nav-' + page + '.svg')));
 }
-assert.match(manifest, /android:label="\\$\\{appLabel\\}"/);
+assert.match(manifest, /android:label="\$\{appLabel\}"/);
 const gradle = fs.readFileSync(path.join(root, 'app/build.gradle.kts'), 'utf8');
-assert.match(gradle, /applicationIdSuffix = "\\.test"/, 'Debug app must install next to the original');
+assert.match(gradle, /applicationIdSuffix = "\.test"/, 'Debug app must install next to the original');
 assert.match(gradle, /manifestPlaceholders\["appLabel"\] = "کانون‌ها آزمایشی"/);
 assert.match(html, /<title>کانون‌ها \| اپ مستقل دانشجویی<\/title>/);
 assert.match(html, /رویدادهای نمونه/);

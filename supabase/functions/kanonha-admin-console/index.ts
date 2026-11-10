@@ -41,7 +41,7 @@ async function identity(req:Request){
 async function overview(){
  const [clubs,events,memberships,registrations,secretaries,profiles,academics,universities,faculties]=await Promise.all([
   rows("kanonha_clubs?select=id,name,description,category,university,faculty,logo_path,is_active,created_at&order=name.asc&limit=500"),
-  rows("kanonha_events?select=id,club_id,title,starts_at,registration_deadline,location,capacity,registered_count,is_published&order=starts_at.desc&limit=500"),
+  rows("kanonha_events?select=id,club_id,title,starts_at,registration_deadline,location,capacity,registered_count,is_published,approval_status,approved_at,poster_path&order=starts_at.desc&limit=500"),
   rows("kanonha_memberships?select=id,user_id,club_id,status,requested_at,decided_at&order=requested_at.desc&limit=500"),
   rows("kanonha_registrations?select=id,user_id,event_id,status,attended_at,registered_at&order=registered_at.desc&limit=500"),
   rows("kanonha_secretaries?select=club_id,user_id,appointed_at&limit=500"),
@@ -132,13 +132,55 @@ async function handle(op:string,d:Record<string,unknown>,actor:string){
     Date.parse(starts_at)<=Date.now()||Date.parse(registration_deadline)<=Date.now()||
     Date.parse(registration_deadline)>Date.parse(starts_at)||
     !Number.isInteger(capacity)||capacity<1||capacity>100000||!allowedBool(d.is_published))throw new Error("input");
-  const patch={title,location,starts_at,registration_deadline,capacity,is_published:d.is_published};
+  const published=d.is_published===true;
+  const patch={title,location,starts_at,registration_deadline,capacity,
+   is_published:published,approval_status:published?'approved':'pending',
+   approved_at:published?new Date().toISOString():null};
   if(op==="event.create")return mutation("kanonha_events","POST",{club_id,...patch});
   if(!uuid(id))throw new Error("input");
   // Changes to event with registrants can invalidate issued registration capacity.
   const existing=await rows("kanonha_events?select=id,registered_count,club_id&id=eq."+id);
   if(existing.length!==1||existing[0].registered_count>0||existing[0].club_id!==club_id)throw new Error("locked");
   return mutation("kanonha_events","PATCH",patch,"?id=eq."+id+"&registered_count=eq.0");
+ }
+ if(op==="event.approve"||op==="event.reject"){
+  if(!uuid(id))throw new Error("input");
+  const matches=await rows("kanonha_events?select=id,approval_status,is_published,registered_count,starts_at,registration_deadline&id=eq."+id+"&limit=1");
+  const event=matches[0];
+  if(!event)throw new Error("missing");
+  if(op==="event.approve"){
+   if(event.approval_status==="approved"&&event.is_published)return {status:"approved"};
+   if(Date.parse(event.starts_at)<=Date.now()||Date.parse(event.registration_deadline)<=Date.now())throw new Error("locked");
+   return mutation("kanonha_events","PATCH",{
+    approval_status:"approved",approved_at:new Date().toISOString(),is_published:true
+   },"?id=eq."+id+"&approval_status=eq."+encodeURIComponent(event.approval_status));
+  }
+  if(Number(event.registered_count)>0)throw new Error("locked");
+  return mutation("kanonha_events","PATCH",{
+   approval_status:"rejected",approved_at:null,is_published:false
+  },"?id=eq."+id+"&registered_count=eq.0");
+ }
+ if(op==="event.report"){
+  if(!uuid(id))throw new Error("input");
+  const events=await rows("kanonha_events?select=id,title,club_id,capacity,registered_count&id=eq."+id+"&limit=1");
+  if(!events.length)throw new Error("missing");
+  const all:Record<string,unknown>[]=[];
+  for(let offset=0;offset<10000;offset+=500){
+   const part=await rows("kanonha_registrations?select=id,user_id,event_id,status,registered_at,attended_at"+
+    "&event_id=eq."+id+"&order=registered_at.asc&limit=500&offset="+offset);
+   all.push(...part);if(part.length<500)break;
+  }
+  const ids=[...new Set(all.map(r=>String(r.user_id||"")).filter(uuid))];
+  const profiles:Record<string,unknown>[]=[];
+  for(let i=0;i<ids.length;i+=80){
+   profiles.push(...await rows("kanonha_profiles?select=user_id,full_name,student_number"+
+    "&user_id=in.("+ids.slice(i,i+80).map(encodeURIComponent).join(",")+")"));
+  }
+  const byId=new Map(profiles.map(p=>[String(p.user_id),p]));
+  return {event:events[0],registered:Number(events[0].registered_count||0),
+   attended:all.filter(r=>r.attended_at).length,
+   rows:all.map(r=>({...r,student:byId.get(String(r.user_id))||null})),
+   truncated:all.length>=10000};
  }
  if(op==="event.delete"){
   if(!uuid(id)||d.confirm!=="DELETE")throw new Error("input");

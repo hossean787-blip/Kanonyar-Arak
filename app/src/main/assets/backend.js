@@ -684,7 +684,7 @@
   }
   async function surveyList(includeDrafts=false) {
     const path=restPath+'kanonha_surveys?select=id,title,description,category,kind,status,starts_at,ends_at,results_approved,published_at,created_at,min_rank_votes,audience_university_id,audience_faculty_id,copied_from'
-      +(includeDrafts?'':'&status=in.(published,archived)')+'&order=created_at.desc&limit=200';
+      +(includeDrafts?'':'&status=in.(published,paused,archived)')+'&order=created_at.desc&limit=200';
     return readRows(await request(path,{auth:includeDrafts}));
   }
   async function surveyOptions(ids) {
@@ -850,9 +850,9 @@
   }
   async function surveyChangeStatus(id,status) {
     surveyCheckId(id);mustUser();
-    if(!['cancelled','archived'].includes(status))throw new ApiError('وضعیت نامعتبر است.');
+    if(!['cancelled','archived','paused','published'].includes(status))throw new ApiError('وضعیت نامعتبر است.');
     const rows=readRows(await request(restPath+'kanonha_surveys?id=eq.'+id+
-      '&status=eq.published&select=id,status',{
+      '&status=in.(published,paused)&select=id,status',{
       method:'PATCH',requireUser:true,headers:{Prefer:'return=representation'},body:{status}
     }));
     if(rows.length!==1)throw new ApiError('لغو یا بایگانی نظرسنجی مجاز نیست.');

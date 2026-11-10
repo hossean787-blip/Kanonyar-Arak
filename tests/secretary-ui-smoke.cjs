@@ -113,7 +113,7 @@ function submit(id,fields){
   click({secretaryTab:'events'});
   click({secretaryAction:'new-event'});
   assert.ok(el.get('secretary-content').innerHTML.includes('secretary-event-form'));
-  assert.match(el.get('secretary-content').innerHTML,/name="event_date" type="date"/);
+  assert.match(el.get('secretary-content').innerHTML,/name="event_date" type="date" data-jalali-future="true"/);
   assert.match(el.get('secretary-content').innerHTML,/name="event_time" type="time"/);
   submit('secretary-event-form',{
     title:'رویداد آینده',location:'سالن',event_date:'2035-03-10',event_time:'15:00',

@@ -108,6 +108,11 @@ function submit(id,fields){
   assert.equal(ops.attendances,1);
   assert.ok(el.get('secretary-content').innerHTML.includes('حاضر'));
   click({secretaryTab:'club'});
+ const editsBefore=ops.edits;
+ submit('secretary-club-form',{name:'کانون تازه',description:'  ',category:'علمی'});
+ await flush();await flush();
+ assert.equal(ops.edits,editsBefore,'blank about field must not submit');
+ assert.match(el.get('secretary-message').textContent,/درباره کانون/);
   submit('secretary-club-form',{name:'کانون ثبت شده',description:'توضیحات نو',category:'پژوهشی'});
   await flush();await flush();
   assert.equal(ops.edits,1);

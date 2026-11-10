@@ -134,8 +134,8 @@ jobs:
           test -f app/build/outputs/apk/debug/app-debug.apk
           unzip -t app/build/outputs/apk/release/app-release-unsigned.apk >/dev/null
           unzip -t app/build/outputs/apk/debug/app-debug.apk >/dev/null
-          $ANDROID_HOME/build-tools/35.0.0/aapt dump badging app/build/outputs/apk/debug/app-debug.apk | grep -q "package: name=\u0027ir.kanonha.app.test\u0027"
-          $ANDROID_HOME/build-tools/35.0.0/aapt dump badging app/build/outputs/apk/release/app-release-unsigned.apk | grep -q "package: name=\u0027ir.kanonha.app\u0027"
+          $ANDROID_HOME/build-tools/35.0.0/aapt dump badging app/build/outputs/apk/debug/app-debug.apk | grep -q "package: name='ir.kanonha.app.test'"
+          $ANDROID_HOME/build-tools/35.0.0/aapt dump badging app/build/outputs/apk/release/app-release-unsigned.apk | grep -q "package: name='ir.kanonha.app'"
           ! find app/src -type f -name '*.jks' | grep -q .
           ! find app/src -type f -name '*.keystore' | grep -q .
           ! find app/src -type f -name '*.p12' | grep -q .

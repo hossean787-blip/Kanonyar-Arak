@@ -28,6 +28,7 @@ public final class MainActivity extends FragmentActivity {
  private WebView web;
  private static final int CLUB_LOGO_PICK_REQUEST=61420;
  private ValueCallback<Uri[]> pendingLogoFiles;
+ private android.webkit.PermissionRequest pendingCameraPermission;
  private BiometricVault biometric;
  private SurveyExportBridge surveyExports;
 
@@ -85,6 +86,7 @@ public final class MainActivity extends FragmentActivity {
   surveyExports=new SurveyExportBridge(this);
   web.addJavascriptInterface(surveyExports, "AndroidSurveyExports");
   web.addJavascriptInterface(new SurveyNoticeReceiver.Bridge(this), "AndroidSurveyNotices");
+  web.addJavascriptInterface(new EventReminderReceiver.Bridge(this), "AndroidEventReminders");
   web.setWebViewClient(new WebViewClient() {
    @Override public WebResourceResponse shouldInterceptRequest(WebView v, WebResourceRequest r) {
     return loader.shouldInterceptRequest(r.getUrl());
@@ -95,8 +97,27 @@ public final class MainActivity extends FragmentActivity {
    }
   });
   web.setWebChromeClient(new WebChromeClient(){
+   @Override public void onPermissionRequest(android.webkit.PermissionRequest request){
+    Uri origin=request.getOrigin();
+    String[] resources=request.getResources();
+    if(origin==null||!"https".equals(origin.getScheme())||
+      !"appassets.androidplatform.net".equals(origin.getHost())||
+      resources==null||resources.length!=1||
+      !android.webkit.PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(resources[0])){
+     request.deny();return;
+    }
+    if(Build.VERSION.SDK_INT>=23&&checkSelfPermission(android.Manifest.permission.CAMERA)!=
+       android.content.pm.PackageManager.PERMISSION_GRANTED){
+     if(pendingCameraPermission!=null)pendingCameraPermission.deny();
+     pendingCameraPermission=request;
+     requestPermissions(new String[]{android.Manifest.permission.CAMERA},104);
+    }else request.grant(new String[]{android.webkit.PermissionRequest.RESOURCE_VIDEO_CAPTURE});
+   }
+   @Override public void onPermissionRequestCanceled(android.webkit.PermissionRequest request){
+    if(pendingCameraPermission==request)pendingCameraPermission=null;
+   }
    @Override public boolean onShowFileChooser(WebView view,ValueCallback<Uri[]> callback,FileChooserParams params){
-    // This app supports a single student club logo; never expose generic file access or camera.
+    // Only one user-selected logo/poster image; no generic file access.
     if(pendingLogoFiles!=null)finishLogoPicker(null);
     pendingLogoFiles=callback;
     if(params!=null&&params.getMode()!=FileChooserParams.MODE_OPEN){
@@ -120,7 +141,16 @@ public final class MainActivity extends FragmentActivity {
 
  @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
   super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-  if (requestCode==103 && grantResults.length>0 &&
+  if(requestCode==104){
+    android.webkit.PermissionRequest request=pendingCameraPermission;
+    pendingCameraPermission=null;
+    if(request!=null){
+     if(grantResults.length>0&&grantResults[0]==android.content.pm.PackageManager.PERMISSION_GRANTED)
+      request.grant(new String[]{android.webkit.PermissionRequest.RESOURCE_VIDEO_CAPTURE});
+     else request.deny();
+    }
+   }
+   if (requestCode==103 && grantResults.length>0 &&
       grantResults[0]==android.content.pm.PackageManager.PERMISSION_GRANTED) {
    DailyCalendarReceiver.show(this);
   }
@@ -166,6 +196,7 @@ public final class MainActivity extends FragmentActivity {
  }
  @Override protected void onDestroy() {
   finishLogoPicker(null);
+  if(pendingCameraPermission!=null){pendingCameraPermission.deny();pendingCameraPermission=null;}
   if (biometric != null) { biometric.destroy(); biometric = null; }
   if (surveyExports != null) { surveyExports.destroy(); surveyExports = null; }
   if (web != null) { web.destroy(); web = null; }

@@ -338,7 +338,7 @@ begin
  if sources is null or array_position(sources,null) is not null then
    raise exception 'legacy_survey_cannot_duplicate_without_catalog' using errcode='23514';
  end if;
- select public.kanonha_survey_save(null,'کپی '+left(s.title,110),s.description,s.category,
+ select public.kanonha_survey_save(null,'کپی '||left(s.title,110),s.description,s.category,
     s.kind,clock_timestamp(),clock_timestamp()+interval '7 days',s.min_rank_votes,
     s.audience_university_id,s.audience_faculty_id,sources) into v_id;
  update public.kanonha_surveys set copied_from=p_id where id=v_id;

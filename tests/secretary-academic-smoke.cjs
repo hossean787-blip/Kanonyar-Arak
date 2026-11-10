@@ -20,14 +20,14 @@ for(const id of ['secretary-panel','secretary-content','secretary-message','secr
   'home-management','home-management-overline','home-management-title','home-management-caption','home-management-btn'])
   element(id);
 const root=elements.get('secretary-panel');
-let user={id:directoryId},assigned=true;
+let user={id:directoryId},assigned=true,directoryFailure=false;
 let patchCount=0,lastPatch=null;
 const backend={
   enabled:true,get currentUser(){return user},
   async secretaryClubs(){return assigned?[{club_id:clubId}]:[]},
   async clubs(){return [{id:clubId,name:'کانون آزمایشی',category:'علمی',description:'توضیحات واقعی',
     university:'دانشگاه اول',faculty:'علوم انسانی'}]},
-  async academicCatalog(){return {
+  async academicCatalog(){if(directoryFailure)throw new Error('Catalog offline');return {
     universities:[{id:uniA,name:'دانشگاه اول'},{id:uniB,name:'دانشگاه دوم'}],
     faculties:[{university_id:uniA,name:'علوم انسانی'},{university_id:uniA,name:'هنر'},
       {university_id:uniB,name:'مهندسی'}]
@@ -86,6 +86,13 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));
   assert.equal(patchCount,1,'valid academic choice must reach backend');
   assert.equal(lastPatch.university,'دانشگاه دوم');
   assert.equal(lastPatch.faculty,'مهندسی');
+  directoryFailure=true;
+  await panel.refresh();
+  assert.equal(root.hidden,false,'academic catalog outage must not hide secretary memberships');
+  assert.match(elements.get('secretary-content').innerHTML,/فهرست دانشگاه‌ها در دسترس نیست/);
+  directoryFailure=false;
+  await panel.refresh();
+  assert.doesNotMatch(elements.get('secretary-content').innerHTML,/فهرست دانشگاه‌ها در دسترس نیست/);
   user=null;panel.clear();
   submit(base);await flush();
   assert.equal(patchCount,1,'logged-out secretary cannot patch');

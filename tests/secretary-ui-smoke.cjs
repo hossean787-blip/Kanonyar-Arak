@@ -50,7 +50,8 @@ const backend={
   async secretaryProfiles(ids){return profileRows.filter(x=>ids.includes(x.user_id))},
   async secretaryUpdateClub(id,data){assert.equal(id,clubId);ops.edits++;return {id,...data}},
   async secretaryCreateEvent(id,data){assert.equal(id,clubId);ops.creates++;const record={id:'20e0d003-8c4f-4d1a-b87a-cc349cc53031',club_id:id,registered_count:0,...data};events=[...events,record];return record},
-  async secretaryUpdateEvent(id,data){assert.ok(events.some(x=>x.id===id));ops.edits++;return {id,...data}},
+  async secretaryUpdateEvent(id,data){assert.ok(events.some(x=>x.id===id));ops.edits++;events=events.map(e=>e.id===id?{...e,...data}:e);return {id,...data}},
+  async uploadEventPoster(club,event,file){assert.equal(club,clubId);assert.ok(file&&file.size>0);events=events.map(e=>e.id===event?{...e,poster_path:club+'/'+event+'.webp'}:e);return club+'/'+event+'.webp'},
   async secretaryDecideMembership(id,status){assert.equal(id,memberId);assert.equal(status,'approved');ops.approvals++;members=members.map(x=>({...x,status}));return members[0]},
   async secretaryRoster(id){assert.equal(id,eventId);return roster},
   async secretaryCertificates(id){
@@ -65,7 +66,7 @@ const backend={
     return roster[0];
   }
 };
-const window={KanonhaBackend:backend};
+const window={KanonhaBackend:backend,KanonhaBiometric:{confirmAction:async kind=>{assert.equal(kind,'secretary-event');return true;}}};
 const document={hidden:false,getElementById(id){return el.get(id)||null},addEventListener(){}};
 class FormDataMock{constructor(form){this.fields=form.fields;}get(name){return this.fields[name]??null}}
 vm.runInNewContext(script,{window,document,Date,FormData:FormDataMock},{filename:'secretary.js',timeout:3000});
@@ -76,7 +77,7 @@ function click(data){
   root.listeners.click({target:{closest(){return{dataset:data}}}});
 }
 function submit(id,fields){
-  root.listeners.submit({target:{id,fields},preventDefault(){}});
+  root.listeners.submit({target:{id,fields,querySelector(name){return name==='input[name="poster"]'?{files:[{type:'image/png',size:512}]}:null;}},preventDefault(){}});
 }
 (async()=>{
   await panel.refresh();
@@ -139,7 +140,7 @@ function submit(id,fields){
  assert.match(el.get('secretary-message').textContent,/درباره کانون/);
   submit('secretary-club-form',{name:'کانون ثبت شده',description:'توضیحات نو',category:'پژوهشی'});
   await flush();await flush();
-  assert.equal(ops.edits,1);
+  assert.equal(ops.edits,2);
   user=null;panel.clear();
   assert.equal(root.hidden,true,'logout must hide all privileged content');
   user={id:secretaryId};secretaryEnabled=false;

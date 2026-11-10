@@ -2500,3 +2500,12 @@ button:focus-visible,input:focus-visible,select:focus-visible {outline-color:#39
 .secretary-refresh-button{border:1px solid #8dd2aa;border-radius:12px;background:#edfff3;color:#20734c;font:inherit;font-weight:700;padding:9px 16px;cursor:pointer;transition:background .15s ease,transform .15s ease}
 .secretary-refresh-button:active{transform:scale(.98)}
 .secretary-refresh-button:focus-visible{outline:3px solid #50c878;outline-offset:2px}
+
+/* Events v0.9.19: private admission codes and administrative attachments. */
+.kanonha-event-poster{display:block;width:100%;max-height:210px;object-fit:cover;border-radius:16px;margin:12px 0;border:1px solid #e6ecee}
+.kanonha-ticket-qr{display:flex;align-items:center;justify-content:center;min-width:188px;min-height:188px;padding:8px;border:1px solid #e5ece9;border-radius:20px;background:white;color:#142927;font-size:12px;line-height:1.6;text-align:center}
+.kanonha-ticket-qr canvas,.kanonha-ticket-qr img{width:172px!important;height:172px!important;max-width:100%}
+.kanonha-ticket-camera{display:block;width:100%;max-height:280px;object-fit:cover;border-radius:18px;background:#111}
+.ticket-cancel{background:#fff4f2!important;color:#a14440!important;border:1px solid #f6d4ce!important;margin-top:8px}
+#secretary-ticket-form{margin:12px 0}
+#secretary-scan-camera:not(:empty){padding-top:12px}

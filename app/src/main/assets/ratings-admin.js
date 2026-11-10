@@ -129,7 +129,7 @@ function managerForm(){
   '<div class="survey-admin-wide survey-option-title"><strong>انتخاب گزینه‌ها از فهرست واقعی</strong>'+
    '<span id="survey-choice-count">'+nf(formState.sources.length)+' انتخاب</span></div>'+
   '<div class="survey-admin-wide">'+optionChoices()+'</div>'+
-  '<p class="survey-admin-form-help">۲ تا ۱۲ گزینه واقعی و متفاوت انتخاب کنید. هر دانشجو در یک نظرسنجی، '+
+  '<p class="survey-admin-form-help">۱ تا ۱۲ گزینه واقعی و متفاوت انتخاب کنید. هر دانشجو در یک نظرسنجی، '+
   'فقط به یک گزینه از ۱ تا ۵ ستاره می‌دهد.</p>'+
   '<div class="survey-admin-wide survey-admin-form-actions">'+
   '<button type="button" data-surveys-action="preview-form">پیش‌نمایش فرم</button>'+
@@ -330,9 +330,9 @@ async function submit(form){
   audience_university_id:formState.university_id||null,
   audience_faculty_id:formState.faculty_id||null};
  const catalog=catalogs[fields.category]||[];
- if(formState.sources.length<2||formState.sources.length>12||
+ if(formState.sources.length<1||formState.sources.length>12||
    formState.sources.some(id=>!catalog.some(c=>c.source_id===id))){
-   notice('۲ تا ۱۲ گزینه معتبر از فهرست همان دسته انتخاب کنید.',true);return;
+   notice('۱ تا ۱۲ گزینه معتبر از فهرست همان دسته انتخاب کنید.',true);return;
  }
  busy=true;render();
  try{

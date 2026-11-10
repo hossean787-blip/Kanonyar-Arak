@@ -8,6 +8,9 @@ const reports=read('app/src/main/assets/survey-report.js');
 const backend=read('app/src/main/assets/backend.js');
 const schema=read('supabase/surveys-v210-finalization.sql');
 const pausing=read('supabase/surveys-v211-pausing.sql');
+const singleSql=read('supabase/surveys-v212-single-option.sql');
+assert.match(singleSql,/v_count not between 1 and 12/);
+assert.match(singleSql,/survey_requires_at_least_one_option/);
 const admin=read('app/src/main/assets/admin.js');
 new vm.Script(manager,{filename:'ratings-admin.js'});
 new vm.Script(reports,{filename:'survey-report.js'});
@@ -23,6 +26,7 @@ assert.match(backend,/surveySaveV21/);
 const ids={
  competition:'22222222-2222-4222-8222-222222222222',
  created:'33333333-3333-4333-8333-333333333333',
+ single:'88888888-8888-4888-8888-888888888888',
  faculty1:'44444444-4444-4444-8444-444444444444',
  faculty2:'55555555-5555-4555-8555-555555555555',
  faculty3:'66666666-6666-4666-8666-666666666666'
@@ -55,15 +59,16 @@ const api={
  surveySaveV21:async (id,fields,sources)=>{
   if(!allowed)throw Error('forbidden');
   operations.push({action:'save',id,fields,sources});
-  if(sources.length!==2)throw Error('bad sources');
-  polls.push({id:ids.created,status:'draft',results_approved:false,...fields,
+  if(sources.length<1||sources.length>12)throw Error('bad sources');
+  const newId=sources.length===1?ids.single:ids.created;
+  polls.push({id:newId,status:'draft',results_approved:false,...fields,
    audience_university_id:fields.audience_university_id,
    audience_faculty_id:fields.audience_faculty_id});
   options.push(...sources.map((sourceId,i)=>({
-   survey_id:ids.created,id:idOpt(i+3),source_id:sourceId,
+   survey_id:newId,id:idOpt(i+(sources.length===1?8:3)),source_id:sourceId,
    title:catalog.find(x=>x.source_id===sourceId).title,sort_order:i
   })));
-  return ids.created;
+  return newId;
  },
  surveyPublish:async id=>{
   if(!allowed)throw Error('forbidden');
@@ -194,5 +199,23 @@ function submit(fields){
  allowed=false;
  click('cancel-ask',ids.created);
  assert.equal(operations.length,5,'nonmanager cannot mutate published survey');
- console.log('PASS: manager Jalali/form controls, 2-click publish/approval/pause, ranking, Excel/PDF bridges and role guard');
+  allowed=true;
+  const makeForm=sources=>({
+    title:'ارزیابی تک‌گزینه‌ای دانشکده',description:'امتیازدهی مستقل',
+    category:'faculty',kind:'regular',
+    starts_at:new Date(Date.now()-60000).toISOString().slice(0,16),
+    ends_at:future.slice(0,16),min_rank_votes:'1',
+    university_id:'',faculty_id:'',sources
+  });
+  submit(makeForm([]));await delay();
+  assert.equal(operations.length,5,'zero options must not save');
+  assert.match(el('admin-ratings-content').innerHTML,/۱ تا ۱۲ گزینه/);
+  submit(makeForm([ids.faculty1]));await delay();
+  assert.equal(operations[5].action,'save','a single-option poll must save');
+  assert.deepEqual(operations[5].sources,[ids.faculty1]);
+  assert.ok(polls.some(p=>p.id===ids.single&&p.status==='draft'));
+  click('publish-ask',ids.single);
+  click('publish-confirm',ids.single);await delay();
+  assert.equal(polls.find(p=>p.id===ids.single).status,'published','single-option poll must publish');
+ console.log('PASS: single-option save/publish, zero-option rejection, manager Jalali/form controls, 2-click publish/approval/pause, ranking, Excel/PDF bridges and role guard');
 })().catch(e=>{console.error(e);process.exitCode=1});

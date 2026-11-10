@@ -762,8 +762,8 @@
     return {title,description,category,kind,ends_at:new Date(ends_at).toISOString()};
   }
   function surveyItems(items) {
-    if(!Array.isArray(items)||items.length<2||items.length>12)
-      throw new ApiError('برای هر نظرسنجی بین ۲ تا ۱۲ گزینه تعریف کنید.');
+    if(!Array.isArray(items)||items.length<1||items.length>12)
+      throw new ApiError('برای هر نظرسنجی بین ۱ تا ۱۲ گزینه تعریف کنید.');
     const options=items.map(v=>String(v||'').trim());
     if(options.some(v=>v.length<2||v.length>120)||
        new Set(options.map(v=>v.toLocaleLowerCase('fa-IR'))).size!==options.length)
@@ -905,10 +905,10 @@
       throw new ApiError('اطلاعات فرم، بازه زمانی یا مخاطبان معتبر نیست.');
     if(audienceUniversity)surveyCheckId(audienceUniversity);
     if(audienceFaculty)surveyCheckId(audienceFaculty);
-    if(!Array.isArray(sources)||sources.length<2||sources.length>12||
+    if(!Array.isArray(sources)||sources.length<1||sources.length>12||
        new Set(sources).size!==sources.length||
        sources.some(x=>!uuid(x)))
-      throw new ApiError('بین ۲ تا ۱۲ گزینه واقعی و متفاوت از فهرست انتخاب کنید.');
+      throw new ApiError('بین ۱ تا ۱۲ گزینه واقعی و متفاوت از فهرست انتخاب کنید.');
     return {
       p_title:title,p_description:description,p_category:category,p_kind:kind,
       p_starts_at:new Date(startsAt).toISOString(),p_ends_at:new Date(endsAt).toISOString(),

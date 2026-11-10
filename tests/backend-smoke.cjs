@@ -60,6 +60,7 @@ async function fakeFetch(url, options) {
   if (url.endsWith('/rest/v1/kanonha_memberships')) return ok(undefined, 201);
   if (url.endsWith('/rest/v1/kanonha_registrations')) return ok(undefined, 201);
   if (url.endsWith('/auth/v1/signup')) return ok({ user: { id } });
+  if (url.endsWith('/rest/v1/rpc/kanonha_survey_save')) return ok('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
   throw new Error('unexpected path: ' + url);
 }
 function createClient(config) {
@@ -105,6 +106,16 @@ function createClient(config) {
   assert.equal(register.headers.Authorization, 'Bearer test-token');
   await assert.rejects(() => online.registerEvent('not-a-uuid'), /معتبر نیست/);
   await assert.rejects(() => online.saveProfile('A', 'wrong-number'), /نام و نام/);
+  const future=new Date(Date.now()+7*86400000).toISOString();
+  const surveyFields={title:'ارزیابی یک استاد',description:'',category:'professor',
+    kind:'regular',starts_at:new Date(Date.now()+60000).toISOString(),
+    ends_at:future,min_rank_votes:1};
+  const saved=await online.surveySaveV21(null,surveyFields,[club]);
+  assert.equal(saved,'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+  const rpc=responses.findLast(r=>r.url.endsWith('/rest/v1/rpc/kanonha_survey_save'));
+  assert.deepEqual(rpc.body.p_sources,[club],'one catalog option must reach the RPC');
+  await assert.rejects(()=>online.surveySaveV21(null,surveyFields,[]),/۱ تا ۱۲/);
+  await assert.rejects(()=>online.surveySaveV21(null,surveyFields,[club,club]),/۱ تا ۱۲/);
   await online.signOut();
   assert.equal(online.currentUser, null);
   await assert.rejects(() => online.registrations(), /وارد حساب/);

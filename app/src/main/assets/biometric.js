@@ -6,6 +6,8 @@
   const native = typeof window.AndroidBiometric !== 'undefined' ? window.AndroidBiometric : null;
   let onToken = null;
   let onStatus = null;
+  let actionCounter = 0;
+  const pendingAction = new Map();
   const nativeBool = method => {
     if (!native || typeof native[method] !== 'function') return false;
     try { return native[method]() === true; } catch (_) { return false; }
@@ -38,8 +40,40 @@
     if (!enrolled() || !token || typeof token !== 'string' || !ownedBy(accountId)) return;
     try { native.rotateToken(token,accountId); } catch (_) {}
   }
+  function confirmAction(kind) {
+    if (!['student-registration','secretary-event'].includes(kind))
+      return Promise.reject(new Error('عملیات احراز هویت نامعتبر است.'));
+    if (!native || typeof native.confirmAction !== 'function' ||
+        typeof native.actionAvailable !== 'function')
+      return Promise.reject(new Error('برای ثبت نهایی، نسخه اندروید دارای اثر انگشت یا تشخیص چهره لازم است.'));
+    if (!nativeBool('actionAvailable')) {
+      try { if (typeof native.openEnrollment === 'function') native.openEnrollment(); } catch (_) {}
+      return Promise.reject(new Error('اثر انگشت یا تشخیص چهره فعال نیست. آن را در تنظیمات گوشی فعال کنید، سپس ثبت نهایی را تکرار کنید.'));
+    }
+    if (pendingAction.size)
+      return Promise.reject(new Error('احراز هویت دیگری در جریان است.'));
+    const id=String(++actionCounter);
+    return new Promise((resolve,reject)=>{
+      pendingAction.set(id,{resolve,reject});
+      try { native.confirmAction(id); }
+      catch (_) {
+        pendingAction.delete(id);
+        reject(new Error('شروع احراز هویت دستگاه امکان‌پذیر نشد.'));
+      }
+    });
+  }
+  function nativeActionResult(id,result) {
+    const item=pendingAction.get(String(id));
+    if (!item) return;
+    pendingAction.delete(String(id));
+    if(result==='verified')item.resolve(true);
+    else item.reject(new Error(result==='enrollment_required'
+      ? 'ابتدا اثر انگشت یا تشخیص چهره را در تنظیمات گوشی فعال کنید و دوباره تلاش کنید.'
+      : 'تأیید بیومتریک انجام نشد؛ ثبت نهایی لغو شد.'));
+  }
   window.KanonhaBiometric=Object.freeze({
     available,present,enrolled,ownedBy,enroll,unlock,clear,lock,rotateToken,
+    confirmAction,nativeActionResult,
     setHandlers(tokenHandler,statusHandler) {
       onToken=typeof tokenHandler==='function'?tokenHandler:null;
       onStatus=typeof statusHandler==='function'?statusHandler:null;

@@ -5,7 +5,7 @@ const api=window.KanonhaBackend,root=document.getElementById('admin-panel');
 if(!root||!api||!api.enabled)return;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let directory=null,history=[],previewCount=null,loading=false,confirming=false,historyLoaded=false,run=0;
+let directory=null,history=[],previewCount=null,loading=false,confirming=false,historyLoaded=false,run=0,requestKey=null;
 const kinds={event:'تبلیغ رویداد',club:'معرفی کانون جدید',update:'به‌روزرسانی برنامه',general:'اطلاعیه عمومی'};
 const audiences={all:'تمام کاربران',students:'تمام دانشجویان',secretaries:'دبیران',university:'یک دانشگاه',faculties:'دانشکده‌های انتخابی',club_members:'اعضای یک کانون'};
 function selectedOptions(options,placeholder){
@@ -57,7 +57,7 @@ function updateVisibility(){
  });
 }
 function invalidate(){
- previewCount=null;confirming=false;
+ previewCount=null;confirming=false;requestKey=null;
  const notice=$('notice-preview');if(notice)notice.textContent='برای ارسال، تعداد گیرندگان را دوباره محاسبه کنید.';
  if($('notice-send-btn'))$('notice-send-btn').disabled=true;
  if($('notice-send-confirm'))$('notice-send-confirm').hidden=true;
@@ -116,7 +116,7 @@ async function preview(){
  try{
   const count=await api.adminAction('notification.preview',fields);
   if(!Number.isInteger(count)||count<0)throw Error('پاسخ شمارش معتبر نیست.');
-  previewCount=count;noticeStatus(count.toLocaleString('fa-IR')+' گیرنده مطابق فیلتر انتخابی');
+  previewCount=count;requestKey=crypto.randomUUID();noticeStatus(count.toLocaleString('fa-IR')+' گیرنده مطابق فیلتر انتخابی');
   $('notice-send-btn').disabled=count===0;
  }catch(e){invalidate();noticeStatus('خطا: '+String(e.message||'خطای سرور'),true);}
  finally{loading=false;}
@@ -129,9 +129,9 @@ async function send(){
  if(!form.reportValidity())return;
  loading=true;$('notice-commit-btn').disabled=true;noticeStatus('ثبت اعلان در سرور…');
  try{
-  const result=await api.adminAction('notification.send',{...fields,request_key:crypto.randomUUID()});
+  const result=await api.adminAction('notification.send',{...fields,request_key:requestKey});
   noticeStatus('اعلان در صندوق '+Number(result.recipient_count||0).toLocaleString('fa-IR')+' کاربر ثبت شد.');
-  previewCount=null;confirming=false;$('notice-send-confirm').hidden=true;
+  previewCount=null;confirming=false;requestKey=null;$('notice-send-confirm').hidden=true;
   $('notice-send-btn').disabled=true;
   await historyRefresh();
   window.KanonhaNotifications?.refresh();
@@ -162,6 +162,6 @@ function mount(data){
  directory=data;previewCount=null;confirming=false;view();
  if(!historyLoaded)void historyRefresh();else drawHistory();
 }
-function clear(){run++;directory=null;history=[];historyLoaded=false;previewCount=null;confirming=false;}
+function clear(){run++;directory=null;history=[];historyLoaded=false;previewCount=null;confirming=false;requestKey=null;}
 window.KanonhaNoticeAdmin=Object.freeze({mount,clear});
 })();

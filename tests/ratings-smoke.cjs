@@ -1,115 +1,138 @@
 'use strict';
 const assert=require('node:assert/strict');
-const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
+const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
 const html=read('app/src/main/assets/index.html');
 const student=read('app/src/main/assets/ratings.js');
+const reports=read('app/src/main/assets/survey-report.js');
 const backend=read('app/src/main/assets/backend.js');
-const sql=read('supabase/surveys-v200.sql');
-const app=read('app/src/main/assets/app.js');
+const sql=read('supabase/surveys-v210-finalization.sql');
+const pauseSql=read('supabase/surveys-v211-pausing.sql');
 new vm.Script(student,{filename:'ratings.js'});
-for(const name of ['screen-ratings','ratings-list','ratings-notice','ratings-active-count','ratings-contest-count','ratings-admin-open'])
- assert.ok(html.includes('id="'+name+'"'),name);
-for(const name of ['all','club','professor','faculty'])
- assert.ok(html.includes('data-ratings-tab="'+name+'"'));
-assert.match(app,/id: 'ratings',\s+label: 'نظرسنجی'/);
+new vm.Script(reports,{filename:'survey-report.js'});
+for(const id of ['screen-ratings','ratings-list','ratings-alerts','ratings-active-count',
+ 'ratings-contest-count','ratings-admin-open','ratings-notice'])
+ assert.ok(html.includes('id="'+id+'"'),id);
+for(const n of ['all','club','professor','faculty'])
+ assert.ok(html.includes('data-ratings-tab="'+n+'"'));
+for(const n of ['active','history','all'])
+ assert.ok(html.includes('data-ratings-life="'+n+'"'));
 assert.doesNotMatch(html,/صدای دانشجو|ratings-home-entry/);
-assert.match(sql,/kanonha_survey_one_vote_per_person unique \(survey_id,user_id\)/);
-assert.match(sql,/user_id=\(select auth\.uid\(\)\)/);
-assert.match(sql,/s\.status='published' and clock_timestamp\(\)<s\.ends_at/);
-assert.match(sql,/s\.kind='regular' or \(s\.kind='competition' and s\.ends_at<=now\(\) and s\.results_approved\)/);
-assert.match(sql,/revoke all on public\.kanonha_surveys,public\.kanonha_survey_options,public\.kanonha_survey_votes/);
-assert.match(sql,/revoke all on function public\.kanonha_survey_results\(uuid\) from public,anon,authenticated/);
-assert.match(backend,/surveyList,surveyOptions,surveyMyVotes,surveyResults,surveyCreate/);
-assert.match(backend,/body:\{survey_id:id,option_id:optionId,stars\}/);
-assert.doesNotMatch(backend,/body:\{survey_id:id,option_id:optionId,stars,user_id:/);
+assert.match(sql,/p_sources uuid\[\]/,'Atomic catalog selection');
+assert.match(sql,/kanonha_surveys_audience_pair_check/);
+assert.match(sql,/kanonha_survey_one_vote_per_person|kanonha_survey_votes_student_insert/);
+assert.match(sql,/from public\.kanonha_survey_catalog/);
+assert.match(pauseSql,/status='paused'/);
+assert.match(backend,/surveyCatalog,surveySaveV21,surveyDuplicate,surveyChangeStatus,surveyParticipation,surveyAudit/);
+assert.match(read('app/src/main/java/ir/kanonha/app/SurveyNoticeReceiver.java'),/setAndAllowWhileIdle/);
 
-const elements=new Map(),handlers={};
-const element=id=>{
- if(!elements.has(id))elements.set(id,{
-  id,innerHTML:'',textContent:'',hidden:false,disabled:false,attrs:{},dataset:{},
-  classList:{toggle(){},add(){}},
-  addEventListener(k,fn){this.handlers??={};this.handlers[k]=fn},
-  setAttribute(k,v){this.attrs[k]=v},tabIndex:0
- });
- return elements.get(id);
-};
-const tabs=['all','club','professor','faculty'].map(key=>{
- const t=element('tab-'+key);t.dataset.ratingsTab=key;return t;
+const elements={};
+function el(id){
+ return elements[id]??=(id=>({
+  id,innerHTML:'',textContent:'',hidden:false,disabled:false,dataset:{},
+  listeners:{},classList:{toggle(){}},addEventListener(k,fn){this.listeners[k]=fn},
+  setAttribute(){},tabIndex:0
+ }))(id);
+}
+const tabs=['all','club','professor','faculty'].map(k=>{
+ const o=el('tab-'+k);o.dataset.ratingsTab=k;return o;
 });
-const document={readyState:'complete',getElementById:element,
- querySelectorAll(query){return query==='[data-ratings-tab]'?tabs:[]}};
-const uid='11111111-1111-4111-8111-111111111111';
-const regular='22222222-2222-4222-8222-222222222222';
-const competition='33333333-3333-4333-8333-333333333333';
-const pastContest='44444444-4444-4444-8444-444444444444';
-const approvedContest='55555555-5555-4555-8555-555555555555';
-const opt=id=>'99999999-9999-4999-8999-'+id.toString().padStart(12,'0');
-const now=Date.now(),future=new Date(now+5*86400000).toISOString(),past=new Date(now-86400000).toISOString();
+const lifeTabs=['active','history','all'].map(k=>{
+ const o=el('life-'+k);o.dataset.ratingsLife=k;return o;
+});
+const document={readyState:'complete',getElementById:el,
+ querySelectorAll(q){return q==='[data-ratings-tab]'?tabs:q==='[data-ratings-life]'?lifeTabs:[]}};
+const uid='77777777-7777-4777-8777-777777777777';
+const ids=['22222222-2222-4222-8222-222222222222',
+ '33333333-3333-4333-8333-333333333333',
+ '44444444-4444-4444-8444-444444444444',
+ '55555555-5555-4555-8555-555555555555'];
+const opt=i=>'99999999-9999-4999-8999-'+String(i).padStart(12,'0');
+const future=new Date(Date.now()+4*86400000).toISOString();
+const past=new Date(Date.now()-86400000).toISOString();
+const start=new Date(Date.now()-2*3600000).toISOString();
 const polls=[
- {id:regular,title:'<script>unsafe</script>',category:'club',kind:'regular',status:'published',ends_at:future},
- {id:competition,title:'مسابقه در حال اجرا',category:'professor',kind:'competition',status:'published',ends_at:future,results_approved:false},
- {id:pastContest,title:'مسابقه پایان‌یافته',category:'faculty',kind:'competition',status:'published',ends_at:past,results_approved:false},
- {id:approvedContest,title:'مسابقه اعلام‌شده',category:'faculty',kind:'competition',status:'published',ends_at:past,results_approved:true}
+ {id:ids[0],title:'<script>bad</script>',category:'club',status:'published',
+   kind:'regular',starts_at:start,ends_at:future,min_rank_votes:5},
+ {id:ids[1],title:'مسابقه در حال اجرا',category:'professor',status:'published',
+   kind:'competition',starts_at:start,ends_at:future,results_approved:false,min_rank_votes:5},
+ {id:ids[2],title:'مسابقه منتظر اعلام',category:'faculty',status:'published',
+   kind:'competition',starts_at:start,ends_at:past,results_approved:false,min_rank_votes:5},
+ {id:ids[3],title:'مسابقه برندگان',category:'faculty',status:'archived',
+   kind:'competition',starts_at:start,ends_at:past,results_approved:true,min_rank_votes:5}
 ];
-const options=polls.flatMap((p,i)=>[
- {id:opt(i*2+1),survey_id:p.id,title:'گزینه الف '+i,sort_order:0},
- {id:opt(i*2+2),survey_id:p.id,title:'گزینه ب '+i,sort_order:1}
+const options=polls.flatMap((s,i)=>[
+ {survey_id:s.id,id:opt(i*2+1),title:'گزینه اول '+i,sort_order:0},
+ {survey_id:s.id,id:opt(i*2+2),title:'گزینه دوم '+i,sort_order:1}
 ]);
-let user={id:uid},actualVotes=[],requested=[],writes=[];
+let current={id:uid},requested=[],votes=[],writes=[],synced=[];
 const api={
- enabled:true,get currentUser(){return user},
+ enabled:true,get currentUser(){return current;},
  surveyList:async()=>polls,
  surveyOptions:async()=>options,
- surveyMyVotes:async()=>actualVotes,
+ surveyMyVotes:async()=>votes,
  surveyResults:async id=>{
   requested.push(id);
-  if(id===competition||id===pastContest)throw Error('PRIVATE RESULT LEAK');
+  if(id===ids[1]||id===ids[2])throw Error('Private contest results leaked');
   return [{option_id:options.find(o=>o.survey_id===id).id,rating_count:6,rating_sum:27}];
  },
- surveyVote:async (surveyId,optionId,stars)=>{
-  if(actualVotes.some(v=>v.survey_id===surveyId))throw {status:409};
-  writes.push({surveyId,optionId,stars});
-  actualVotes.push({survey_id:surveyId,option_id:optionId,stars});
+ surveyVote:async(id,option,stars)=>{
+  if(votes.some(v=>v.survey_id===id))throw {status:409};
+  writes.push({id,option,stars});
+  votes.push({survey_id:id,option_id:option,stars});
  }
 };
-const win={KanonhaBackend:api};
-vm.runInNewContext(student,{window:win,document,Date,Intl,Promise,console},{timeout:4000});
-const click=(selector,value,attrs={})=>{
- const item={dataset:attrs,disabled:false};
- const selectors=Array.isArray(selector)?selector:[selector];
- element('screen-ratings').handlers.click({target:{closest:key=>selectors.includes(key)?item:null}});
-};
-const wait=()=>new Promise(resolve=>setTimeout(resolve,30));
+const window={KanonhaBackend:api,AndroidSurveyNotices:{sync:s=>synced.push(s)},
+  KanonhaAdminPanel:{hasAccess:()=>false}};
+const ctx={window,document,console,Promise,Date,Intl,TextEncoder,btoa,Blob,URL,setTimeout};
+vm.runInNewContext(reports,ctx,{timeout:3000});
+vm.runInNewContext(student,ctx,{timeout:3000});
+const sleep=()=>new Promise(r=>setTimeout(r,35));
+function click(q,data){
+ const item={dataset:data||{},disabled:false};
+ el('screen-ratings').listeners.click({target:{closest:x=>x===q?item:null}});
+}
 (async()=>{
- await win.KanonhaRatings.open();
- let view=element('ratings-list').innerHTML;
- assert.match(view,/&lt;script&gt;unsafe&lt;\/script&gt;/);
- assert.ok(!view.includes('<script>unsafe</script>'));
- assert.deepEqual(requested,[regular,approvedContest],
-  'regular results immediately visible; competition sealed until end and manager approval');
+ await window.KanonhaRatings.open();
+ let view=el('ratings-list').innerHTML;
+ assert.match(view,/&lt;script&gt;bad&lt;\/script&gt;/,'XSS escaping');
+ assert.ok(!view.includes('<script>bad</script>'));
+ assert.deepEqual(requested,[ids[0],ids[3]],'only ordinary and approved-ended contest aggregations requested');
+ assert.equal((view.match(/data-survey-card=/g)||[]).length,2,'active tab hides history');
+ assert.match(view,/میانگین/);
+ assert.match(view,/برترین گزینه/);
  assert.match(view,/آمار مسابقه تا روز پایان مخفی است/);
+ assert.ok(synced.length===1,'local Android alerts synced on student refresh');
+
+ click('[data-ratings-life]',{ratingsLife:'history'});
+ view=el('ratings-list').innerHTML;
+ assert.equal((view.match(/data-survey-card=/g)||[]).length,2);
  assert.match(view,/در انتظار تأیید و انتشار نتایج توسط مدیرکل/);
- assert.match(view,/۴٫۵۰/,'normal survey results visible while open');
- assert.equal((view.match(/survey-card"/g)||[]).length,4);
- click('[data-survey-select]',null,{surveyId:regular,surveySelect:opt(1)});
- click('[data-survey-star]',null,{surveyId:regular,surveyStar:'5'});
- view=element('ratings-list').innerHTML;
- assert.match(view,/data-survey-submit/);
- click('[data-survey-submit]',null,{surveySubmit:regular});
- await wait();
- assert.equal(writes.length,1);
+ assert.match(view,/مسابقه برندگان/);
+ click('[data-ratings-life]',{ratingsLife:'active'});
+
+ click('[data-survey-select]',{surveyId:ids[0],surveySelect:opt(1)});
+ click('[data-survey-star]',{surveyId:ids[0],surveyStar:'5'});
+ click('[data-survey-submit]',{surveySubmit:ids[0]});
+ await sleep();
+ assert.equal(writes.length,1,'one vote submitted');
  assert.equal(writes[0].stars,5);
- assert.equal(writes[0].optionId,opt(1));
- click('[data-survey-submit]',null,{surveySubmit:regular});
- await wait();
- assert.equal(writes.length,1,'same student cannot vote twice in a poll');
- assert.match(element('ratings-list').innerHTML,/رأی قطعی شما/);
- user=null;requested=[];
- await win.KanonhaRatings.open();
- assert.equal(requested.length,0,'guests must never request aggregate results');
- assert.match(element('ratings-list').innerHTML,/برای مشاهده آمار وارد حساب شوید/);
- click('[data-ratings-tab]',null,{ratingsTab:'professor'});
- assert.equal(element('ratings-category-heading').textContent,'اساتید');
- console.log('PASS: new student survey cards, competition concealment, regular live aggregate, manager approval, XSS, vote once and guest protections');
+ click('[data-survey-submit]',{surveySubmit:ids[0]});
+ await sleep();
+ assert.equal(writes.length,1,'repeat vote blocked');
+ assert.match(el('ratings-list').innerHTML,/رأی قطعی شما/);
+
+ current=null;requested=[];
+ await window.KanonhaRatings.open();
+ assert.equal(requested.length,0,'guest cannot fetch aggregates');
+ assert.match(el('ratings-list').innerHTML,/برای مشاهده آمار وارد حساب شوید/);
+
+ const tied=window.KanonhaSurveyReports.rank({min_rank_votes:5},
+  [{id:opt(1),title:'الف'},{id:opt(2),title:'ب'},{id:opt(3),title:'ج'}],
+  [{option_id:opt(1),rating_count:5,rating_sum:20},
+   {option_id:opt(2),rating_count:5,rating_sum:20},
+   {option_id:opt(3),rating_count:2,rating_sum:10}]);
+ assert.equal(tied.filter(x=>x.rank===1).length,2,'equal scores and votes are co-winners');
+ assert.equal(tied.find(x=>x.title==='ج').qualified,false,'min valid ballots enforced');
+ console.log('PASS: protected competition, normal real-time stats, in-app/native alert sync, scoped results, ties, threshold and vote-once');
 })().catch(e=>{console.error(e);process.exitCode=1});

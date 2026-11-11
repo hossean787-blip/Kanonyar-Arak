@@ -715,6 +715,20 @@
     if(!Array.isArray(rows)||rows.length!==1)throw new ApiError('ذخیره مشخصات تحصیلی انجام نشد.');
     return rows[0];
   }
+  /* National code is verified against the server-side HMAC digest for the current user.
+     Raw code is never stored in localStorage or in a database column. */
+  async function verifyNationalForCertificate(rawCode) {
+    mustUser();
+    const code=normalizeDigits(rawCode).trim();
+    if(!nationalIdValid(code))
+      throw new ApiError('کد ملی باید ۱۰ رقم معتبر باشد.',422);
+    const response=await edgeRequest('kanonha-certificate-verify',{
+      action:'national.verify',national_id:code
+    },true);
+    if(!response||response.valid!==true)
+      throw new ApiError('کد ملی این حساب تأیید نشد.',422);
+    return code;
+  }
   async function adminAction(action,fields={}) {
     const result=await edgeRequest('kanonha-admin-console',{action,...fields},true);
     return result.result;
@@ -1131,7 +1145,7 @@
     eventSummary, secretaryEventExport, secretaryClubs, secretaryEvents, secretaryMemberships,
     secretaryProfiles, secretaryUpdateClub, secretaryCreateEvent, secretaryUpdateEvent,
     secretaryDecideMembership, secretaryRoster, secretarySetAttendance,
-    studentSignUp,studentSignIn,managerSignUp,isManager,academicDetails,saveAcademicDetails,adminAction,
+    studentSignUp,studentSignIn,managerSignUp,isManager,academicDetails,saveAcademicDetails,adminAction,verifyNationalForCertificate,
     notificationInbox,notificationRead,
     academicCatalog,resumeFromBiometric,biometricRefreshToken,
     ratingCatalog,ratingControl,ratingResults,ratingSetControl,ratingMyVotes,ratingSubmit,ratingAddProfessor,

@@ -143,6 +143,9 @@ function submit(id,fields){
   assert.match(el.get('secretary-message').textContent,/فهرست حضور بارگذاری شد/);
   certificateLookupFails=false;
   click({secretaryTab:'club'});
+  assert.match(el.get('secretary-content').innerHTML, /<label class="field">دانشگاه \*<select/);
+  assert.match(el.get('secretary-content').innerHTML, /<label class="field">دانشکده \*<select/);
+  assert.doesNotMatch(el.get('secretary-content').innerHTML, /(?:دانشگاه|دانشکده) کانون/);
   assert.match(el.get('secretary-content').innerHTML,/name="university" data-secretary-university required/);
   assert.match(el.get('secretary-content').innerHTML,/name="faculty" data-secretary-faculty required/);
   const selectFaculty={innerHTML:'',value:'علوم انسانی',disabled:false};

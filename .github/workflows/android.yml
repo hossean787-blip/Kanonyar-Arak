@@ -1,4 +1,4 @@
-name: Kanonha 0.9.26 targeted notifications QA
+name: Kanonha 0.9.27 targeted notifications QA
 on:
   push:
     branches: [main]
@@ -60,6 +60,7 @@ jobs:
           node --check app/src/main/assets/admin-notifications.js
           node --check app/src/main/assets/notifications.js
           node --check tests/notifications-v022-smoke.cjs
+          node --check tests/six-sections-regression-smoke.cjs
           node --check tests/unified-auth-smoke.cjs
           node --check tests/admin-ui-smoke.cjs
           node --check tests/multi-role-ui-smoke.cjs
@@ -116,7 +117,9 @@ jobs:
           print('UI, persistent Persian calendar, and SVG assets valid')
           PY
       - name: Verify targeted notification contracts
-        run: node tests/notifications-v022-smoke.cjs
+        run: |
+          node tests/notifications-v022-smoke.cjs
+          node tests/six-sections-regression-smoke.cjs
       - name: Smoke-test navigation, offline state and Android Back bridge
         run: node tests/ui-smoke.cjs
       - name: Verify online API, RLS schema and account isolation
@@ -167,16 +170,16 @@ jobs:
           ! find app/src -type f -name '*.keystore' | grep -q .
           ! find app/src -type f -name '*.p12' | grep -q .
           grep -q 'applicationId = "ir.kanonha.app"' app/build.gradle.kts
-          grep -q 'versionCode = 41' app/build.gradle.kts
+          grep -q 'versionCode = 42' app/build.gradle.kts
           grep -q 'android:allowBackup="false"' app/src/main/AndroidManifest.xml
           echo 'Release output validated; unsigned candidate requires secure external signing'
       - uses: actions/upload-artifact@v4
         with:
-          name: kanonha-0.9.26-notifications-release-unsigned
+          name: kanonha-0.9.27-notifications-release-unsigned
           path: app/build/outputs/apk/release/app-release-unsigned.apk
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
-          name: kanonha-0.9.26-notifications-debug-validation
+          name: kanonha-0.9.27-notifications-debug-validation
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error

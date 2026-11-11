@@ -239,7 +239,7 @@
     const c=(snapshot.certificates||[]).find(x=>x.id===id);
     const renderer=window.KanonhaCertificateDocument?.render;
     if(!c||typeof renderer!=='function')return false;
-    const qr=window.KanonhaEventTools?.qrPng?.('KANONHA-CERT:'+String(c.certificate_code||''))||'';
+    const qr=window.KanonhaEventTools?.certificateQrPng?.(String(c.certificate_code||''))||'';
     const print=organizerLogo=>printPdf(renderer(c,{qr,organizerLogo}),'Kanonha-Certificate-'+id);
     // The logo is loaded into a data URI: Android's secure print WebView blocks network access.
     if(!c.club_id||!c.club_logo_path)return print('');

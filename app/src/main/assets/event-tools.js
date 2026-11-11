@@ -109,6 +109,12 @@
   }catch(_){return ''}
   finally{box.remove();}
  }
+ function certificateVerificationUrl(certificateId){
+  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(certificateId)))return '';
+  const base=window.KANONHA_CONFIG?.url||'';
+  if(!/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(base))return '';
+  return base+'/functions/v1/kanonha-certificate-verify?code='+encodeURIComponent(certificateId);
+ }
  function certificateQrPng(certificateId){
   if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(certificateId)))return '';
   if(typeof window.QRCode!=='function'||!document?.createElement||!document.body?.appendChild)return '';
@@ -116,7 +122,9 @@
   box.style.cssText='position:absolute;left:-99999px;top:-99999px;opacity:0';
   document.body.appendChild(box);
   try{
-    new window.QRCode(box,{text:'KANONHA-CERT:'+certificateId,width:210,height:210,
+    const verificationUrl=certificateVerificationUrl(certificateId);
+    if(!verificationUrl)return '';
+    new window.QRCode(box,{text:verificationUrl,width:210,height:210,
       colorDark:'#0b5145',colorLight:'#ffffff',correctLevel:window.QRCode.CorrectLevel.M});
     const canvas=box.querySelector('canvas');
     if(canvas&&typeof canvas.toDataURL==='function')return canvas.toDataURL('image/png');
@@ -125,5 +133,5 @@
   }catch(_){return ''}
   finally{box.remove();}
  }
- window.KanonhaEventTools=Object.freeze({exportEventCsv,exportEventExcel,exportEventPdf,renderQr,qrPng,certificateQrPng});
+ window.KanonhaEventTools=Object.freeze({exportEventCsv,exportEventExcel,exportEventPdf,renderQr,qrPng,certificateQrPng,certificateVerificationUrl});
 })();

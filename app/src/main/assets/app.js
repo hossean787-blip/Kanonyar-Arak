@@ -380,7 +380,7 @@
         const start = Date.parse(e.starts_at);
         const close = Date.parse(e.registration_deadline);
         const free = Math.max(0, Number(e.capacity || 0) - Number(e.registered_count || 0));
-        const category = 'رویداد';
+        const category = window.KanonhaEventKinds?.get(e.event_type)?.label || 'سایر رویدادها';
         return {
           id: e.id,
           title: String(e.title || ''), date: Number.isFinite(start) ? (window.KanonhaJalali
@@ -1120,7 +1120,9 @@
   }
 
   function renderEvents() {
-    $('event-filters').innerHTML = (onlineMode ? ['همه', 'رویداد'] : ['همه', 'کارگاه', 'نشست', 'مسابقه']).map(type =>
+    const filterOptions=onlineMode?['همه',...new Set(events.map(e=>e.category))]:['همه','کارگاه','نشست','مسابقه'];
+    if(!filterOptions.includes(activeFilter))activeFilter='همه';
+    $('event-filters').innerHTML = filterOptions.map(type =>
       `<button type="button" class="filter-btn${type === activeFilter ? ' active' : ''}" data-filter="${type}" aria-pressed="${type === activeFilter}">${type}</button>`
     ).join('');
     const found = events.map((ev, i) => [ev, i]).filter(([ev]) => activeFilter === 'همه' || ev.category === activeFilter);

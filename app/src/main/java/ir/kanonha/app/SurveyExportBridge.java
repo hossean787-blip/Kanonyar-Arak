@@ -103,8 +103,10 @@ public final class SurveyExportBridge {
      try{
       PrintManager printer=(PrintManager)activity.getSystemService(Context.PRINT_SERVICE);
       if(printer==null)throw new IllegalStateException("Print service absent");
+      PrintAttributes.MediaSize mediaSize=title.startsWith("Kanonha-Certificate-")
+        ?PrintAttributes.MediaSize.ISO_A4.asLandscape():PrintAttributes.MediaSize.ISO_A4;
       PrintAttributes attributes=new PrintAttributes.Builder()
-        .setMediaSize(PrintAttributes.MediaSize.ISO_A4)
+        .setMediaSize(mediaSize)
         .setColorMode(PrintAttributes.COLOR_MODE_COLOR).build();
       printer.print(title,v.createPrintDocumentAdapter(title),attributes);
      }catch(Exception e){

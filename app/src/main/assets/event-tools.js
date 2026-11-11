@@ -109,5 +109,21 @@
   }catch(_){return ''}
   finally{box.remove();}
  }
- window.KanonhaEventTools=Object.freeze({exportEventCsv,exportEventExcel,exportEventPdf,renderQr,qrPng});
+ function certificateQrPng(certificateId){
+  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(certificateId)))return '';
+  if(typeof window.QRCode!=='function'||!document?.createElement||!document.body?.appendChild)return '';
+  const box=document.createElement('div');
+  box.style.cssText='position:absolute;left:-99999px;top:-99999px;opacity:0';
+  document.body.appendChild(box);
+  try{
+    new window.QRCode(box,{text:'KANONHA-CERT:'+certificateId,width:210,height:210,
+      colorDark:'#0b5145',colorLight:'#ffffff',correctLevel:window.QRCode.CorrectLevel.M});
+    const canvas=box.querySelector('canvas');
+    if(canvas&&typeof canvas.toDataURL==='function')return canvas.toDataURL('image/png');
+    const img=box.querySelector('img');
+    return img&&typeof img.src==='string'&&img.src.startsWith('data:image/png;base64,')?img.src:'';
+  }catch(_){return ''}
+  finally{box.remove();}
+ }
+ window.KanonhaEventTools=Object.freeze({exportEventCsv,exportEventExcel,exportEventPdf,renderQr,qrPng,certificateQrPng});
 })();

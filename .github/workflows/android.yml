@@ -26,6 +26,9 @@ jobs:
         run: |
           node --check app/src/main/assets/activity-ui.js
           node --check app/src/main/assets/event-tools.js
+          node --check app/src/main/assets/event-kinds.js
+          node --check app/src/main/assets/certificate-document.js
+          node --check tests/certificate-verification-smoke.cjs
           node --check app/src/main/assets/vendor/qrcode.js
           node --check app/src/main/assets/vendor/jsQR.js
           node --check tests/events-v219-smoke.cjs
@@ -69,6 +72,7 @@ jobs:
           node --check tests/live-identity-smoke.cjs
           deno check supabase/functions/kanonha-student-auth/index.ts
           deno check supabase/functions/kanonha-admin-console/index.ts
+          deno check supabase/functions/kanonha-certificate-verify/index.ts
           node --check tests/secretary-backend-smoke.cjs
           node --check tests/secretary-ui-smoke.cjs
           node --check tests/club-experience-smoke.cjs
@@ -127,6 +131,7 @@ jobs:
           node tests/backend-smoke.cjs
           node tests/online-ui-smoke.cjs
           node tests/activity-smoke.cjs
+          node tests/certificate-verification-smoke.cjs
           node tests/events-v219-smoke.cjs
           node tests/survey-export-smoke.cjs
           node tests/ratings-smoke.cjs
@@ -155,6 +160,19 @@ jobs:
           node tests/live-api-smoke.cjs
           node tests/live-identity-smoke.cjs
         continue-on-error: true # External service timeout must not block local APK compilation
+      - name: Verify live certificate QR endpoint and deny unauthenticated proof
+        run: |
+          set -eu
+          ENDPOINT='https://cnqcysnjinghzzrzanpj.supabase.co/functions/v1/kanonha-certificate-verify'
+          status=$(curl --silent --show-error --max-time 25 -o /tmp/cert-notfound.html -w '%{http_code}' "$ENDPOINT?code=11111111-1111-4111-8111-111111111111")
+          test "$status" = '404'
+          grep -q 'گواهی یافت نشد' /tmp/cert-notfound.html
+          status=$(curl --silent --show-error --max-time 25 -o /tmp/cert-invalid.html -w '%{http_code}' "$ENDPOINT?code=invalid")
+          test "$status" = '400'
+          status=$(curl --silent --show-error --max-time 25 -o /tmp/cert-noauth.json -w '%{http_code}' -X POST -H 'Content-Type: application/json' -d '{"action":"national.verify","national_id":"1234567891"}' "$ENDPOINT")
+          test "$status" = '401'
+          ! grep -qi 'national_digest\|service_role\|student_national_id' /tmp/cert-notfound.html
+          echo 'PASS public QR route (400,404) and anonymous national proof denial (401)'
       - name: Build Android Debug and Release candidate
         run: gradle :app:assembleDebug :app:assembleRelease --no-daemon
       - name: Verify package identity, version, release output and no embedded signing keys

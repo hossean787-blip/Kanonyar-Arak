@@ -243,10 +243,15 @@
     return '<form id="secretary-event-form" class="secretary-form secretary-card">' +
       '<h3 class="secretary-card-title">' + (editing ? 'ویرایش رویداد' : 'ثبت رویداد جدید') + '</h3>' +
       '<label class="field">نام رویداد<input name="title" maxlength="160" required value="' + escape(e.title || '') + '"></label>' +
+      '<label class="field">نوع رویداد و عنوان گواهی<select name="event_type" required>' +
+      (window.KanonhaEventKinds?.options(e.event_type||'') || '<option value="general">سایر رویدادها</option>') +
+      '</select></label>' +
       '<label class="field">محل برگزاری<input name="location" maxlength="250" required value="' + escape(e.location || '') + '"></label>' +
       '<label class="field">تاریخ برگزاری<input name="event_date" type="date" data-jalali-future="true" required value="' + escape(eventDate) + '"></label>' +
       '<label class="field">ساعت برگزاری<input name="event_time" type="time" required value="' + escape(eventTime) + '"></label>' +
       '<label class="field">توضیحات رویداد<textarea name="description" maxlength="4000" rows="4" placeholder="موضوع، برنامه و شرایط حضور را توضیح دهید">' + escape(e.description || '') + '</textarea></label>' +
+      '<label class="field">استادان امضاکننده گواهی (اختیاری؛ نام هر استاد در یک سطر)<textarea name="certificate_signers" maxlength="4000" rows="3" placeholder="مثلاً: دکتر محمد رضایی">' +
+      escape((e.certificate_signers||[]).join('\n')) + '</textarea></label>' +
       '<label class="field">مهلت ثبت‌نام<input name="registration_deadline" type="datetime-local" required value="' + escape(inputDate(e.registration_deadline)) + '"></label>' +
       '<label class="field">ظرفیت<input name="capacity" type="number" min="' + Math.max(1,Number(e.registered_count||0)) + '" max="100000" required value="' + escape(e.capacity || 30) + '"></label>' +
       (poster?'<img class="kanonha-event-poster" src="'+escape(poster)+'" alt="پوستر کنونی">':'') +
@@ -266,6 +271,7 @@
         '<span class="secretary-chip ' + (e.is_published ? '' : 'pending') + '">' +
         (e.is_published?'منتشرشده':'پیش‌نویس؛ منتظر تکمیل پوستر') + '</span>' +
         (poster?'<img class="kanonha-event-poster" src="'+escape(poster)+'" alt="پوستر رویداد">':'') +
+        '<p class="secretary-card-p">نوع: ' + escape(window.KanonhaEventKinds?.get(e.event_type)?.label || 'سایر رویدادها') + '</p>' +
         '<p class="secretary-card-p">برگزاری: ' + escape(stamp(e.starts_at)) + '</p>' +
         '<p class="secretary-card-meta">مهلت ثبت‌نام: ' + escape(stamp(e.registration_deadline)) + '</p>' +
         '<p class="secretary-card-meta">ثبت‌نام: ' + seats + ' از ' + Number(e.capacity || 0) + ' نفر</p>' +
@@ -452,6 +458,8 @@
       throw new Error('تاریخ و ساعت برگزاری را کامل و معتبر وارد کنید.');
     const data = {
       title: formValue(fd,'title'), location: formValue(fd,'location'),
+      event_type: formValue(fd,'event_type')||'general',
+      certificate_signers:formValue(fd,'certificate_signers').split(/\r?\n/).map(x=>x.trim()).filter(Boolean),
       description: formValue(fd,'description'),
       starts_at: eventDate+'T'+eventTime, registration_deadline: formValue(fd,'registration_deadline'),
       capacity: Number(fd.get('capacity')), is_published: true

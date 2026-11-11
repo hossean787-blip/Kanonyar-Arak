@@ -59,7 +59,7 @@ function render(c, options={}){
  '<p class="english">CERTIFICATE OF PARTICIPATION</p><div class="ornament"></div></div>'+
  '<div class="brand">'+logo+'<strong>کانون‌ها</strong><small>اپلیکیشن کانون‌های دانشجویی</small></div></div>'+
  '<section class="content"><p class="intro">بدین‌وسیله گواهی می‌شود که</p><p class="recipient">'+esc(c.student_name)+'</p>'+
- '<p class="national">کد ملی: '+esc(c.student_national_id||'در حساب ثبت نشده')+'</p>'+
+ '<p class="national">کد ملی: '+esc(c.student_national_id||'در حساب ثبت نشده')+' · شماره دانشجویی: '+esc(c.student_number||'')+'</p>'+
  '<p class="story">'+esc(info.context||'در رویداد')+' <strong>«'+esc(c.event_title)+'»</strong> که به همت <strong>'+
  esc(c.club_name)+'</strong> برگزار گردید، مشارکت داشته است؛ این گواهی بر اساس ثبت حضور تأییدشده ایشان صادر شده است.</p>'+
  '<p class="detail">تاریخ برگزاری: '+esc(dateText(c.event_starts_at))+

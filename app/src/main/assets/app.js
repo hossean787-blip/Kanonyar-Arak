@@ -373,7 +373,7 @@
         id: c.id, title: String(c.name || ''), short: String(c.name || '').slice(0, 28),
         desc: String(c.description || ''), icon: onlineClubIcon(c.category),
         category: String(c.category || 'سایر'), university: String(c.university || ''),
-        faculty: String(c.faculty || ''), logoPath: String(c.logo_path || ''), tone: 'green'
+        faculty: String(c.faculty || ''), logoPath: String(c.logo_path || ''), tone: 'indigo'
       }));
       const now = Date.now();
       events = rawEvents.filter(e => e && typeof e.id === 'string').map(e => {
@@ -409,7 +409,8 @@
     if (!onlineMode || !onlineBackend.currentUser) return;
     const ownerId = onlineBackend.currentUser.id;
     const refreshId = ++onlinePersonalSequence;
-    const [profile, memberRows, eventRows, academic, historyRows, memberDetails, certificates] = await Promise.all([
+    // Optional activity endpoints must never block the member-request status.
+    const outcomes = await Promise.allSettled([
       state.isManager ? onlineBackend.profile() : onlineBackend.ensureProfile(),
       onlineBackend.memberships(), onlineBackend.registrations(),
       typeof onlineBackend.academicDetails === 'function' ? onlineBackend.academicDetails() : null,
@@ -417,21 +418,47 @@
       typeof onlineBackend.myClubMemberships==='function'?onlineBackend.myClubMemberships():[],
       typeof onlineBackend.myCertificates==='function'?onlineBackend.myCertificates():[]
     ]);
+    const successful = (index, fallback = null) =>
+      outcomes[index].status === 'fulfilled' ? outcomes[index].value : fallback;
+    const profile = successful(0);
+    const memberRows = successful(1);
+    const eventRows = successful(2);
+    const academic = successful(3);
+    const historyRows = successful(4);
+    const memberDetails = successful(5);
+    const certificates = successful(6);
     if (refreshId !== onlinePersonalSequence ||
         !onlineBackend.currentUser || onlineBackend.currentUser.id !== ownerId) return;
-    const memberMap = new Map(memberRows.map(m => [m.club_id, m.status]));
-    const eventIds = new Set(eventRows.filter(e => e.status === 'confirmed').map(e => e.event_id));
-    const attendedIds = new Set(eventRows.filter(e => e.status === 'confirmed' && e.attended_at).map(e=>e.event_id));
-    eventTickets.clear();
-    activityHistory = historyRows;
-    activityMembers = memberDetails;
-    activityCertificates = certificates;
-    for(const r of historyRows)if(r.status==='confirmed'&&r.ticket_token)eventTickets.set(r.event_id,r.ticket_token);
-    state.joined = clubs.map((c, i) => memberMap.get(c.id) === 'approved' ? i : -1).filter(i => i >= 0);
-    state.requested = clubs.map((c, i) => memberMap.get(c.id) === 'pending' ? i : -1).filter(i => i >= 0);
-    state.rejected = clubs.map((c, i) => memberMap.get(c.id) === 'rejected' ? i : -1).filter(i => i >= 0);
-    state.registered = events.map((e, i) => eventIds.has(e.id) ? i : -1).filter(i => i >= 0);
-    state.attended = events.map((e,i)=>attendedIds.has(e.id)?i:-1).filter(i=>i>=0);
+    const eventIds = new Set((eventRows || []).filter(e => e.status === 'confirmed').map(e => e.event_id));
+    if (Array.isArray(memberRows)) {
+      const memberMap = new Map(memberRows.map(m => [m.club_id, m.status]));
+      state.joined = clubs.map((c, i) => memberMap.get(c.id) === 'approved' ? i : -1).filter(i => i >= 0);
+      state.requested = clubs.map((c, i) => memberMap.get(c.id) === 'pending' ? i : -1).filter(i => i >= 0);
+      state.rejected = clubs.map((c, i) => memberMap.get(c.id) === 'rejected' ? i : -1).filter(i => i >= 0);
+    } else {
+      onlineMessage('دریافت وضعیت عضویت ناموفق بود؛ وضعیت قبلی حفظ شد. دوباره تازه‌سازی کنید.', true);
+    }
+    if (Array.isArray(eventRows)) {
+      const attendedIds = new Set(eventRows.filter(e => e.status === 'confirmed' && e.attended_at).map(e=>e.event_id));
+      state.registered = events.map((e, i) => eventIds.has(e.id) ? i : -1).filter(i => i >= 0);
+      state.attended = events.map((e,i)=>attendedIds.has(e.id)?i:-1).filter(i=>i>=0);
+    } else {
+      onlineMessage('دریافت ثبت‌نام رویدادها ناموفق بود؛ اطلاعات قبلی حفظ شد.', true);
+    }
+    if (Array.isArray(historyRows)) {
+      activityHistory = historyRows;
+      eventTickets.clear();
+      for (const r of historyRows)
+        if (r.status === 'confirmed' && r.ticket_token) eventTickets.set(r.event_id, r.ticket_token);
+    }
+    if (Array.isArray(memberDetails)) activityMembers = memberDetails;
+    else if (Array.isArray(memberRows)) activityMembers = memberRows.map(m => {
+      const club = clubs.find(c => c.id === m.club_id);
+      return { club_id: m.club_id, club_name: club?.title || 'کانون',
+        university: club?.university || '', category: club?.category || '',
+        is_active: Boolean(club), status: m.status };
+    });
+    if (Array.isArray(certificates)) activityCertificates = certificates;
     studentProfileReady = Boolean(profile &&
       /^[0-9]{6,20}$/.test(String(profile.student_number||'')) &&
       String(profile.full_name||'').trim().length>=2 && academic &&
@@ -449,7 +476,9 @@
       events.filter(e=>eventIds.has(e.id)&&e.startsAtMs>Date.now())
         .map(e=>({id:e.id,title:e.title,startsAt:e.startsAtMs}))
     ));}catch(_){}
-    if (!profile && !state.isManager) onlineMessage('برای درخواست عضویت، اطلاعات دانشجویی خود را تکمیل کنید.');
+    if (!profile && !state.isManager && outcomes[0].status === 'fulfilled')
+      onlineMessage('برای درخواست عضویت، اطلاعات دانشجویی خود را تکمیل کنید.');
+    return Array.isArray(memberRows);
   }
   const signupFieldIds = Object.freeze({
     name:'online-name',studentNumber:'online-student',nationalId:'online-national',
@@ -575,9 +604,10 @@
     try {
       if (state.rejected.includes(i)) await onlineBackend.reapplyClub(clubs[i].id);
       else await onlineBackend.joinClub(clubs[i].id);
-      await onlineRefreshPersonal();
+      const synced = await onlineRefreshPersonal();
       closeSheet();
-      notify('درخواست عضویت ثبت شد و در انتظار تأیید است.');
+      notify(synced ? 'درخواست عضویت ثبت شد و در انتظار تأیید است.' :
+        'درخواست در سرور ثبت شد، اما دریافت وضعیت جدید ممکن نشد؛ بخش فعالیت‌های من را تازه‌سازی کنید.');
     } catch (error) {
       if (error?.status === 409) {
         try { await onlineRefreshPersonal(); } catch (_) {}
@@ -594,9 +624,10 @@
     clubMembershipWorking.add(clubId);
     try {
       await onlineBackend.cancelClubMembership(clubId);
-      await onlineRefreshPersonal();
+      const synced = await onlineRefreshPersonal();
       closeSheet();
-      notify(wasMember ? 'عضویت شما در کانون پایان یافت.' : 'درخواست عضویت لغو شد.');
+      notify(!synced ? 'لغو روی سرور ثبت شد؛ برای مشاهده وضعیت جدید تازه‌سازی کنید.' :
+        wasMember ? 'عضویت شما در کانون پایان یافت.' : 'درخواست عضویت لغو شد.');
     } catch (error) { notify(onlineError(error)); }
     finally { clubMembershipWorking.delete(clubId); }
   }

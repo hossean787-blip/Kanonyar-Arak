@@ -30,8 +30,9 @@ const token='fc9ec2ef-75b1-485e-afaa-720cb7962348';
 const window={
  KanonhaEventTools:{
   renderQr(el,t){qrCalls.push(t);return Boolean(t);},
-  qrPng(t){return t===token?'data:image/png;base64,AAAA':'';
-  }
+  qrPng(t){return t===token?'data:image/png;base64,AAAA':'';},
+  certificateQrPng(t){return t==='12345678-1234-4123-8123-123456789012'?'data:image/png;base64,CCCC':'';}
+
  },
  AndroidSurveyExports:{printHtmlNamed(title,body){prints.push({title,body});}}
 };
@@ -107,6 +108,7 @@ assert.match(prints[1].body,/001230/,'preserve leading zeros in student number')
 assert.match(prints[1].body,/گواهی شرکت در کارگاه/,'certificate title matches event type');
 assert.match(prints[1].body,/دکتر نمونه/,'professor signature name rendered');
 assert.match(prints[1].body,/A4 landscape/,'approved certificate is print-ready landscape A4');
+assert.match(prints[1].body,/data:image\/png;base64,CCCC/,'certificate verification QR embedded');
 page.setFilter('club','pending');
 assert.match(get('activity-clubs'),/در انتظار تأیید/);
 assert.ok(!get('activity-clubs').includes('درخواست مجدد عضویت'));

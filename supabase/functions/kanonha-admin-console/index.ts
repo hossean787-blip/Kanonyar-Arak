@@ -41,7 +41,7 @@ async function identity(req:Request){
 async function overview(){
  const [clubs,events,memberships,registrations,secretaries,profiles,academics,universities,faculties]=await Promise.all([
   rows("kanonha_clubs?select=id,name,description,category,university,faculty,logo_path,is_active,created_at&order=name.asc&limit=500"),
-  rows("kanonha_events?select=id,club_id,title,starts_at,registration_deadline,location,capacity,registered_count,is_published,approval_status,approved_at,poster_path&order=starts_at.desc&limit=500"),
+  rows("kanonha_events?select=id,club_id,title,event_type,certificate_signers,starts_at,registration_deadline,location,capacity,registered_count,is_published,approval_status,approved_at,poster_path&order=starts_at.desc&limit=500"),
   rows("kanonha_memberships?select=id,user_id,club_id,status,requested_at,decided_at&order=requested_at.desc&limit=500"),
   rows("kanonha_registrations?select=id,user_id,event_id,status,attended_at,registered_at&order=registered_at.desc&limit=500"),
   rows("kanonha_secretaries?select=club_id,user_id,appointed_at&limit=500"),
@@ -156,6 +156,12 @@ async function handle(op:string,d:Record<string,unknown>,actor:string){
  if(op==="event.create"||op==="event.update"){
   const club_id=val(d.club_id,40);
   const title=val(d.title,160),location=val(d.location,250);
+  const event_type=typeof d.event_type==='string'?d.event_type:'general';
+  const allowedTypes=['workshop','course','conference','session','competition','festival','volunteer','collaboration','general'];
+  const certificate_signers=d.certificate_signers===undefined?[]:d.certificate_signers;
+  if(!allowedTypes.includes(event_type)||!Array.isArray(certificate_signers)||certificate_signers.length>60||
+     certificate_signers.some((x:unknown)=>typeof x!=='string'||x.trim().length<2||x.trim().length>100))
+   throw new Error("input");
   const starts_at=val(d.starts_at,45),registration_deadline=val(d.registration_deadline,45);
   const capacity=Number(d.capacity);
   if(!uuid(club_id)||title.length<2||title.length>160||location.length>250||
@@ -164,7 +170,7 @@ async function handle(op:string,d:Record<string,unknown>,actor:string){
     Date.parse(registration_deadline)>Date.parse(starts_at)||
     !Number.isInteger(capacity)||capacity<1||capacity>100000||!allowedBool(d.is_published))throw new Error("input");
   const published=d.is_published===true;
-  const patch={title,location,starts_at,registration_deadline,capacity,
+  const patch={title,location,event_type,certificate_signers,starts_at,registration_deadline,capacity,
    is_published:published,approval_status:published?'approved':'pending',
    approved_at:published?new Date().toISOString():null};
   if(op==="event.create")return mutation("kanonha_events","POST",{club_id,...patch});

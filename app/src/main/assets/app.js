@@ -1525,11 +1525,17 @@
         return;
       }
       if (btn.dataset.activityDownloadCertificate!==undefined) {
-        void Promise.resolve(window.KanonhaActivity?.downloadCertificate(btn.dataset.activityDownloadCertificate))
-          .then(ok=>notify(ok
-            ? 'برای دریافت فایل، در پنجره چاپ «ذخیره به‌صورت PDF» را انتخاب کنید.'
-            : 'گواهی یا ابزار دریافت PDF در دسترس نیست.'))
-          .catch(()=>notify('دریافت گواهی انجام نشد؛ دوباره تلاش کنید.'));
+        if(!onlineMode||!onlineBackend.currentUser)return notify('برای دانلود گواهی وارد شوید.');
+        const certificateId=btn.dataset.activityDownloadCertificate;
+        openSheet('تأیید کد ملی گواهی',
+          '<p>برای درج کد ملی واقعی روی گواهی، آن را با اطلاعات ثبت‌نام خود تطبیق دهید. '+
+          'کد ملی در دستگاه یا پایگاه‌داده گواهی ذخیره نمی‌شود.</p>'+
+          '<form id="certificate-national-form" data-certificate-id="'+escapeHTML(certificateId)+'" autocomplete="off">'+
+          '<label class="field">کد ملی (۱۰ رقم)<input name="national_id" type="password" inputmode="numeric" '+
+          'maxlength="10" minlength="10" autocomplete="off" required placeholder="کد ملی خود را وارد کنید"></label>'+
+          '<p class="field-hint">پس از تأیید، گزینه ذخیره PDF در گوشی نمایش داده می‌شود.</p>'+
+          '<p id="certificate-national-error" class="online-auth-status" role="status" aria-live="polite"></p>'+
+          '<button type="submit" class="pill-btn sheet-action">تأیید و دریافت PDF</button></form>');
         return;
       }
 
@@ -1552,6 +1558,31 @@
 
     // Profile edit form
     document.addEventListener('submit', async (e) => {
+      if(onlineMode && e.target.id==='certificate-national-form'){
+        e.preventDefault();
+        const form=e.target, input=form.querySelector('input[name="national_id"]');
+        const button=form.querySelector('button[type="submit"]');
+        const message=form.querySelector('#certificate-national-error');
+        const account=onlineBackend.currentUser?.id;
+        if(!account||!input)return;
+        const candidate=input.value;
+        if(button)button.disabled=true;
+        if(message)message.textContent='در حال اعتبارسنجی اطلاعات…';
+        try{
+          const ok=await window.KanonhaActivity?.downloadCertificate(
+            form.dataset.certificateId,candidate);
+          if(!onlineBackend.currentUser||onlineBackend.currentUser.id!==account)return;
+          if(!ok)throw new Error('تولید PDF یا کد استعلام ممکن نشد.');
+          closeSheet();
+          notify('در پنجره چاپ، «ذخیره به‌صورت PDF» را انتخاب کنید.');
+        }catch(error){
+          if(message)message.textContent=onlineError(error);
+        }finally{
+          if(input)input.value='';
+          if(button)button.disabled=false;
+        }
+        return;
+      }
       if (onlineMode && e.target.id === 'online-auth-form') {
         e.preventDefault();
         await onlineAuthenticate(e.target);

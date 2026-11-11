@@ -1,0 +1,52 @@
+'use strict';
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),vm=require('node:vm');
+const root=path.resolve(__dirname,'..');
+const read=p=>fs.readFileSync(path.join(root,p),'utf8');
+const scripts=['app/src/main/assets/app.js','app/src/main/assets/notifications.js',
+'app/src/main/assets/admin-notifications.js','app/src/main/assets/student-calendar.js',
+'app/src/main/assets/activity-ui.js','app/src/main/assets/secretary.js',
+'app/src/main/assets/ratings.js','app/src/main/assets/ratings-admin.js'];
+for(const p of scripts)new vm.Script(read(p),{filename:p});
+const html=read('app/src/main/assets/index.html');
+assert.doesNotMatch(html,/class="screen-kicker"/,'obsolete header removed');
+for(const part of ['clubs','events','ratings','activity','profile'])
+ assert.match(html,new RegExp('id="screen-'+part+'"'),'missing '+part);
+const app=read(scripts[0]);
+assert.match(app,/Promise\.allSettled/,'membership refresh survives unrelated endpoint failure');
+assert.match(app,/Array\.isArray\(memberRows\)/,'membership API errors preserve earlier state');
+assert.match(app,/درخواست در سرور ثبت شد، اما دریافت وضعیت جدید ممکن نشد/);
+assert.match(app,/tone: 'indigo'/,'no stray green club avatar');
+const notifications=read(scripts[1]);
+assert.match(notifications,/if\(title\)title\.textContent='اطلاعیه‌ها'/,'private inbox summary cleared on logout');
+assert.match(notifications,/loaded=false;close\(\);summary\(\)/);
+const composer=read(scripts[2]);
+assert.match(composer,/function requestUuid\(/);
+assert.match(composer,/secure\.getRandomValues\(bytes\)/);
+assert.doesNotMatch(composer,/requestKey=crypto\.randomUUID\(\)/);
+const sql=read('supabase/notifications-v023-campaign-visibility.sql');
+assert.match(sql,/delivery\.campaign_id\s*=\s*kanonha_notification_campaigns\.id/);
+assert.match(sql,/delivery\.user_id\s*=\s*\(select auth\.uid\(\)\)/);
+const expiry=read('supabase/events-v221-expired-ticket-guard.sql');
+assert.match(expiry,/clock_timestamp\(\)\s*>=\s*v\.starts_at\s*\+\s*interval '7 days'/);
+assert.match(expiry,/r\.event_id=p_event_id/);
+const activity=read('app/src/main/assets/activity-ui.js');
+assert.match(activity,/const SEVEN_DAYS = 7 \* 24 \* 60 \* 60 \* 1000/);
+assert.match(activity,/activity-certificates/);
+assert.match(activity,/downloadCertificate/);
+assert.match(activity,/downloadTicket/);
+const secretary=read('app/src/main/assets/secretary.js');
+assert.match(secretary,/confirmAction\('secretary-event'\)/);
+assert.match(secretary,/accept="image\/png"/);
+assert.match(secretary,/درباره کانون \*/);
+assert.match(secretary,/دانشگاه \*/);
+assert.match(secretary,/دانشکده \*/);
+const ratings=read('app/src/main/assets/ratings.js');
+assert.match(ratings,/canShow=s=>/);
+assert.match(ratings,/canShow=s=>\['published','paused','archived'\]/);
+const calendar=read('app/src/main/assets/student-calendar.js');
+const colors=read('app/src/main/assets/student-calendar.css');
+assert.match(calendar,/function refreshToday\(/);
+assert.match(calendar,/visibilitychange/);
+assert.doesNotMatch(colors,/#50c878|#268d57|#137a48|#19412f/i);
+assert.match(colors,/#3944bc/i);
+console.log('PASS six sections: clubs, target inbox RLS, events expiry, polling, personal activity, calendar and theme');

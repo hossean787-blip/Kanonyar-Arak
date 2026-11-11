@@ -97,7 +97,7 @@ function eventForm(){
  '<label class="field">نوع رویداد و عنوان گواهی<select name="event_type" required>'+
  (window.KanonhaEventKinds?.options(e.event_type||'')||'<option value="general">سایر رویدادها</option>')+'</select></label>'+
  '<label class="field">استادان امضاکننده گواهی (اختیاری؛ هر سطر یک نام)<textarea name="certificate_signers" maxlength="4000" rows="3">'+
- esc((e.certificate_signers||[]).join('\\n'))+'</textarea></label>'+
+ esc((e.certificate_signers||[]).join(String.fromCharCode(10)))+'</textarea></label>'+
  '<label class="field">مکان<input name="location" maxlength="250" value="'+esc(e.location||'')+'"></label>'+
  '<label class="field">زمان شروع<input type="datetime-local" name="starts_at" required value="'+esc(inputTime(e.starts_at))+'"></label>'+
  '<label class="field">مهلت ثبت‌نام<input type="datetime-local" name="registration_deadline" required value="'+esc(inputTime(e.registration_deadline))+'"></label>'+

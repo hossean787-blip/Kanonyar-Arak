@@ -8,6 +8,17 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 let directory=null,history=[],previewCount=null,loading=false,confirming=false,historyLoaded=false,run=0,requestKey=null;
 const kinds={event:'تبلیغ رویداد',club:'معرفی کانون جدید',update:'به‌روزرسانی برنامه',general:'اطلاعیه عمومی'};
 const audiences={all:'تمام کاربران',students:'تمام دانشجویان',secretaries:'دبیران',university:'یک دانشگاه',faculties:'دانشکده‌های انتخابی',club_members:'اعضای یک کانون'};
+function requestUuid(){
+ const secure=globalThis.crypto;
+ if(secure&&typeof secure.randomUUID==='function')return secure.randomUUID();
+ if(!secure||typeof secure.getRandomValues!=='function')
+   throw new Error('این دستگاه از ساخت شناسه امن برای ارسال اعلان پشتیبانی نمی‌کند.');
+ const bytes=new Uint8Array(16);
+ secure.getRandomValues(bytes);
+ bytes[6]=(bytes[6]&15)|64;bytes[8]=(bytes[8]&63)|128;
+ const hex=Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');
+ return [hex.slice(0,8),hex.slice(8,12),hex.slice(12,16),hex.slice(16,20),hex.slice(20)].join('-');
+}
 function selectedOptions(options,placeholder){
  return '<option value="">'+placeholder+'</option>'+options.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.label)+'</option>').join('');
 }
@@ -116,7 +127,7 @@ async function preview(){
  try{
   const count=await api.adminAction('notification.preview',fields);
   if(!Number.isInteger(count)||count<0)throw Error('پاسخ شمارش معتبر نیست.');
-  previewCount=count;requestKey=crypto.randomUUID();noticeStatus(count.toLocaleString('fa-IR')+' گیرنده مطابق فیلتر انتخابی');
+  previewCount=count;requestKey=requestUuid();noticeStatus(count.toLocaleString('fa-IR')+' گیرنده مطابق فیلتر انتخابی');
   $('notice-send-btn').disabled=count===0;
  }catch(e){invalidate();noticeStatus('خطا: '+String(e.message||'خطای سرور'),true);}
  finally{loading=false;}

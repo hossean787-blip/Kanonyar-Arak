@@ -94,6 +94,10 @@ function eventForm(){
  '<label class="field">کانون برگزارکننده<select name="club_id" required>'+
  data.clubs.map(c=>'<option value="'+esc(c.id)+'"'+(c.id===e.club_id?' selected':'')+'>'+esc(c.name)+'</option>').join('')+'</select></label>'+
  '<label class="field">عنوان<input name="title" required maxlength="160" value="'+esc(e.title||'')+'"></label>'+
+ '<label class="field">نوع رویداد و عنوان گواهی<select name="event_type" required>'+
+ (window.KanonhaEventKinds?.options(e.event_type||'')||'<option value="general">سایر رویدادها</option>')+'</select></label>'+
+ '<label class="field">استادان امضاکننده گواهی (اختیاری؛ هر سطر یک نام)<textarea name="certificate_signers" maxlength="4000" rows="3">'+
+ esc((e.certificate_signers||[]).join('\\n'))+'</textarea></label>'+
  '<label class="field">مکان<input name="location" maxlength="250" value="'+esc(e.location||'')+'"></label>'+
  '<label class="field">زمان شروع<input type="datetime-local" name="starts_at" required value="'+esc(inputTime(e.starts_at))+'"></label>'+
  '<label class="field">مهلت ثبت‌نام<input type="datetime-local" name="registration_deadline" required value="'+esc(inputTime(e.registration_deadline))+'"></label>'+
@@ -119,7 +123,8 @@ function events(){
  (rosterFor?roster(rosterFor):'')+
  (!data.events.length?empty('رویدادی تعریف نشده است.'):
  data.events.map(e=>'<article class="secretary-card"><h3 class="secretary-card-title">'+esc(e.title)+'</h3>'+
- '<p class="secretary-card-p">'+esc(club(e.club_id))+' · '+esc(date(e.starts_at))+'</p>'+
+ '<p class="secretary-card-p">'+esc(club(e.club_id))+' · '+esc(date(e.starts_at))+' · '+
+ esc(window.KanonhaEventKinds?.get(e.event_type)?.label||'سایر رویدادها')+'</p>'+
  '<p class="secretary-card-meta">ظرفیت: '+Number(e.registered_count||0)+' / '+Number(e.capacity||0)+
  ' · '+(e.is_published?'منتشرشده':'پیش‌نویس')+
   '</p><div class="secretary-actions">'+
@@ -345,6 +350,8 @@ root.addEventListener('submit',ev=>{
  const iso=name=>{const d=new Date(v(fd,name));return Number.isFinite(d.getTime())?d.toISOString():''};
  void perform(editor?.id?'event.update':'event.create',{
   id:editor?.id,club_id:v(fd,'club_id'),title:v(fd,'title'),location:v(fd,'location'),
+  event_type:v(fd,'event_type')||'general',
+  certificate_signers:v(fd,'certificate_signers').split(/\r?\n/).map(x=>x.trim()).filter(Boolean),
   starts_at:iso('starts_at'),registration_deadline:iso('registration_deadline'),
   capacity:Number(fd.get('capacity')),is_published:fd.get('is_published')==='1'
  });

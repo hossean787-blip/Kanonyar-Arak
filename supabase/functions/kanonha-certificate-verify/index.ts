@@ -15,11 +15,10 @@ const KIND:Record<string,string>={
  volunteer:"گواهی همکاری داوطلبانه",collaboration:"گواهی همکاری در برگزاری",
  general:"گواهی مشارکت"
 };
-const escape=(value:unknown)=>String(value==null?"":value)
- .replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]||c));
+const ESCAPES:Record<string,string>={"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"};
+const escape=(value:unknown)=>String(value==null?"":value).replace(/[&<>"']/g,c=>ESCAPES[c]||c);
 function cors(req:Request){
- const origin=req.headers.get("origin");
- return {...NO_STORE,"Access-Control-Allow-Origin":origin===APP_ORIGIN?APP_ORIGIN:APP_ORIGIN,
+ return {...NO_STORE,"Access-Control-Allow-Origin":APP_ORIGIN,
   "Access-Control-Allow-Methods":"GET,POST,OPTIONS",
   "Access-Control-Allow-Headers":"apikey,authorization,content-type,x-client-info",
   "Vary":"Origin"};
@@ -114,7 +113,9 @@ async function verifyNational(req:Request){
    fields.national_id.length>16)return json(400,{error:"درخواست معتبر نیست."},req);
  const id=national(fields.national_id.trim());
  if(!nationalValid(id))return json(422,{error:"کد ملی معتبر نیست."},req);
- const identity=await supa("/auth/v1/user",{auth:matched[1]});
+ let identity:unknown;
+ try{identity=await supa("/auth/v1/user",{auth:matched[1]});}
+ catch{return json(401,{error:"نشست شما معتبر نیست."},req);}
  const user=identity&&typeof identity==="object"?identity as Record<string,unknown>:{};
  if(typeof user.id!=="string"||!UUID.test(user.id))
   return json(401,{error:"نشست شما معتبر نیست."},req);

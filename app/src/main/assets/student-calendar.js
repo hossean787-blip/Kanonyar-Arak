@@ -5,7 +5,7 @@ const format=new Intl.DateTimeFormat('fa-IR-u-ca-persian',{year:'numeric',month:
 const fa=n=>Number(n).toLocaleString('fa-IR',{useGrouping:false});
 const latin=s=>String(s).replace(/[۰-۹]/g,x=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(x))).replace(/[٠-٩]/g,x=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(x)));
 const parts=date=>Object.fromEntries(format.formatToParts(date).filter(p=>p.type!=='literal').map(p=>[p.type,Number(latin(p.value))]));
-const now=parts(new Date());
+let now=parts(new Date());
 let year=now.year,month=now.month,day=now.day,body,overlay;
 function findDate(y,m,d){
  const seed=Date.UTC(y-621,2,21,12);
@@ -14,6 +14,16 @@ function findDate(y,m,d){
   if(p.year===y&&p.month===m&&p.day===d)return date;
  }
  return null;
+}
+function refreshToday(){
+ const current=parts(new Date());
+ const changed=current.year!==now.year||current.month!==now.month||current.day!==now.day;
+ const viewingToday=year===now.year&&month===now.month&&day===now.day;
+ if(changed&&viewingToday){year=current.year;month=current.month;day=current.day;}
+ now=current;
+ const label=document.querySelector('.sc-entry small');
+ if(label)label.textContent=fa(now.day)+' '+months[now.month-1]+' '+fa(now.year);
+ if(changed&&overlay&&!overlay.hidden)render();
 }
 function render(){
  if(!body)return;
@@ -36,12 +46,12 @@ function init(){
  if(!home)return;
  const entry=document.createElement('button');
  entry.type='button';entry.className='sc-entry';
- entry.innerHTML='<span class="sc-icon">▦</span><span><strong>تقویم دانشجویی</strong><small>'+fa(now.day)+' '+months[now.month-1]+' '+fa(now.year)+'</small></span><span>‹</span>';
+ entry.innerHTML='<span class="sc-icon">▦</span><span><strong>تقویم</strong><small>'+fa(now.day)+' '+months[now.month-1]+' '+fa(now.year)+'</small></span><span>‹</span>';
  home.prepend(entry);
  overlay=document.createElement('div');overlay.className='sc-overlay';overlay.hidden=true;
- overlay.innerHTML='<section class="sc-panel" role="dialog" aria-modal="true" aria-label="تقویم دانشجویی"><header><strong>تقویم دانشجویی</strong><button data-sc-close aria-label="بستن">×</button></header><div id="sc-content"></div></section>';
+ overlay.innerHTML='<section class="sc-panel" role="dialog" aria-modal="true" aria-label="تقویم شمسی"><header><strong>تقویم شمسی</strong><button data-sc-close aria-label="بستن">×</button></header><div id="sc-content"></div></section>';
  document.body.append(overlay);body=document.getElementById('sc-content');
- entry.addEventListener('click',()=>{render();overlay.hidden=false;overlay.querySelector('[data-sc-close]').focus()});
+ entry.addEventListener('click',()=>{refreshToday();render();overlay.hidden=false;overlay.querySelector('[data-sc-close]').focus()});
  overlay.addEventListener('click',e=>{
   if(e.target===overlay||e.target.closest('[data-sc-close]'))overlay.hidden=true;
   if(e.target.closest('[data-sc-prev]'))shift(-1);
@@ -50,6 +60,8 @@ function init(){
   if(target){day=Number(target.dataset.scDay);render();}
  });
  document.addEventListener('keydown',e=>{if(e.key==='Escape')overlay.hidden=true});
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshToday();});
+ window.addEventListener('focus',refreshToday);
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();

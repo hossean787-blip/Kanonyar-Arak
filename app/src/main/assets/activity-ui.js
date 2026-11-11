@@ -234,16 +234,26 @@
       });
     }catch(_error){return '';}
   }
-  function downloadCertificate(id){
+  async function downloadCertificate(id,nationalCode){
     if(!snapshot||!snapshot.onlineMode)return false;
     const c=(snapshot.certificates||[]).find(x=>x.id===id);
     const renderer=window.KanonhaCertificateDocument?.render;
-    if(!c||typeof renderer!=='function')return false;
-    const qr=window.KanonhaEventTools?.certificateQrPng?.(String(c.certificate_code||''))||'';
-    const print=organizerLogo=>printPdf(renderer(c,{qr,organizerLogo}),'Kanonha-Certificate-'+id);
-    // The logo is loaded into a data URI: Android's secure print WebView blocks network access.
-    if(!c.club_id||!c.club_logo_path)return print('');
-    return organizerLogoData(c).then(print);
+    const backend=window.KanonhaBackend;
+    if(!c||typeof renderer!=='function'||typeof backend?.verifyNationalForCertificate!=='function')
+      return false;
+    const account=backend.currentUser?.id;
+    if(!account||typeof nationalCode!=='string')return false;
+    // Server compares this code with the HMAC of the current account's registration.
+    // The raw code lives only in the temporary print request, never a database row.
+    const verified=await backend.verifyNationalForCertificate(nationalCode);
+    if(!snapshot||!backend.currentUser||backend.currentUser.id!==account)return false;
+    const verificationUrl=window.KanonhaEventTools?.certificateVerificationUrl?.(c.certificate_code)||'';
+    const qr=window.KanonhaEventTools?.certificateQrPng?.(c.certificate_code)||'';
+    if(!verificationUrl||!qr)return false;
+    const organizerLogo=await organizerLogoData(c);
+    if(!snapshot||!backend.currentUser||backend.currentUser.id!==account)return false;
+    const html=renderer({...c,student_national_id:verified},{qr,organizerLogo,verificationUrl});
+    return printPdf(html,'Kanonha-Certificate-'+id);
   }
   function clear(){
     snapshot=null;memberFilter='all';eventFilter='all';

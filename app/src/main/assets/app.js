@@ -1529,7 +1529,7 @@
         const certificateId=btn.dataset.activityDownloadCertificate;
         openSheet('تأیید کد ملی گواهی',
           '<p>برای درج کد ملی واقعی روی گواهی، آن را با اطلاعات ثبت‌نام خود تطبیق دهید. '+
-          'کد ملی در دستگاه یا پایگاه‌داده گواهی ذخیره نمی‌شود.</p>'+
+          'متن کد ملی در حافظه برنامه یا پایگاه‌داده گواهی ذخیره نمی‌شود؛ اما در فایل PDF شما درج خواهد شد.</p>'+
           '<form id="certificate-national-form" data-certificate-id="'+escapeHTML(certificateId)+'" autocomplete="off">'+
           '<label class="field">کد ملی (۱۰ رقم)<input name="national_id" type="password" inputmode="numeric" '+
           'maxlength="10" minlength="10" autocomplete="off" required placeholder="کد ملی خود را وارد کنید"></label>'+

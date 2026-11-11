@@ -188,7 +188,7 @@ jobs:
           ! find app/src -type f -name '*.keystore' | grep -q .
           ! find app/src -type f -name '*.p12' | grep -q .
           grep -q 'applicationId = "ir.kanonha.app"' app/build.gradle.kts
-          grep -q 'versionCode = 42' app/build.gradle.kts
+          grep -q 'versionCode = 43' app/build.gradle.kts
           grep -q 'android:allowBackup="false"' app/src/main/AndroidManifest.xml
           echo 'Release output validated; unsigned candidate requires secure external signing'
       - uses: actions/upload-artifact@v4

@@ -171,7 +171,7 @@
     }
     $('activity-certificates').innerHTML=certs.length?certs.map(c=>{
       return '<article class="activity-certificate"><div class="activity-certificate-symbol" aria-hidden="true">✦</div>'+
-        '<div class="activity-certificate-body"><span>گواهینامه شرکت در رویداد</span>'+
+        '<div class="activity-certificate-body"><span>'+esc(window.KanonhaEventKinds?.get(c.event_type)?.certificateTitle||'گواهی مشارکت')+'</span>'+
         '<h3>'+esc(c.event_title)+'</h3><p>'+esc(c.club_name)+' · '+esc(dateText(c.issued_at))+'</p>'+
         '<small>کد گواهینامه: <b dir="ltr">'+esc(c.certificate_code)+'</b></small>'+
         '<button class="activity-pdf-button" type="button" data-activity-download-certificate="'+
@@ -218,20 +218,32 @@
       '<div class="fine">این بلیت بر اساس ثبت‌نام تأییدشده صادر شده و ۷ روز پس از برگزاری رویداد از اپ حذف می‌شود.</div>');
     return printPdf(html,'Kanonha-Ticket-'+registrationId);
   }
+  async function organizerLogoData(c){
+    const url=window.KanonhaBackend?.clubLogoUrl?.(c.club_id,c.club_logo_path);
+    if(!url||typeof fetch!=='function'||typeof FileReader!=='function')return '';
+    try{
+      const response=await fetch(url,{mode:'cors',credentials:'omit'});
+      if(!response.ok)return '';
+      const blob=await response.blob();
+      if(!['image/png','image/webp','image/jpeg'].includes(blob.type)||blob.size>2097152)return '';
+      return await new Promise(resolve=>{
+        const reader=new FileReader();
+        reader.onload=()=>resolve(typeof reader.result==='string'?reader.result:'');
+        reader.onerror=()=>resolve('');
+        reader.readAsDataURL(blob);
+      });
+    }catch(_error){return '';}
+  }
   function downloadCertificate(id){
     if(!snapshot||!snapshot.onlineMode)return false;
     const c=(snapshot.certificates||[]).find(x=>x.id===id);
-    if(!c)return false;
-    const html=docHtml('<div class="kicker">گواهینامه حضور در رویداد</div>'+
-      '<div class="seal">✦ گواهینامه شرکت ✦</div>'+
-      '<h1>گواهی می‌شود</h1><p>دانشجو <strong>'+esc(c.student_name)+'</strong> با شماره دانشجویی <strong>'+
-      esc(c.student_number)+'</strong> در رویداد <strong>'+esc(c.event_title)+'</strong> به‌همت <strong>'+
-      esc(c.club_name)+'</strong> شرکت نموده است.</p>'+
-      '<p><strong>تاریخ رویداد:</strong> '+esc(dateText(c.event_starts_at))+'</p>'+
-      '<p><strong>تاریخ صدور:</strong> '+esc(dateText(c.issued_at))+'</p>'+
-      '<p class="code">Certificate ID: '+esc(c.certificate_code)+'</p>'+
-      '<div class="fine">این سند از سوابق گواهینامه صادرشده در اپ کانون‌ها تولید شده است. صدور تنها پس از ثبت حضور توسط مسئول مجاز امکان‌پذیر است.</div>');
-    return printPdf(html,'Kanonha-Certificate-'+id);
+    const renderer=window.KanonhaCertificateDocument?.render;
+    if(!c||typeof renderer!=='function')return false;
+    const qr=window.KanonhaEventTools?.qrPng?.('KANONHA-CERT:'+String(c.certificate_code||''))||'';
+    const print=organizerLogo=>printPdf(renderer(c,{qr,organizerLogo}),'Kanonha-Certificate-'+id);
+    // The logo is loaded into a data URI: Android's secure print WebView blocks network access.
+    if(!c.club_id||!c.club_logo_path)return print('');
+    return organizerLogoData(c).then(print);
   }
   function clear(){
     snapshot=null;memberFilter='all';eventFilter='all';

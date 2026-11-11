@@ -1525,9 +1525,11 @@
         return;
       }
       if (btn.dataset.activityDownloadCertificate!==undefined) {
-        notify(window.KanonhaActivity?.downloadCertificate(btn.dataset.activityDownloadCertificate)
-          ? 'برای دریافت فایل، در پنجره چاپ «ذخیره به‌صورت PDF» را انتخاب کنید.'
-          : 'گواهینامه یا ابزار دریافت PDF در دسترس نیست.');
+        void Promise.resolve(window.KanonhaActivity?.downloadCertificate(btn.dataset.activityDownloadCertificate))
+          .then(ok=>notify(ok
+            ? 'برای دریافت فایل، در پنجره چاپ «ذخیره به‌صورت PDF» را انتخاب کنید.'
+            : 'گواهی یا ابزار دریافت PDF در دسترس نیست.'))
+          .catch(()=>notify('دریافت گواهی انجام نشد؛ دوباره تلاش کنید.'));
         return;
       }
 

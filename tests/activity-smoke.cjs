@@ -35,8 +35,12 @@ const window={
  },
  AndroidSurveyExports:{printHtmlNamed(title,body){prints.push({title,body});}}
 };
-vm.runInNewContext(code,{window,document,Date,Number,Set,Map,setTimeout:()=>1,clearTimeout(){}},
- {filename:'activity-ui.js',timeout:3000});
+const runtime={window,document,Date,Number,Set,Map,setTimeout:()=>1,clearTimeout(){}};
+vm.runInNewContext(getFile('app/src/main/assets/event-kinds.js'),runtime,
+ {filename:'event-kinds.js',timeout:3000});
+vm.runInNewContext(getFile('app/src/main/assets/certificate-document.js'),runtime,
+ {filename:'certificate-document.js',timeout:3000});
+vm.runInNewContext(code,runtime,{filename:'activity-ui.js',timeout:3000});
 const page=window.KanonhaActivity;
 const malicious='<img src=x onerror=alert(1)>';
 const now=Date.now(),day=86400000;
@@ -66,6 +70,7 @@ const data={
  ],
  certificates:[
   {id:'cert-id',student_name:malicious,student_number:'001230',event_title:malicious,
+   event_type:'workshop',certificate_signers:['دکتر نمونه'],secretary_name:'دبیر کانون',
    club_name:'کانون قدیمی',event_starts_at:iso(now-3650*day),
    issued_at:iso(now-3649*day),certificate_code:'12345678-1234-4123-8123-123456789012'}
  ]
@@ -99,6 +104,9 @@ assert.match(prints[1].title,/Kanonha-Certificate/);
 assert.ok(!prints[0].body.includes(malicious),'ticket PDF escapes unsafe input');
 assert.ok(!prints[1].body.includes(malicious),'certificate PDF escapes unsafe input');
 assert.match(prints[1].body,/001230/,'preserve leading zeros in student number');
+assert.match(prints[1].body,/گواهی شرکت در کارگاه/,'certificate title matches event type');
+assert.match(prints[1].body,/دکتر نمونه/,'professor signature name rendered');
+assert.match(prints[1].body,/A4 landscape/,'approved certificate is print-ready landscape A4');
 page.setFilter('club','pending');
 assert.match(get('activity-clubs'),/در انتظار تأیید/);
 assert.ok(!get('activity-clubs').includes('درخواست مجدد عضویت'));

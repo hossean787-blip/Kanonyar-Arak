@@ -28,11 +28,21 @@ const document={
 const prints=[],qrCalls=[];
 const token='fc9ec2ef-75b1-485e-afaa-720cb7962348';
 const window={
+ KANONHA_CONFIG:{url:'https://cnqcysnjinghzzrzanpj.supabase.co'},
+ KanonhaBackend:{
+  currentUser:{id:'11111111-1111-4111-8111-111111111111'},
+  async verifyNationalForCertificate(raw){
+   if(raw!=='1234567891')throw new Error('national mismatch');
+   return raw;
+  }
+ },
  KanonhaEventTools:{
   renderQr(el,t){qrCalls.push(t);return Boolean(t);},
   qrPng(t){return t===token?'data:image/png;base64,AAAA':'';},
-  certificateQrPng(t){return t==='12345678-1234-4123-8123-123456789012'?'data:image/png;base64,CCCC':'';}
-
+  certificateQrPng(t){return t==='12345678-1234-4123-8123-123456789012'?'data:image/png;base64,CCCC':'';},
+  certificateVerificationUrl(t){
+   return 'https://cnqcysnjinghzzrzanpj.supabase.co/functions/v1/kanonha-certificate-verify?code='+t;
+  }
  },
  AndroidSurveyExports:{printHtmlNamed(title,body){prints.push({title,body});}}
 };
@@ -42,6 +52,7 @@ vm.runInNewContext(getFile('app/src/main/assets/event-kinds.js'),runtime,
 vm.runInNewContext(getFile('app/src/main/assets/certificate-document.js'),runtime,
  {filename:'certificate-document.js',timeout:3000});
 vm.runInNewContext(code,runtime,{filename:'activity-ui.js',timeout:3000});
+(async()=>{
 const page=window.KanonhaActivity;
 const malicious='<img src=x onerror=alert(1)>';
 const now=Date.now(),day=86400000;
@@ -97,7 +108,9 @@ assert.ok(!get('activity-events').includes(malicious),'escaped event');
 assert.ok(!get('activity-certificates').includes(malicious),'escaped certificate');
 assert.equal(page.downloadTicket(regA),true,'ticket PDF opens native print');
 assert.equal(page.downloadTicket(regB),false,'expired tickets are not downloadable');
-assert.equal(page.downloadCertificate('cert-id'),true);
+assert.equal(await page.downloadCertificate('cert-id'),false,'national proof is required');
+await assert.rejects(page.downloadCertificate('cert-id','0000000000'),/national mismatch/);
+assert.equal(await page.downloadCertificate('cert-id','1234567891'),true);
 assert.equal(prints.length,2);
 assert.match(prints[0].body,/data:image\/png;base64,AAAA/);
 assert.match(prints[0].title,/Kanonha-Ticket/);
@@ -105,6 +118,8 @@ assert.match(prints[1].title,/Kanonha-Certificate/);
 assert.ok(!prints[0].body.includes(malicious),'ticket PDF escapes unsafe input');
 assert.ok(!prints[1].body.includes(malicious),'certificate PDF escapes unsafe input');
 assert.match(prints[1].body,/001230/,'preserve leading zeros in student number');
+assert.match(prints[1].body,/1234567891/,'print only server-verified national ID');
+assert.match(prints[1].body,/kanonha-certificate-verify\?code=/,'embedded online verification URL');
 assert.match(prints[1].body,/گواهی شرکت در کارگاه/,'certificate title matches event type');
 assert.match(prints[1].body,/دکتر نمونه/,'professor signature name rendered');
 assert.match(prints[1].body,/A4 landscape/,'approved certificate is print-ready landscape A4');
@@ -120,7 +135,7 @@ page.setFilter('club','all');page.setFilter('event','all');
 assert.match(get('activity-tickets'),/بلیت فعالی وجود ندارد/);
 assert.match(get('activity-certificates'),/هنوز گواهینامه‌ای/);
 page.clear();
-assert.equal(page.downloadCertificate('cert-id'),false,'clear identity-bound data on logout');
+assert.equal(await page.downloadCertificate('cert-id','1234567891'),false,'clear identity-bound data on logout');
 assert.doesNotMatch(app,/onlineCancelEvent|confirmEventCancel/);
 assert.doesNotMatch(backend,/async function cancelEvent/);
 assert.match(app,/activityHistory = historyRows/);
@@ -140,3 +155,4 @@ const css=styles.slice(styles.indexOf('/* Activities v0.9.21'),styles.indexOf('/
 assert.match(css,/#505cc8|#4c55b4|#303d91/i);
 assert.doesNotMatch(css,/--ac:#16865b/,'green activity theme must not return');
 console.log('PASS: four activity sections, club state, 7-day ticket expiry, permanent certificates, signed-in PDF and XSS safety');
+})().catch(error=>{console.error(error);process.exitCode=1});

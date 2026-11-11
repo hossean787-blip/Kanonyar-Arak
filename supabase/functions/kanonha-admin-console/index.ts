@@ -86,7 +86,8 @@ async function attachManagerStudent(d:Record<string,unknown>,actor:string){
 const allowedBool=(b:unknown)=>typeof b==="boolean";
 async function handle(op:string,d:Record<string,unknown>,actor:string){
  const id=val(d.id,40);
- if(op==="overview")return await overview(); if(op==="notification.preview"||op==="notification.send"){
+ if(op==="overview")return await overview();
+ if(op==="notification.preview"||op==="notification.send"){
   const audience=val(d.audience,30),university=val(d.university,120);
   const club_id=d.club_id==null||d.club_id===""?null:val(d.club_id,40);
   const faculties=Array.isArray(d.faculties)?d.faculties:[];

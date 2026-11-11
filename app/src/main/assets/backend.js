@@ -238,7 +238,7 @@
     return Array.isArray(rows) ? rows : [];
   }
   async function events() {
-    const rows = await request(restPath + 'kanonha_events?select=id,club_id,title,starts_at,registration_deadline,location,capacity,registered_count,poster_path,description&is_published=eq.true&order=starts_at.asc', { auth: false });
+    const rows = await request(restPath + 'kanonha_events?select=id,club_id,title,event_type,starts_at,registration_deadline,location,capacity,registered_count,poster_path,description&is_published=eq.true&order=starts_at.asc', { auth: false });
     return Array.isArray(rows) ? rows : [];
   }
   async function memberships() {
@@ -408,7 +408,7 @@
   }
   async function myCertificates(){
     const userId=mustUser();
-    return readRows(await request(restPath+'kanonha_certificates?select=id,registration_id,event_id,student_name,student_number,event_title,club_name,event_starts_at,event_location,issued_at,certificate_code'
+    return readRows(await request(restPath+'kanonha_certificates?select=id,registration_id,event_id,student_name,student_number,student_national_id,event_title,event_type,certificate_signers,club_id,club_name,club_logo_path,secretary_name,event_starts_at,event_location,issued_at,certificate_code'
        +'&user_id=eq.'+encodeURIComponent(userId)+'&order=issued_at.desc',{requireUser:true}));
   }
   async function secretaryCertificates(eventId){
@@ -491,6 +491,15 @@
     const deadline = new Date(input && input.registration_deadline);
     const capacity = Number(input && input.capacity);
     const description = String(input && input.description || '').trim();
+    const event_type = String(input && input.event_type || 'general');
+    const eventKinds = window.KanonhaEventKinds;
+    const allowedTypes = ['workshop','course','conference','session','competition','festival','volunteer','collaboration','general'];
+    if (!allowedTypes.includes(event_type)) throw new ApiError('نوع رویداد معتبر نیست.');
+    const rawSigners = input && input.certificate_signers;
+    const signers = rawSigners === undefined ? [] : rawSigners;
+    if (!Array.isArray(signers) || signers.length > 60 ||
+      signers.some(x=>typeof x!=='string'||x.trim().length<2||x.trim().length>100))
+      throw new ApiError('نام استادان امضاکننده معتبر نیست.');
     if (title.length < 2 || title.length > 160 || location.length < 2 || location.length > 250 || description.length > 4000)
       throw new ApiError('نام، محل یا توضیحات رویداد معتبر نیست.');
     if (!Number.isInteger(capacity) || capacity < 1 || capacity > 100000) throw new ApiError('ظرفیت باید عدد مثبت باشد.');
@@ -498,7 +507,7 @@
         || (!editing && (start.getTime() <= Date.now() || deadline.getTime() <= Date.now())) || deadline > start)
       throw new ApiError('شروع و مهلت ثبت‌نام باید در آینده باشند و مهلت قبل از شروع باشد.');
     return {
-      title, location, description, starts_at: start.toISOString(),
+      title, location, description, event_type, certificate_signers:signers.map(x=>x.trim()), starts_at: start.toISOString(),
       registration_deadline: deadline.toISOString(), capacity,
       is_published: Boolean(input && input.is_published)
     };
@@ -511,7 +520,7 @@
   }
   async function secretaryEvents(clubId) {
     requireUuid(clubId, 'کانون');
-    return readRows(await request(restPath + 'kanonha_events?select=id,club_id,title,location,description,starts_at,registration_deadline,capacity,registered_count,is_published,approval_status,poster_path'
+    return readRows(await request(restPath + 'kanonha_events?select=id,club_id,title,event_type,certificate_signers,location,description,starts_at,registration_deadline,capacity,registered_count,is_published,approval_status,poster_path'
       + '&club_id=eq.' + encodeURIComponent(clubId) + '&order=starts_at.desc&limit=150', { requireUser: true }));
   }
   async function secretaryMemberships(clubId) {

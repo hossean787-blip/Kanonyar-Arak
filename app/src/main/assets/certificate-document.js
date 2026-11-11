@@ -52,6 +52,11 @@ function render(c, options={}){
  const qr=typeof options.qr==='string'&&/^data:image\/png;base64,[a-z0-9+/=]+$/i.test(options.qr)
   ?'<img src="'+options.qr+'" alt="QR شناسه گواهی">':'';
  const code=String(c.certificate_code||'');
+ const verifyUrl=typeof options.verificationUrl==='string'&&
+   /^https:\/\/[a-z0-9-]+\.supabase\.co\/functions\/v1\/kanonha-certificate-verify\?code=[0-9a-f-]{36}$/i.test(options.verificationUrl)
+     ?options.verificationUrl:'';
+ const privateNational=/^\d{10}$/.test(String(c.student_national_id||''))?
+   String(c.student_national_id):'—';
  return '<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>'+esc(title)+'</title>'+css+
  '</head><body><main class="certificate"><div class="curve" aria-hidden="true"></div><div class="heading">'+
  '<div class="brand">'+organizerLogo+'<strong>'+esc(c.club_name||'برگزارکننده')+'</strong><small>لوگوی برگزارکننده</small></div>'+
@@ -59,12 +64,13 @@ function render(c, options={}){
  '<p class="english">CERTIFICATE OF PARTICIPATION</p><div class="ornament"></div></div>'+
  '<div class="brand">'+logo+'<strong>کانون‌ها</strong><small>اپلیکیشن کانون‌های دانشجویی</small></div></div>'+
  '<section class="content"><p class="intro">بدین‌وسیله گواهی می‌شود که</p><p class="recipient">'+esc(c.student_name)+'</p>'+
- '<p class="national">کد ملی: '+esc(c.student_national_id||'در حساب ثبت نشده')+' · شماره دانشجویی: '+esc(c.student_number||'')+'</p>'+
+ '<p class="national">کد ملی: '+esc(privateNational)+' · شماره دانشجویی: '+esc(c.student_number||'')+'</p>'+
  '<p class="story">'+esc(info.context||'در رویداد')+' <strong>«'+esc(c.event_title)+'»</strong> که به همت <strong>'+
  esc(c.club_name)+'</strong> برگزار گردید، مشارکت داشته است؛ این گواهی بر اساس ثبت حضور تأییدشده ایشان صادر شده است.</p>'+
  '<p class="detail">تاریخ برگزاری: '+esc(dateText(c.event_starts_at))+
  (c.event_location?' · محل برگزاری: '+esc(c.event_location):'')+'</p></section>'+
- '<section class="lower"><div class="verification">'+qr+'<span>شناسه یکتای گواهی</span><span class="code">'+esc(code)+'</span></div>'+
+ '<section class="lower"><div class="verification">'+qr+'<span>اسکن جهت استعلام اصالت</span><span class="code">'+esc(code)+'</span>'+
+ (verifyUrl?'<a style="font-size:8pt;color:#14694e" href="'+esc(verifyUrl)+'">بررسی آنلاین گواهی</a>':'')+'</div>'+
  '<div class="signatures">'+signHtml+'</div></section><div class="footer">با آرزوی موفقیت</div></main></body></html>';
 }
 window.KanonhaCertificateDocument=Object.freeze({render});

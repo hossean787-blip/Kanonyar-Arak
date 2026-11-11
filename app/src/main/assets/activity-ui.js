@@ -197,7 +197,7 @@
   }
   function printPdf(html,title){
     const bridge=window.AndroidSurveyExports;
-    if(!bridge)return false;
+    if(!bridge||typeof html!=='string'||html.length>1450000)return false;
     if(typeof bridge.printHtmlNamed==='function')bridge.printHtmlNamed(title,html);
     else if(typeof bridge.printHtml==='function')bridge.printHtml(html);
     else return false;
@@ -226,9 +226,26 @@
       if(!response.ok)return '';
       const blob=await response.blob();
       if(!['image/png','image/webp','image/jpeg'].includes(blob.type)||blob.size>2097152)return '';
+      // Convert uploaded logos to compact data URIs for Android's offline, JS-disabled
+      // PDF print WebView. The native print bridge enforces a 1.5M-character HTML cap.
+      if(typeof createImageBitmap==='function'&&document?.createElement){
+        try{
+          const bitmap=await createImageBitmap(blob);
+          const canvas=document.createElement('canvas');
+          const factor=Math.min(1,300/Math.max(bitmap.width,bitmap.height,1));
+          canvas.width=Math.max(1,Math.round(bitmap.width*factor));
+          canvas.height=Math.max(1,Math.round(bitmap.height*factor));
+          const context=canvas.getContext('2d');
+          if(context)context.drawImage(bitmap,0,0,canvas.width,canvas.height);
+          bitmap.close?.();
+          const compact=context?.canvas?.toDataURL('image/png')||'';
+          if(compact.startsWith('data:image/png;base64,')&&compact.length<500000)return compact;
+        }catch(_ignored){}
+      }
+      if(blob.size>700000)return '';
       return await new Promise(resolve=>{
         const reader=new FileReader();
-        reader.onload=()=>resolve(typeof reader.result==='string'?reader.result:'');
+        reader.onload=()=>resolve(typeof reader.result==='string'&&reader.result.length<1100000?reader.result:'');
         reader.onerror=()=>resolve('');
         reader.readAsDataURL(blob);
       });

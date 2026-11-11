@@ -12,7 +12,13 @@ function summary(){
  const banner=$('notice-btn');if(!banner)return;
  const title=banner.querySelector('.home-notice-title'),subtitle=banner.querySelector('.home-notice-subtitle');
  const badge=banner.querySelector('.home-notice-new');
- if(!api.currentUser){banner.setAttribute('aria-label','مشاهده اعلان‌ها؛ ابتدا وارد حساب شوید');return}
+ if(!api.currentUser){
+    banner.setAttribute('aria-label','مشاهده اعلان‌ها؛ ابتدا وارد حساب شوید');
+    if(title)title.textContent='اطلاعیه‌ها';
+    if(subtitle)subtitle.textContent='برای مشاهده اعلان‌های خود وارد حساب شوید.';
+    if(badge)badge.textContent='';
+    return;
+  }
  const newest=inbox[0]?.campaign,unread=countUnread();
  banner.setAttribute('aria-label',unread+' اعلان خوانده‌نشده؛ مشاهده مرکز اعلان‌ها');
  if(title)title.textContent=newest?.title||'مرکز اعلان‌ها';
@@ -100,7 +106,7 @@ function close(){
  document.body.classList.remove('notice-dialog-open');
 }
 function clear(){
- requestVersion++;owner='';inbox=[];busy=false;loaded=false;close();
+ requestVersion++;owner='';inbox=[];busy=false;loaded=false;close();summary();
 }
 document.addEventListener('DOMContentLoaded',()=>{
  const button=$('notice-btn');

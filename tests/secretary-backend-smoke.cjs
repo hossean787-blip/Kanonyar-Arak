@@ -21,7 +21,11 @@ async function fetchMock(url, options) {
   if (url.includes('/auth/v1/token?grant_type=password')) return ok({access_token:'sample-token',refresh_token:'sample-refresh',expires_in:3600,user:{id:secretaryId}});
   if (url.endsWith('/auth/v1/user')) return ok({id:secretaryId});
   if (url.includes('/kanonha_secretaries?')) return ok([{club_id:clubId,user_id:secretaryId}]);
-  if (url.includes('/kanonha_memberships?') && options.method==='PATCH') return ok([{id:memberId,status:body.status}]);
+  if (url.includes('/kanonha_memberships?') && options.method==='PATCH') {
+    // Real PostgREST returns 42501 when RETURNING * includes hidden decision-audit columns.
+    if (!url.includes('&select=id,status')) return ok({message:'permission denied for table kanonha_memberships'},403);
+    return ok([{id:memberId,status:body.status}]);
+  }
   if (url.includes('/kanonha_memberships?')) return ok([{id:memberId,user_id:secretaryId,club_id:clubId,status:'pending'}]);
   if (url.includes('/kanonha_profiles?')) return ok([{user_id:secretaryId,full_name:'دبیر نمونه',student_number:'123456'}]);
   if (url.includes('/kanonha_clubs?') && options.method==='PATCH') return ok([{id:clubId,...body}]);
@@ -71,6 +75,9 @@ const api=window.KanonhaBackend;
   await api.secretaryDecideMembership(memberId,'approved');
   const decision=calls.findLast(x=>x.method==='PATCH'&&x.url.includes('kanonha_memberships'));
   assert.deepEqual(decision.body,{status:'approved'});
+  assert.match(decision.url,/&status=eq\.pending&select=id,status/);
+  assert.ok(!decision.url.includes('decided_at') && !decision.url.includes('decided_by'),
+    'the decision must never request private audit fields');
   await api.secretaryRoster(eventId);
   await api.secretarySetAttendance(registrationId,true);
   const attendance=calls.findLast(x=>x.method==='PATCH'&&x.url.includes('kanonha_registrations'));

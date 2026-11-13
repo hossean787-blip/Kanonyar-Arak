@@ -28,7 +28,7 @@ assert.match(gradle,/firebase-bom:35\.1\.0/);
 assert.match(gradle,/firebase-messaging/);
 assert.match(manifest,/KanonhaFirebaseService/);
 assert.match(java,/FirebaseOptions\.Builder/);
-assert.match(java,/AndroidPush/);
+assert.match(file('app/src/main/java/ir/kanonha/app/MainActivity.java'),/AndroidPush/);
 assert.match(fcm,/onMessageReceived/);
 assert.match(fcm,/owner_id/);
 assert.match(backend,/pushRegister/);

@@ -37,7 +37,8 @@ public final class MainActivity extends FragmentActivity {
  @Override public void onCreate(Bundle b) {
   super.onCreate(b);
   DailyCalendarReceiver.schedule(this);
-  DailyCalendarReceiver.show(this);\n  KanonhaFirebasePush.initialize(this);
+  DailyCalendarReceiver.show(this);
+  KanonhaFirebasePush.initialize(this);
   if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
    requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 103);
   }
@@ -90,7 +91,8 @@ public final class MainActivity extends FragmentActivity {
   eventExcel=new EventExcelBridge(this,web);
   web.addJavascriptInterface(eventExcel,"AndroidEventExcel");
   web.addJavascriptInterface(new SurveyNoticeReceiver.Bridge(this), "AndroidSurveyNotices");
-  web.addJavascriptInterface(new EventReminderReceiver.Bridge(this), "AndroidEventReminders");\n  web.addJavascriptInterface(new KanonhaFirebasePush.Bridge(this,web), "AndroidPush");
+  web.addJavascriptInterface(new EventReminderReceiver.Bridge(this), "AndroidEventReminders");
+  web.addJavascriptInterface(new KanonhaFirebasePush.Bridge(this,web), "AndroidPush");
   web.setWebViewClient(new WebViewClient() {
    @Override public WebResourceResponse shouldInterceptRequest(WebView v, WebResourceRequest r) {
     return loader.shouldInterceptRequest(r.getUrl());

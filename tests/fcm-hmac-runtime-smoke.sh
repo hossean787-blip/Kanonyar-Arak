@@ -6,7 +6,7 @@ export SUPABASE_URL="https://unit-test.invalid"
 export SUPABASE_SERVICE_ROLE_KEY="qa_only_server_role_credential_not_real_001"
 export KANONHA_FCM_WEBHOOK_HMAC_SECRET="qa_only_hmac_secret_not_real_32_characters_minimum"
 unset KANONHA_FIREBASE_SERVICE_ACCOUNT_JSON
-deno run --allow-env --allow-net=127.0.0.1:8000 supabase/functions/kanonha-fcm-delivery/index.ts >/tmp/kanonha-hmac-deno.log 2>&1 &
+deno run --allow-env --allow-net=0.0.0.0:8000,127.0.0.1:8000 supabase/functions/kanonha-fcm-delivery/index.ts >/tmp/kanonha-hmac-deno.log 2>&1 &
 server_pid=$!
 trap 'kill "$server_pid" 2>/dev/null || true' EXIT
 for i in $(seq 1 30); do

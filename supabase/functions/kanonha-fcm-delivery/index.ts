@@ -1,5 +1,5 @@
 // Kanonha: authenticated database-webhook FCM HTTP v1 sender.
-// Only a Supabase server secret API key may call this endpoint. All delivery
+// Only a correctly HMAC-signed database webhook may invoke this endpoint. All delivery
 // details are reloaded from trusted database records; webhook data is untrusted.
 // Firebase service account JSON must exist ONLY in Supabase Edge Function secrets.
 type ServiceAccount={project_id:string;client_email:string;private_key:string;token_uri?:string};
@@ -31,35 +31,50 @@ async function googleAccessToken(account:ServiceAccount):Promise<string>{
 function validUuid(value:unknown):value is string{
  return typeof value==="string"&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 }
+// Webhook authentication uses a short-lived HMAC, not a reusable API key
+// inside pg_net's transient request queue. Only the server stores the HMAC key.
 Deno.serve(async req=>{
  if(req.method!=="POST")return json({error:"method_not_allowed"},405);
+ const timestamp=req.headers.get("x-kanonha-timestamp")||"";
+ const signature=req.headers.get("x-kanonha-signature")||"";
+ const webhookKey=Deno.env.get("KANONHA_FCM_WEBHOOK_HMAC_SECRET")||"";
+ const seconds=Number(timestamp);
+ if(webhookKey.length<32||!/^[0-9]{10,11}$/.test(timestamp)||
+    !/^[a-f0-9]{64}$/.test(signature)||
+    !Number.isSafeInteger(seconds)||Math.abs(Date.now()/1000-seconds)>180)
+  return json({error:"unauthorized"},401);
+ let event:Record<string,unknown>;
+ try {
+  if(Number(req.headers.get("content-length")||"0")>8192)
+    return json({error:"payload_too_large"},413);
+  const raw=await req.text();
+  if(raw.length>8192)return json({error:"payload_too_large"},413);
+  event=JSON.parse(raw);
+ } catch{return json({error:"invalid_json"},400)}
+ const rec=event?.record as Record<string,unknown>|undefined;
+ if(event?.type!=="INSERT"||event?.schema!=="public"||
+    event?.table!=="kanonha_notification_deliveries"||!rec||!validUuid(rec.id))
+   return json({error:"invalid_webhook"},400);
+ const key=await crypto.subtle.importKey("raw",utf8(webhookKey),
+   {name:"HMAC",hash:"SHA-256"},false,["verify"]);
+ const signatureBytes=Uint8Array.from(signature.match(/../g)!,part=>parseInt(part,16));
+ if(!await crypto.subtle.verify("HMAC",key,signatureBytes,utf8(rec.id+":"+timestamp)))
+   return json({error:"unauthorized"},401);
+ // From here onward this delivery ID has a verified time-bound server signature.
  const dbUrl=Deno.env.get("SUPABASE_URL")||"";
  let serviceKey=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"";
  try {
   const named=JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS")||"{}");
   if(typeof named.default==="string"&&named.default.startsWith("sb_secret_"))
     serviceKey=named.default;
- } catch { /* Legacy service-role JWT fallback. */ }
+ } catch { /* Legacy service-role key fallback. */ }
+ if(serviceKey.length<32)return json({error:"server_credentials_missing"},503);
  const secret=Deno.env.get("KANONHA_FIREBASE_SERVICE_ACCOUNT_JSON")||"";
- const supplied=req.headers.get("apikey")||
-  (req.headers.get("authorization")||"").replace(/^Bearer /,"");
- // This check is mandatory even with verify_jwt=false, because database
- // webhooks send server credentials in apikey, not a user JWT.
- if(serviceKey.length<32||supplied!==serviceKey)return json({error:"unauthorized"},401);
  if(!secret)return json({error:"firebase_not_configured"},503);
  let account:ServiceAccount;
  try{account=JSON.parse(secret);}catch{return json({error:"firebase_credentials_invalid"},503)}
  if(!account.project_id||!/^[a-z0-9-]{6,100}$/.test(account.project_id)||
     !account.client_email||!account.private_key)return json({error:"firebase_credentials_invalid"},503);
- let event:Record<string,unknown>;
- try{
-  if(Number(req.headers.get("content-length")||"0")>8192)return json({error:"payload_too_large"},413);
-  event=await req.json();
- }catch{return json({error:"invalid_json"},400)}
- const rec=event?.record as Record<string,unknown>|undefined;
- if(event?.type!=="INSERT"||event?.schema!=="public"||
-    event?.table!=="kanonha_notification_deliveries"||!rec||!validUuid(rec.id))
-  return json({error:"invalid_webhook"},400);
  const headers:Record<string,string>={apikey:serviceKey,accept:"application/json"};
  if(!serviceKey.startsWith("sb_secret_"))headers.authorization="Bearer "+serviceKey;
  const db=async (path:string,init:RequestInit={})=>{

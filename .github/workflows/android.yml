@@ -177,6 +177,20 @@ jobs:
           test "$status" = '401'
           ! grep -qi 'national_digest\|service_role\|student_national_id' /tmp/cert-notfound.html
           echo 'PASS public QR route (400,404) and anonymous national proof denial (401)'
+      - name: Verify live FCM sender rejects anonymous and publishable keys
+        run: |
+          set -eu
+          ENDPOINT='https://cnqcysnjinghzzrzanpj.supabase.co/functions/v1/kanonha-fcm-delivery'
+          BODY='{"type":"INSERT","schema":"public","table":"kanonha_notification_deliveries","record":{"id":"11111111-1111-4111-8111-111111111111"}}'
+          status=$(curl -sS --max-time 25 -o /tmp/push-noauth.json -w '%{http_code}' -X POST -H 'Content-Type: application/json' -d "$BODY" "$ENDPOINT")
+          test "$status" = '401'
+          grep -q '"unauthorized"' /tmp/push-noauth.json
+          PUBLIC_KEY=$(grep -oE 'sb_publishable_[[:alnum:]_-]+' app/src/main/assets/config.js | head -n 1)
+          test -n "$PUBLIC_KEY"
+          status=$(curl -sS --max-time 25 -o /tmp/push-public.json -w '%{http_code}' -X POST -H 'Content-Type: application/json' -H "apikey: $PUBLIC_KEY" -d "$BODY" "$ENDPOINT")
+          test "$status" = '401'
+          grep -q '"unauthorized"' /tmp/push-public.json
+          echo 'PASS: remote FCM sender rejects both unsigned and publishable-key requests'
       - name: Build Android Debug and Release candidate
         run: gradle :app:assembleDebug :app:assembleRelease --no-daemon
       - name: Verify package identity, version, release output and no embedded signing keys

@@ -1,5 +1,5 @@
 // Kanonha: authenticated database-webhook FCM HTTP v1 sender.
-// Only a Supabase service-role bearer may call this endpoint. All delivery
+// Only a Supabase server secret API key may call this endpoint. All delivery
 // details are reloaded from trusted database records; webhook data is untrusted.
 // Firebase service account JSON must exist ONLY in Supabase Edge Function secrets.
 type ServiceAccount={project_id:string;client_email:string;private_key:string;token_uri?:string};
@@ -34,10 +34,18 @@ function validUuid(value:unknown):value is string{
 Deno.serve(async req=>{
  if(req.method!=="POST")return json({error:"method_not_allowed"},405);
  const dbUrl=Deno.env.get("SUPABASE_URL")||"";
- const serviceKey=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"";
+ let serviceKey=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"";
+ try {
+  const named=JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS")||"{}");
+  if(typeof named.default==="string"&&named.default.startsWith("sb_secret_"))
+    serviceKey=named.default;
+ } catch { /* Legacy service-role JWT fallback. */ }
  const secret=Deno.env.get("KANONHA_FIREBASE_SERVICE_ACCOUNT_JSON")||"";
- const incoming=req.headers.get("authorization")||"";
- if(!serviceKey||incoming!=="Bearer "+serviceKey)return json({error:"unauthorized"},401);
+ const supplied=req.headers.get("apikey")||
+  (req.headers.get("authorization")||"").replace(/^Bearer /,"");
+ // This check is mandatory even with verify_jwt=false, because database
+ // webhooks send server credentials in apikey, not a user JWT.
+ if(serviceKey.length<32||supplied!==serviceKey)return json({error:"unauthorized"},401);
  if(!secret)return json({error:"firebase_not_configured"},503);
  let account:ServiceAccount;
  try{account=JSON.parse(secret);}catch{return json({error:"firebase_credentials_invalid"},503)}
@@ -52,7 +60,8 @@ Deno.serve(async req=>{
  if(event?.type!=="INSERT"||event?.schema!=="public"||
     event?.table!=="kanonha_notification_deliveries"||!rec||!validUuid(rec.id))
   return json({error:"invalid_webhook"},400);
- const headers={apikey:serviceKey,authorization:"Bearer "+serviceKey,accept:"application/json"};
+ const headers:Record<string,string>={apikey:serviceKey,accept:"application/json"};
+ if(!serviceKey.startsWith("sb_secret_"))headers.authorization="Bearer "+serviceKey;
  const db=async (path:string,init:RequestInit={})=>{
   const r=await fetch(dbUrl+"/rest/v1/"+path,{...init,headers:{...headers,...init.headers},
    signal:AbortSignal.timeout(10000)});

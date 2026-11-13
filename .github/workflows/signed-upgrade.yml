@@ -67,10 +67,17 @@ jobs:
           set -euo pipefail
           APK=app/build/outputs/apk/release/app-release.apk
           test -s "$APK"
-          test -s app/build/generated/res/google-services/release/values/values.xml
-          grep -Fq '1:172921153592:android:ffd6bec6daf6f9f5a7decd' app/build/generated/res/google-services/release/values/values.xml
+          echo 'PASS release APK exists'
+          echo 'Google Services generated files:'
+          find app/build/generated -type f -path '*google-services*' -print
+          RES_XML=$(find app/build/generated -type f -path '*/google-services/*/values/values.xml' -print -quit)
+          test -n "$RES_XML" && test -s "$RES_XML"
+          grep -Fq '1:172921153592:android:ffd6bec6daf6f9f5a7decd' "$RES_XML"
+          echo 'PASS production Firebase Android registration in resources'
           unzip -t "$APK" >/dev/null
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -q "^package: name='ir.kanonha.app' versionCode='45'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" > "$RUNNER_TEMP/kanonha-badging.txt"
+          grep -q "^package: name='ir.kanonha.app' versionCode='45'" "$RUNNER_TEMP/kanonha-badging.txt"
+          echo 'PASS production package and versionCode 45'
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK" > "$RUNNER_TEMP/apk-cert.txt"
           grep -Eqi 'Signer #1 certificate SHA-256 digest: 49acf93724a85d76ea26f10511b152b0d443e8ac0ef2d7a882dbc229b26453d5' "$RUNNER_TEMP/apk-cert.txt"
           grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true' "$RUNNER_TEMP/apk-cert.txt"

@@ -22,16 +22,25 @@ val releaseSigningConfigured = listOf(
     releaseStorePath, releaseStorePassword, releaseAlias, releaseKeyPassword
 ).all { !it.isNullOrBlank() }
 
-android {
+// Firebase Android identifiers are public. The server private key is NEVER used here.
+fun publicFirebaseField(env: String): String {
+    val value = System.getenv(env) ?: ""
+    return "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+}
+android {\n    buildFeatures { buildConfig = true }
     namespace = "ir.kanonha.app"
     compileSdk = 35
     defaultConfig {
         applicationId = "ir.kanonha.app"  // Do not change: preserves installed app identity.
         minSdk = 26
         targetSdk = 35
-        versionCode = 43
-        versionName = "0.9.30-certificate-verification"
+        versionCode = 44
+        versionName = "0.9.31-fcm-prepared"
         manifestPlaceholders["appLabel"] = "کانون‌ها"
+        buildConfigField("String", "FCM_PROJECT_ID", publicFirebaseField("KANONHA_FCM_PROJECT_ID"))
+        buildConfigField("String", "FCM_APP_ID", publicFirebaseField("KANONHA_FCM_APP_ID"))
+        buildConfigField("String", "FCM_API_KEY", publicFirebaseField("KANONHA_FCM_API_KEY"))
+        buildConfigField("String", "FCM_SENDER_ID", publicFirebaseField("KANONHA_FCM_SENDER_ID"))
     }
     signingConfigs {
         if (releaseSigningConfigured) {
@@ -62,6 +71,8 @@ android {
     }
 }
 dependencies {
+    implementation(platform("com.google.firebase:firebase-bom:35.1.0"))
+    implementation("com.google.firebase:firebase-messaging")
     implementation("androidx.webkit:webkit:1.12.1")
     implementation("androidx.core:core:1.15.0")
     implementation("androidx.fragment:fragment:1.7.1")

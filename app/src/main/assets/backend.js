@@ -1136,6 +1136,38 @@
       '&order=occurred_at.desc&limit='+safe,{requireUser:true}));
   }
 
+  // The FCM token belongs to one authenticated device; no admin privileges.
+  async function pushRegister(deviceId,token) {
+    const user_id=mustUser();
+    if(!uuid(deviceId)||typeof token!=='string'||token.length<20||token.length>4096)
+      throw new ApiError('مشخصات دستگاه اعلان معتبر نیست.');
+    const query='kanonha_push_devices?user_id=eq.'+encodeURIComponent(user_id)+
+      '&device_id=eq.'+encodeURIComponent(deviceId)+'&select=id';
+    const existing=readRows(await request(restPath+query,{requireUser:true}));
+    if(existing.length){
+      const updated=readRows(await request(restPath+query,{
+        method:'PATCH',requireUser:true,headers:{Prefer:'return=representation'},
+        body:{token,updated_at:new Date().toISOString()}
+      }));
+      if(updated.length!==1)throw new ApiError('به‌روزرسانی دستگاه اعلان ناموفق بود.');
+      return updated[0];
+    }
+    const inserted=readRows(await request(restPath+'kanonha_push_devices?select=id',{
+      method:'POST',requireUser:true,headers:{Prefer:'return=representation'},
+      body:{user_id,device_id:deviceId,token,platform:'android'}
+    }));
+    if(inserted.length!==1)throw new ApiError('ثبت دستگاه اعلان ناموفق بود.');
+    return inserted[0];
+  }
+  async function pushUnregister(deviceId) {
+    const user_id=mustUser();
+    if(!uuid(deviceId))return false;
+    await request(restPath+'kanonha_push_devices?user_id=eq.'+
+      encodeURIComponent(user_id)+'&device_id=eq.'+encodeURIComponent(deviceId),
+      {method:'DELETE',requireUser:true});
+    return true;
+  }
+
   window.KanonhaBackend = Object.freeze({
     enabled, signUp, signIn, signOut, me, profile, ensureProfile,
     saveProfile, clubs, events, memberships, registrations,
@@ -1146,7 +1178,7 @@
     secretaryProfiles, secretaryUpdateClub, secretaryCreateEvent, secretaryUpdateEvent,
     secretaryDecideMembership, secretaryRoster, secretarySetAttendance,
     studentSignUp,studentSignIn,managerSignUp,isManager,academicDetails,saveAcademicDetails,adminAction,verifyNationalForCertificate,
-    notificationInbox,notificationRead,
+    notificationInbox,notificationRead,pushRegister,pushUnregister,
     academicCatalog,resumeFromBiometric,biometricRefreshToken,
     ratingCatalog,ratingControl,ratingResults,ratingSetControl,ratingMyVotes,ratingSubmit,ratingAddProfessor,
     surveyList,surveyOptions,surveyMyVotes,surveyResults,surveyCreate,surveyUpdateDraft,

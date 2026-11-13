@@ -25,9 +25,9 @@ values('a8320000-0000-4000-8000-000000000003');
 -- Student: request membership, never self-approve.
 set local role authenticated;
 select set_config('request.jwt.claim.sub','a8320000-0000-4000-8000-000000000001',true);
-insert into public.kanonha_memberships(user_id,club_id,status)
+insert into public.kanonha_memberships(user_id,club_id)
 values('a8320000-0000-4000-8000-000000000001',
-'a8321000-0000-4000-8000-000000000000','pending');
+'a8321000-0000-4000-8000-000000000000');
 
 -- Secretary: pending request is visible and can be approved.
 select set_config('request.jwt.claim.sub','a8320000-0000-4000-8000-000000000002',true);
@@ -40,20 +40,40 @@ update public.kanonha_memberships set status='approved'
 where club_id='a8321000-0000-4000-8000-000000000000' and status='pending';
 
 -- Secretary: publish upcoming event without manager approval.
+insert into public.kanonha_events(club_id,title,location,description,starts_at,
+ registration_deadline,capacity,is_published,event_type)
+values('a8321000-0000-4000-8000-000000000000','رویداد دبیر مستقیم',
+'سالن آزمایش','رویداد موقت غیرواقعی',now()+interval '2 hours',
+now()+interval '1 hour',20,true,'workshop');
+
+-- Manager-free publication by secretary verified via RLS.
+do $begin
+ if (select count(*) from public.kanonha_events where title='رویداد دبیر مستقیم' and is_published)<>1
+ then raise exception 'Secretary event was not published without manager';end if;
+end$;
+-- Create a separate deterministic event for QR regression while in the transaction.
+reset role;
 insert into public.kanonha_events(id,club_id,title,location,description,starts_at,
  registration_deadline,capacity,is_published,event_type)
 values('a8322000-0000-4000-8000-000000000000',
 'a8321000-0000-4000-8000-000000000000','رویداد آزمون بازگشتی',
 'سالن آزمایش','رویداد موقت غیرواقعی',now()+interval '2 hours',
 now()+interval '1 hour',20,true,'workshop');
+set local role authenticated;
 
 -- Student: enroll once; no certificate before attendance.
 select set_config('request.jwt.claim.sub','a8320000-0000-4000-8000-000000000001',true);
-insert into public.kanonha_registrations(id,user_id,event_id,ticket_token)
-values('a8323000-0000-4000-8000-000000000000',
-'a8320000-0000-4000-8000-000000000001',
-'a8322000-0000-4000-8000-000000000000',
-'a8324000-0000-4000-8000-000000000000');
+insert into public.kanonha_registrations(user_id,event_id)
+values('a8320000-0000-4000-8000-000000000001',
+'a8322000-0000-4000-8000-000000000000');
+-- Ticket stays private; capture it under the server role only for the test.
+reset role;
+select set_config('kanonha.qa.ticket',(select ticket_token::text
+ from public.kanonha_registrations
+ where user_id='a8320000-0000-4000-8000-000000000001'
+ and event_id='a8322000-0000-4000-8000-000000000000'),true);
+set local role authenticated;
+select set_config('request.jwt.claim.sub','a8320000-0000-4000-8000-000000000001',true);
 do $$begin
  if (select count(*) from public.kanonha_certificates)>0
  then raise exception 'Certificate issued before attendance';end if;
@@ -63,7 +83,7 @@ end$$;
 select set_config('request.jwt.claim.sub','a8320000-0000-4000-8000-000000000002',true);
 do $$declare answer text;begin
  select result into answer from public.kanonha_checkin_ticket(
- 'a8324000-0000-4000-8000-000000000000',
+ current_setting('kanonha.qa.ticket')::uuid,
  'a8322000-0000-4000-8000-000000000000');
  if answer<>'early' then raise exception 'Early check-in was not blocked: %',answer;end if;
 end$$;
@@ -77,11 +97,12 @@ set local role authenticated;
 select set_config('request.jwt.claim.sub','a8320000-0000-4000-8000-000000000002',true);
 do $$declare answer text; cert_count integer;begin
  select result into answer from public.kanonha_checkin_ticket(
- 'a8324000-0000-4000-8000-000000000000',
+ current_setting('kanonha.qa.ticket')::uuid,
  'a8322000-0000-4000-8000-000000000000');
  if answer<>'checked_in' then raise exception 'Expected checked_in: %',answer;end if;
  select count(*) into cert_count from public.kanonha_certificates
- where registration_id='a8323000-0000-4000-8000-000000000000';
+ where user_id='a8320000-0000-4000-8000-000000000001'
+ and event_id='a8322000-0000-4000-8000-000000000000';
  if cert_count<>1 then raise exception 'Certificate auto-issue failed: %',cert_count;end if;
 end$$;
 

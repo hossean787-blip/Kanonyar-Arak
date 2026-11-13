@@ -1,4 +1,4 @@
-name: Kanonha 0.9.27 targeted notifications QA
+name: Kanonha 0.9.31 full Android and notifications QA
 on:
   push:
     branches: [main]
@@ -75,6 +75,7 @@ jobs:
           deno check supabase/functions/kanonha-student-auth/index.ts
           deno check supabase/functions/kanonha-admin-console/index.ts
           deno check supabase/functions/kanonha-certificate-verify/index.ts
+          deno check supabase/functions/kanonha-fcm-delivery/index.ts
           node --check tests/secretary-backend-smoke.cjs
           node --check tests/secretary-ui-smoke.cjs
           node --check tests/club-experience-smoke.cjs
@@ -196,11 +197,11 @@ jobs:
           echo 'Release output validated; unsigned candidate requires secure external signing'
       - uses: actions/upload-artifact@v4
         with:
-          name: kanonha-0.9.27-notifications-release-unsigned
+          name: kanonha-0.9.31-push-prepared-release-unsigned
           path: app/build/outputs/apk/release/app-release-unsigned.apk
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
-          name: kanonha-0.9.27-notifications-debug-validation
+          name: kanonha-0.9.31-push-prepared-debug-validation
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error

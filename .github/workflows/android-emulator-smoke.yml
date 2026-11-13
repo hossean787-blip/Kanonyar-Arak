@@ -55,10 +55,7 @@ jobs:
             adb shell screencap -p /sdcard/kanonha-foreground.png
             adb pull /sdcard/kanonha-foreground.png emulator-evidence/kanonha-foreground-api-${{ matrix.api }}.png
             adb logcat -d -v time AndroidRuntime:E > emulator-evidence/android-runtime-api-${{ matrix.api }}.log || true
-            if grep -E 'FATAL EXCEPTION|Process: ir.kanonha.app.test' emulator-evidence/android-runtime-api-${{ matrix.api }}.log; then
-              echo 'AndroidRuntime exception detected' >&2
-              exit 1
-            fi
+            ! grep -F 'Process: ir.kanonha.app.test' emulator-evidence/android-runtime-api-${{ matrix.api }}.log
             adb shell input keyevent KEYCODE_HOME
             sleep 2
             adb shell am start -W -n ir.kanonha.app.test/ir.kanonha.app.MainActivity

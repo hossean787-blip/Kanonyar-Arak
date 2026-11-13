@@ -47,10 +47,10 @@ values('a8321000-0000-4000-8000-000000000000','رویداد دبیر مستقی�
 now()+interval '1 hour',20,true,'workshop');
 
 -- Manager-free publication by secretary verified via RLS.
-do $begin
+do $$begin
  if (select count(*) from public.kanonha_events where title='رویداد دبیر مستقیم' and is_published)<>1
  then raise exception 'Secretary event was not published without manager';end if;
-end$;
+end$$;
 -- Create a separate deterministic event for QR regression while in the transaction.
 reset role;
 insert into public.kanonha_events(id,club_id,title,location,description,starts_at,

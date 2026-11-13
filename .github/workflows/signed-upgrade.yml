@@ -68,12 +68,11 @@ jobs:
           APK=app/build/outputs/apk/release/app-release.apk
           test -s "$APK"
           echo 'PASS release APK exists'
-          echo 'Google Services generated files:'
-          find app/build/generated -type f -path '*google-services*' -print
-          RES_XML=$(find app/build/generated -type f -path '*/google-services/*/values/values.xml' -print -quit)
-          test -n "$RES_XML" && test -s "$RES_XML"
-          grep -Fq '1:172921153592:android:ffd6bec6daf6f9f5a7decd' "$RES_XML"
-          echo 'PASS production Firebase Android registration in resources'
+          # Check the final APK's compiled resources, not AGP's unstable intermediate directory.
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump resources "$APK" > "$RUNNER_TEMP/kanonha-resources.txt"
+          grep -Fq '1:172921153592:android:ffd6bec6daf6f9f5a7decd' "$RUNNER_TEMP/kanonha-resources.txt"
+          grep -Fq 'kanonha-86f00' "$RUNNER_TEMP/kanonha-resources.txt"
+          echo 'PASS registered Firebase client bundled into signed APK'
           unzip -t "$APK" >/dev/null
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" > "$RUNNER_TEMP/kanonha-badging.txt"
           grep -q "^package: name='ir.kanonha.app' versionCode='45'" "$RUNNER_TEMP/kanonha-badging.txt"

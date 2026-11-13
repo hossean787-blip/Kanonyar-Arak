@@ -1,4 +1,4 @@
-name: Kanonha 0.9.31 signed upgrade
+name: Kanonha 0.9.32 signed Firebase upgrade
 on:
   push:
     branches: [main]
@@ -58,6 +58,7 @@ jobs:
           node tests/club-logo-upload-smoke.cjs
           node tests/six-sections-regression-smoke.cjs
           node tests/push-fcm-smoke.cjs
+          node tests/firebase-client-config-smoke.cjs
       - name: Build APK signed with original certificate
         run: gradle :app:assembleRelease --no-daemon
       - name: Validate upgrade package ID, version and cryptographic signature
@@ -66,17 +67,19 @@ jobs:
           set -euo pipefail
           APK=app/build/outputs/apk/release/app-release.apk
           test -s "$APK"
+          test -s app/build/generated/res/google-services/release/values/values.xml
+          grep -Fq '1:172921153592:android:ffd6bec6daf6f9f5a7decd' app/build/generated/res/google-services/release/values/values.xml
           unzip -t "$APK" >/dev/null
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -q "^package: name='ir.kanonha.app' versionCode='44'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -q "^package: name='ir.kanonha.app' versionCode='45'"
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK" > "$RUNNER_TEMP/apk-cert.txt"
           grep -Eqi 'Signer #1 certificate SHA-256 digest: 49acf93724a85d76ea26f10511b152b0d443e8ac0ef2d7a882dbc229b26453d5' "$RUNNER_TEMP/apk-cert.txt"
           grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true' "$RUNNER_TEMP/apk-cert.txt"
-          echo "PASS: same original release signing certificate; package ir.kanonha.app; versionCode 43."
+          echo "PASS: same original release signing certificate; package ir.kanonha.app; versionCode 45; Firebase client included."
           sha256sum "$APK"
       - name: Upload verified installable signed upgrade
         uses: actions/upload-artifact@v4
         with:
-          name: Kanonha-0.9.31-SIGNED-UPGRADE-TEST
+          name: Kanonha-0.9.32-SIGNED-FIREBASE-CLIENT
           path: app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
       - name: Purge temporary signing key

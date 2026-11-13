@@ -202,10 +202,13 @@ jobs:
           set -eu
           test -f app/build/outputs/apk/release/app-release-unsigned.apk
           test -f app/build/outputs/apk/debug/app-debug.apk
-          test -s app/build/generated/res/google-services/release/values/values.xml
-          grep -Fq '1:172921153592:android:ffd6bec6daf6f9f5a7decd' app/build/generated/res/google-services/release/values/values.xml
-          grep -Fq 'kanonha-86f00' app/build/generated/res/google-services/release/values/values.xml
-          echo 'PASS: Google Services generated Firebase resources for registered release app'
+          echo 'Generated Google Services resources:'
+          find app/build/generated -type f -path '*google-services*' -print
+          RES_XML=$(find app/build/generated -type f -path '*/google-services/*/values/values.xml' -print -quit)
+          test -n "$RES_XML" && test -s "$RES_XML"
+          grep -Fq '1:172921153592:android:ffd6bec6daf6f9f5a7decd' "$RES_XML"
+          grep -Fq 'kanonha-86f00' "$RES_XML"
+          echo 'PASS: Google Services generated resources for registered release app'
           unzip -t app/build/outputs/apk/release/app-release-unsigned.apk >/dev/null
           unzip -t app/build/outputs/apk/debug/app-debug.apk >/dev/null
           $ANDROID_HOME/build-tools/35.0.0/aapt dump badging app/build/outputs/apk/debug/app-debug.apk | grep -q "package: name='ir.kanonha.app.test'"

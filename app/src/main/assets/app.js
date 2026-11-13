@@ -312,6 +312,8 @@
     onlineRenderAuth();
     $('online-auth-status').textContent='';
     go(personaHome());
+    // Register push only after the server confirmed this account.
+    window.KanonhaPush?.sync?.();
     // Sync eligible survey start/end/result reminders at each verified sign-in.
     if(window.KanonhaRatings?.backgroundSync)
       void window.KanonhaRatings.backgroundSync();
@@ -719,6 +721,8 @@
     if (window.KanonhaAdminPanel) window.KanonhaAdminPanel.clear();
     window.KanonhaNotifications?.clear?.();
     managerUsersTab = 'students'; secretaryMembersTab = 'members';
+    // Remove this account's device token before deleting its session.
+    await window.KanonhaPush?.clear?.();
     try { await onlineBackend.signOut({preserveBiometric:preserve}); }
     catch (_) { /* local tokens still cleared by adapter */ }
     if(biom){

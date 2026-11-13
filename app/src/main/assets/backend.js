@@ -571,8 +571,10 @@
   async function secretaryDecideMembership(memberId, status) {
     requireUuid(memberId, 'درخواست عضویت');
     if (!['approved', 'rejected'].includes(status)) throw new ApiError('وضعیت عضویت نامعتبر است.');
+    // The membership decision-audit fields are intentionally unreadable to clients.
+    // Without an explicit projection PostgREST attempts RETURNING *, yielding 42501.
     const rows = await request(restPath + 'kanonha_memberships?id=eq.' + encodeURIComponent(memberId)
-      + '&status=eq.pending', {
+      + '&status=eq.pending&select=id,status', {
       method: 'PATCH', requireUser: true, headers: { Prefer: 'return=representation' },
       body: { status }
     });

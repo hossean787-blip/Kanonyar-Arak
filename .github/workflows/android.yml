@@ -61,7 +61,7 @@ jobs:
           node --check app/src/main/assets/secretary.js
           node --check app/src/main/assets/admin.js
           node --check app/src/main/assets/admin-notifications.js
-          node --check app/src/main/assets/notifications.js
+          node --check app/src/main/assets/notifications.js\n          node --check app/src/main/assets/push.js\n          node --check tests/push-fcm-smoke.cjs
           node --check tests/notifications-v022-smoke.cjs
           node --check tests/six-sections-regression-smoke.cjs
           node --check tests/unified-auth-smoke.cjs
@@ -122,7 +122,7 @@ jobs:
           PY
       - name: Verify targeted notification contracts
         run: |
-          node tests/notifications-v022-smoke.cjs
+          node tests/notifications-v022-smoke.cjs\n          node tests/push-fcm-smoke.cjs
           node tests/six-sections-regression-smoke.cjs
       - name: Smoke-test navigation, offline state and Android Back bridge
         run: node tests/ui-smoke.cjs

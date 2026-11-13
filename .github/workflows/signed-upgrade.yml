@@ -69,7 +69,7 @@ jobs:
           test -s "$APK"
           echo 'PASS release APK exists'
           # Check the final APK's compiled resources, not AGP's unstable intermediate directory.
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump resources "$APK" > "$RUNNER_TEMP/kanonha-resources.txt"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump resources --values "$APK" > "$RUNNER_TEMP/kanonha-resources.txt"
           grep -Fq '1:172921153592:android:ffd6bec6daf6f9f5a7decd' "$RUNNER_TEMP/kanonha-resources.txt"
           grep -Fq 'kanonha-86f00' "$RUNNER_TEMP/kanonha-resources.txt"
           echo 'PASS registered Firebase client bundled into signed APK'

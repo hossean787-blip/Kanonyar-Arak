@@ -202,13 +202,10 @@ jobs:
           set -eu
           test -f app/build/outputs/apk/release/app-release-unsigned.apk
           test -f app/build/outputs/apk/debug/app-debug.apk
-          echo 'Generated Google Services resources:'
-          find app/build/generated -type f -path '*google-services*' -print
-          RES_XML=$(find app/build/generated -type f -path '*/google-services/*/values/values.xml' -print -quit)
-          test -n "$RES_XML" && test -s "$RES_XML"
-          grep -Fq '1:172921153592:android:ffd6bec6daf6f9f5a7decd' "$RES_XML"
-          grep -Fq 'kanonha-86f00' "$RES_XML"
-          echo 'PASS: Google Services generated resources for registered release app'
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump resources app/build/outputs/apk/release/app-release-unsigned.apk > "$RUNNER_TEMP/kanonha-resources.txt"
+          grep -Fq '1:172921153592:android:ffd6bec6daf6f9f5a7decd' "$RUNNER_TEMP/kanonha-resources.txt"
+          grep -Fq 'kanonha-86f00' "$RUNNER_TEMP/kanonha-resources.txt"
+          echo 'PASS Firebase client present in compiled release resources'
           unzip -t app/build/outputs/apk/release/app-release-unsigned.apk >/dev/null
           unzip -t app/build/outputs/apk/debug/app-debug.apk >/dev/null
           $ANDROID_HOME/build-tools/35.0.0/aapt dump badging app/build/outputs/apk/debug/app-debug.apk | grep -q "package: name='ir.kanonha.app.test'"

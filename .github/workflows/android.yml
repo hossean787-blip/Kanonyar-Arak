@@ -202,7 +202,7 @@ jobs:
           set -eu
           test -f app/build/outputs/apk/release/app-release-unsigned.apk
           test -f app/build/outputs/apk/debug/app-debug.apk
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump resources --values app/build/outputs/apk/release/app-release-unsigned.apk > "$RUNNER_TEMP/kanonha-resources.txt"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump --values resources app/build/outputs/apk/release/app-release-unsigned.apk > "$RUNNER_TEMP/kanonha-resources.txt"
           grep -Fq '1:172921153592:android:ffd6bec6daf6f9f5a7decd' "$RUNNER_TEMP/kanonha-resources.txt"
           grep -Fq 'kanonha-86f00' "$RUNNER_TEMP/kanonha-resources.txt"
           echo 'PASS Firebase client present in compiled release resources'

@@ -123,6 +123,8 @@ jobs:
           assert 'setAutoCancel(true)' not in receiver
           print('UI, persistent Persian calendar, and SVG assets valid')
           PY
+      - name: Verify actual Deno signed FCM webhook handler (no production keys)
+        run: bash tests/fcm-hmac-runtime-smoke.sh
       - name: Verify targeted notification contracts
         run: |
           node tests/notifications-v022-smoke.cjs

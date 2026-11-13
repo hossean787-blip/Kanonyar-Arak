@@ -1,4 +1,14 @@
-plugins { id("com.android.application") }
+plugins {
+    id("com.android.application")
+    id("com.google.gms.google-services")
+}
+
+// Firebase Console registration covers ir.kanonha.app only.
+// Debug uses ir.kanonha.app.test; skip Google Services task until registered separately.
+tasks.matching { it.name == "processDebugGoogleServices" }.configureEach {
+    enabled = false
+}
+
 
 // AndroidX Biometric 1.1 pulls old Kotlin JDK7/8 compatibility artifacts;
 // resolve all stdlib variants to a single merged Kotlin release to avoid
@@ -22,11 +32,6 @@ val releaseSigningConfigured = listOf(
     releaseStorePath, releaseStorePassword, releaseAlias, releaseKeyPassword
 ).all { !it.isNullOrBlank() }
 
-// Firebase Android identifiers are public. The server private key is NEVER used here.
-fun publicFirebaseField(env: String): String {
-    val value = System.getenv(env) ?: ""
-    return "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
-}
 android {
     buildFeatures { buildConfig = true }
     namespace = "ir.kanonha.app"
@@ -35,13 +40,9 @@ android {
         applicationId = "ir.kanonha.app"  // Do not change: preserves installed app identity.
         minSdk = 26
         targetSdk = 35
-        versionCode = 44
-        versionName = "0.9.31-fcm-prepared"
+        versionCode = 45
+        versionName = "0.9.32-firebase-client"
         manifestPlaceholders["appLabel"] = "کانون‌ها"
-        buildConfigField("String", "FCM_PROJECT_ID", publicFirebaseField("KANONHA_FCM_PROJECT_ID"))
-        buildConfigField("String", "FCM_APP_ID", publicFirebaseField("KANONHA_FCM_APP_ID"))
-        buildConfigField("String", "FCM_API_KEY", publicFirebaseField("KANONHA_FCM_API_KEY"))
-        buildConfigField("String", "FCM_SENDER_ID", publicFirebaseField("KANONHA_FCM_SENDER_ID"))
     }
     signingConfigs {
         if (releaseSigningConfigured) {
@@ -72,7 +73,7 @@ android {
     }
 }
 dependencies {
-    implementation(platform("com.google.firebase:firebase-bom:35.1.0"))
+    implementation(platform("com.google.firebase:firebase-bom:35.2.0"))
     implementation("com.google.firebase:firebase-messaging")
     implementation("androidx.webkit:webkit:1.12.1")
     implementation("androidx.core:core:1.15.0")

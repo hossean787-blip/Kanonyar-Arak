@@ -10,8 +10,8 @@ import org.json.JSONObject;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
-/** Optional Firebase setup; disabled until public Firebase Android configuration is provided.
- * Never store a service-account secret, account session, or Firebase private key in the APK.
+/** Firebase Messaging setup for the registered release identity only.
+ * Service-account private keys are server-only. No FCM token before sign-in.
  */
 public final class KanonhaFirebasePush {
   static final String PREFS="kanonha_fcm_v1";
@@ -24,18 +24,19 @@ public final class KanonhaFirebasePush {
 
   public static synchronized void initialize(Context context){
     if(ready)return;
-    String project=BuildConfig.FCM_PROJECT_ID;
-    String appId=BuildConfig.FCM_APP_ID;
-    String apiKey=BuildConfig.FCM_API_KEY;
-    String sender=BuildConfig.FCM_SENDER_ID;
-    if(project.isEmpty()||appId.isEmpty()||apiKey.isEmpty()||sender.isEmpty())return;
+    // The registered Firebase Android App belongs only to the production
+    // package. The .test package has not been registered in Firebase.
+    if(BuildConfig.DEBUG || !"ir.kanonha.app".equals(context.getPackageName()))return;
     try{
-      if(FirebaseApp.getApps(context).isEmpty()){
-        FirebaseOptions options=new FirebaseOptions.Builder()
-          .setProjectId(project).setApplicationId(appId)
-          .setApiKey(apiKey).setGcmSenderId(sender).build();
-        FirebaseApp.initializeApp(context,options);
-      }
+      // Google Services generates the Android resources from the release-only
+      // google-services.json. Do not hand-copy credentials into BuildConfig.
+      FirebaseApp app=FirebaseApp.getApps(context).isEmpty()
+        ? FirebaseApp.initializeApp(context) : FirebaseApp.getInstance();
+      if(app==null)return;
+      FirebaseOptions options=app.getOptions();
+      if(!"kanonha-86f00".equals(options.getProjectId()) ||
+         !"1:172921153592:android:ffd6bec6daf6f9f5a7decd".equals(options.getApplicationId()) ||
+         !"172921153592".equals(options.getGcmSenderId()))return;
       FirebaseMessaging.getInstance().setAutoInitEnabled(false);
       ready=true;
     }catch(RuntimeException ignored){ready=false;}

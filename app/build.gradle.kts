@@ -27,7 +27,8 @@ fun publicFirebaseField(env: String): String {
     val value = System.getenv(env) ?: ""
     return "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 }
-android {\n    buildFeatures { buildConfig = true }
+android {
+    buildFeatures { buildConfig = true }
     namespace = "ir.kanonha.app"
     compileSdk = 35
     defaultConfig {

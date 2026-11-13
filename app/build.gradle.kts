@@ -40,8 +40,8 @@ android {
         applicationId = "ir.kanonha.app"  // Do not change: preserves installed app identity.
         minSdk = 26
         targetSdk = 35
-        versionCode = 45
-        versionName = "0.9.32-firebase-client"
+        versionCode = 46
+        versionName = "0.9.33-membership-approval"
         manifestPlaceholders["appLabel"] = "کانون‌ها"
     }
     signingConfigs {

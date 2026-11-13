@@ -48,7 +48,7 @@ public final class KanonhaFirebaseService extends FirebaseMessagingService {
     // No backend request is made here because this process may have no user session.
   }
   private static String limited(String text,String fallback,int max){
-    if(text==null||text.isBlank())return fallback;
+    if(text==null||text.trim().isEmpty())return fallback;
     return text.length()<=max?text:text.substring(0,max);
   }
 }

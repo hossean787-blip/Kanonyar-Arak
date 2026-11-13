@@ -30,7 +30,7 @@ assert.match(manifest,/KanonhaFirebaseService/);
 assert.match(java,/FirebaseOptions\.Builder/);
 assert.match(file('app/src/main/java/ir/kanonha/app/MainActivity.java'),/AndroidPush/);
 assert.match(fcm,/onMessageReceived/);
-assert.match(fcm,/owner_id/);
+assert.match(fcm,/KanonhaFirebasePush\.OWNER/);
 assert.match(backend,/pushRegister/);
 assert.match(backend,/pushUnregister/);
 assert.match(client,/nativeToken/);

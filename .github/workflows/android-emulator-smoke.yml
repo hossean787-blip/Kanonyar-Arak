@@ -1,4 +1,4 @@
-name: Kanonha physical-like emulator launch smoke
+name: Kanonha emulator actual UI smoke (permission-free screenshot)
 on:
   push:
     branches: [main]
@@ -46,6 +46,9 @@ jobs:
             test -s app/build/outputs/apk/debug/app-debug.apk
             adb install -r app/build/outputs/apk/debug/app-debug.apk
             adb shell pm list packages | grep -F 'package:ir.kanonha.app.test'
+            # Authorize notifications *before* first launch, otherwise the Android
+            # system permission overlay hides the login screen in screenshot QA.
+            adb shell pm grant ir.kanonha.app.test android.permission.POST_NOTIFICATIONS
             adb shell am start -W -n ir.kanonha.app.test/ir.kanonha.app.MainActivity
             sleep 12
             adb shell pidof ir.kanonha.app.test

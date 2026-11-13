@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "172921153592",
+    "project_id": "kanonha-86f00",
+    "storage_bucket": "kanonha-86f00.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:172921153592:android:ffd6bec6daf6f9f5a7decd",
+        "android_client_info": {
+          "package_name": "ir.kanonha.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDb4Wc0Hr69998xpNuTRGbLpOEM0qG4eTw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

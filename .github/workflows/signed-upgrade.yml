@@ -56,7 +56,8 @@ jobs:
           node tests/secretary-ui-smoke.cjs
           node tests/club-experience-smoke.cjs
           node tests/club-logo-upload-smoke.cjs
-          node tests/six-sections-regression-smoke.cjs\n          node tests/push-fcm-smoke.cjs
+          node tests/six-sections-regression-smoke.cjs
+          node tests/push-fcm-smoke.cjs
       - name: Build APK signed with original certificate
         run: gradle :app:assembleRelease --no-daemon
       - name: Validate upgrade package ID, version and cryptographic signature
